@@ -1,0 +1,55 @@
+function(IRLAddExample_cpp)
+  cmake_parse_arguments(IRL_ADD_EXAMPLE_CPP
+    "DUMMY"
+    "TARGET_NAME;OUTPUT_DIR;COLLECTION"
+    "HDRS;SRCS"
+    ${ARGN}
+  )
+
+  add_executable(${IRL_ADD_EXAMPLE_CPP_TARGET_NAME} EXCLUDE_FROM_ALL ${IRL_ADD_EXAMPLE_CPP_SRCS})
+  if(IRL_ADD_EXAMPLE_CPP_HDRS)
+    target_sources(${IRL_ADD_EXAMPLE_CPP_TARGET_NAME} PRIVATE ${IRL_ADD_EXAMPLE_CPP_HDRS})
+  endif()
+
+  set_target_properties(${IRL_ADD_EXAMPLE_CPP_TARGET_NAME}
+    PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${IRL_ADD_EXAMPLE_CPP_OUTPUT_DIR}"
+    COMPILE_FLAGS "${IRL_CXX_FLAGS}"
+    CXX_STANDARD 14)
+  get_property(taken_includes TARGET irl PROPERTY INCLUDE_DIRECTORIES )
+  target_include_directories(${IRL_ADD_EXAMPLE_CPP_TARGET_NAME} SYSTEM PRIVATE "${taken_includes}")
+  target_link_libraries(${IRL_ADD_EXAMPLE_CPP_TARGET_NAME} PRIVATE irl)
+
+  if(IRL_ADD_EXAMPLE_CPP_COLLECTION)
+    add_dependencies(${IRL_ADD_EXAMPLE_CPP_COLLECTION} ${IRL_ADD_EXAMPLE_CPP_TARGET_NAME})
+  endif()
+
+endfunction()
+
+
+function(IRLAddExample_fortran)
+  cmake_parse_arguments(IRL_ADD_EXAMPLE_FORTRAN
+    "DUMMY"
+    "TARGET_NAME;OUTPUT_DIR;COLLECTION"
+    "SRCS"
+    ${ARGN}
+  )
+
+  add_executable(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME} EXCLUDE_FROM_ALL ${IRL_ADD_EXAMPLE_FORTRAN_SRCS})
+  set_target_properties(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME}
+    PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${IRL_ADD_EXAMPLE_FORTRAN_OUTPUT_DIR}"
+    COMPILE_FLAGS "${IRL_Fortran_FLAGS}"
+  )
+  target_include_directories(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME} PRIVATE "${PROJECT_SOURCE_DIR}")
+  target_include_directories(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME} SYSTEM PRIVATE "${EIGEN_INCLUDE_DIR}")
+
+  target_link_libraries(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME} PRIVATE irl_fortran)
+  get_property(taken_includes TARGET irl_fortran PROPERTY INCLUDE_DIRECTORIES )
+  target_include_directories(${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME} SYSTEM PRIVATE "${taken_includes}")
+
+  if(IRL_ADD_EXAMPLE_FORTRAN_COLLECTION)
+    add_dependencies(${IRL_ADD_EXAMPLE_FORTRAN_COLLECTION} ${IRL_ADD_EXAMPLE_FORTRAN_TARGET_NAME})
+  endif()
+
+endfunction()
