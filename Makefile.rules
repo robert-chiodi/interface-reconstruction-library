@@ -1,0 +1,32 @@
+# Shortcut commands for compilation and dependency checking
+DEPDIR := .d
+$(shell mkdir -p $(DEPDIR) >/dev/null)
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+COMPILE.cc = $(CXX) $(DEPFLAGS) $(CPPFLAGS) $(FLAGS) -I$(INCDIR) -c
+OUTPUT_OPTION = -o $(OBJDIR)/$@
+POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $(OBJDIR)/$@
+
+CCSRC = $(wildcard *.cpp)
+OFILES = $(CCSRC:.cpp=.o)
+DEP = $(OFILES:.o=.d)  # one dependency file for each source
+
+
+$(LIBFILE):$(OFILES) Makefile
+	cd $(OBJDIR); $(AR) $(LIBDIR)/$(LIBFILE) $(OFILES); $(RL) $(LIBDIR)/$(LIBFILE)
+
+%.o : %.cpp
+%.o : %.cpp $(DEPDIR)/%.d
+	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+
+include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(CCSRC))))
+
+
+clean: 
+	cd $(OBJDIR); rm -f $(OFILES)
+	cd $(LIBDIR); rm -f $(LIBFILE)
+	cd $(DEPDIR); rm -f $(DEP)
