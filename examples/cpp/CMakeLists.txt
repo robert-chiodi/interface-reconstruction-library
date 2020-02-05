@@ -65,6 +65,15 @@ IRLAddExample_cpp(
 )
 
 
-
+IRLAddExample_cpp(
+  TARGET_NAME
+    cpp_polyhedron_write_to_cpp
+  SRCS
+    "polyhedron_write_to_vtk.cpp"
+  OUTPUT_DIR
+    "${IRL_EXAMPLES_OUTPUT_DIR}/cpp"
+  COLLECTION
+    "examples_cpp"
+)
 
 
