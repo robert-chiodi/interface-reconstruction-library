@@ -1,0 +1,36 @@
+#  This file is part of the Interface Reconstruction Library (IRL),
+#  a library for interface reconstruction and computational geometry operations.
+#
+#  Copyright (C) 2019 Robert Chiodi <robert.chiodi@gmail.com>
+#
+#  This Source Code Form is subject to the terms of the Mozilla Public
+#  License, v. 2.0. If a copy of the MPL was not distributed with this
+#  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+The files in this directory contain the information needed to generate some of the 
+polyhedron used in IRL_root/src/geometty/polyhedrons/ using the polyhedron_creator tool.
+
+The file containing the simplex information must be formatted as followed
+name_of_file (newline)
+NameOfPolyhedronClass (newline)
+List of vertex indices making up the faces.
+
+To adhere with conventions used in IRL, the
+file name should be lower-case and separated by
+underscores, such as rectangular_cuboid.
+The polyhedron class name should have no spaces
+or underscores and start each new word with a capital letter,
+such as RectangularCuboid.
+
+An example of such an input file would be this, used to generate
+a RectangularCuboid class.
+
+rectangular_cuboid
+RectangularCuboid
+4 7 6 5
+0 1 2 3
+4 0 3 7
+2 1 5 6
+1 0 4 5
+3 2 6 7
