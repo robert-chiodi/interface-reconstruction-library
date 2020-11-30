@@ -1,0 +1,12 @@
+capped_octahedron_LLL
+CappedOctahedron_LLL
+0 1 2
+6 4 3
+6 3 5
+6 5 4
+0 4 1
+0 3 4
+1 4 5
+1 5 2
+2 5 3
+2 3 0
