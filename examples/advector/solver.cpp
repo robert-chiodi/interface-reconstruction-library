@@ -186,3 +186,59 @@ void writeOutVisualization(const int a_iteration,
   }
   fclose(viz_file);
 }
+
+void writeOutVisualizationVTK(const int a_iteration,
+                              const int a_visualization_frequency,
+                              const double a_simulation_time,
+                              const Data<double>& a_liquid_volume_fraction) {
+  std::string output_folder = "viz";
+  const int dir_err = mkdir(output_folder.c_str(), 0777);
+
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  FILE* viz_file;
+
+  // Create zero-filled file name
+  int iteration_digits = 6;
+  std::string number = std::to_string(a_iteration / a_visualization_frequency);
+  assert(iteration_digits > number.length);
+  std::string id_suffix =
+      std::string(iteration_digits - number.length(), '0') + number;
+  std::string file_name = "viz/file_" + id_suffix + ".vtk";
+  viz_file = fopen(file_name.c_str(), "w");
+  fprintf(viz_file, "# vtk DataFile Version 3.0 \n");
+  fprintf(viz_file, "vtk output \n");
+  fprintf(viz_file, "ASCII \n");
+  fprintf(viz_file, "DATASET RECTILINEAR_GRID \n");
+  fprintf(viz_file, "%11s \t %d \t %d \t %d \n", "DIMENSIONS", mesh.getNx() + 1,
+          mesh.getNy() + 1, mesh.getNz() + 1);
+  fprintf(viz_file, "%14s \t %d \t %6s \n", "X_COORDINATES", mesh.getNx() + 1,
+          "float");
+  for (int i = mesh.imin(); i <= mesh.imax() + 1; ++i) {
+    fprintf(viz_file, "%15.8E \n", mesh.x(i));
+  }
+  fprintf(viz_file, "%14s \t %d \t %6s \n", "Y_COORDINATES", mesh.getNy() + 1,
+          "float");
+  for (int j = mesh.jmin(); j <= mesh.jmax() + 1; ++j) {
+    fprintf(viz_file, "%15.8E \n", mesh.y(j));
+  }
+  fprintf(viz_file, "%14s \t %d \t %6s \n", "Z_COORDINATES", mesh.getNz() + 1,
+          "float");
+  for (int k = mesh.kmin(); k <= mesh.kmax() + 1; ++k) {
+    fprintf(viz_file, "%15.8E \n", mesh.z(k));
+  }
+  fprintf(viz_file, "%11s \t %d \n", "CELL_DATA",
+          mesh.getNx() * mesh.getNy() * mesh.getNz());
+  fprintf(viz_file, "FIELD FieldData 1 \n");
+  fprintf(viz_file, "%11s \t %d \t %d \t %6s \n", "VolumeFraction ", 1,
+          mesh.getNx() * mesh.getNy() * mesh.getNz(), "float");
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        fprintf(viz_file, "%15.8E \n", a_liquid_volume_fraction(i, j, k));
+      }
+    }
+  }
+  fprintf(viz_file, "TIME 1 1 double \n");
+  fprintf(viz_file, "%15.4f \n", a_simulation_time);
+  fclose(viz_file);
+}

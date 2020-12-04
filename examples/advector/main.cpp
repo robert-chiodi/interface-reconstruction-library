@@ -13,10 +13,11 @@ static int startSimulation(const std::string& a_simulation_type,
                            const std::string& a_reconstruction_method,
                            const double a_time_step_size,
                            const double a_time_duration,
-                           const int a_viz_frequency);
+                           const int a_viz_frequency,
+                           const std::string& a_viz_type);
 
 int main(int argc, char* argv[]) {
-  if (argc != 7) {
+  if (argc != 8) {
     std::cout << "Incorrect amount of command line arguments supplied. \n";
     std::cout << "Arguments should be \n";
     std::cout
@@ -29,6 +30,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Number of cycles (integer)\n";
     std::cout
         << "Amount of time steps between visualization output (integer)\n";
+    std::cout
+        << "Type of visualization files. Options: VTK, VIZ (to use visualize.m)\n";
     std::exit(-1);
   }
 
@@ -38,6 +41,7 @@ int main(int argc, char* argv[]) {
   double time_step_size = std::stod(argv[4]);
   int n_cycles = std::atoi(argv[5]);
   int viz_frequency = atoi(argv[6]);
+  std::string viz_type = argv[7];
 
   double time_duration;
   if (simulation_type == "Deformation2D") {
@@ -51,9 +55,14 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
+  if (viz_type != "VTK" && viz_type != "VIZ") {
+    std::cout << "Unknown visualization type of " << viz_type << std::endl;
+    return -1;
+  }
+
   auto start = std::chrono::system_clock::now();
   startSimulation(simulation_type, advection_method, reconstruction_method,
-                  time_step_size, time_duration, viz_frequency);
+                  time_step_size, time_duration, viz_frequency, viz_type);
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> runtime = end - start;
   printf("Total run time: %20f \n\n", runtime.count());
@@ -66,15 +75,16 @@ static int startSimulation(const std::string& a_simulation_type,
                            const std::string& a_reconstruction_method,
                            const double a_time_step_size,
                            const double a_time_duration,
-                           const int a_viz_frequency) {
+                           const int a_viz_frequency,
+                           const std::string& a_viz_type) {
   if (a_simulation_type == "CircleRotation2D") {
     return runSimulation<CircleRotation2D>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
-        a_time_duration, a_viz_frequency);
+        a_time_duration, a_viz_frequency, a_viz_type);
   } else if (a_simulation_type == "Deformation2D") {
     return runSimulation<Deformation2D>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
-        a_time_duration, a_viz_frequency);
+        a_time_duration, a_viz_frequency, a_viz_type);
   } else {
     std::cout << "Unknown simulation type of : " << a_simulation_type << '\n';
     std::cout << "Value entries are: CircleRotation2D, Deformation2D. \n";
