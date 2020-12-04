@@ -68,6 +68,12 @@ void writeOutVisualization(const int a_iteration,
                            const double a_simulation_time,
                            const Data<double>& a_liquid_volume_fraction);
 
+/// \brief Write out visualization files in VTK format.
+void writeOutVisualizationVTK(const int a_iteration,
+                           const int a_visualization_frequency,
+                           const double a_simulation_time,
+                           const Data<double>& a_liquid_volume_fraction);
+
 //******************************************************************* //
 //     Template function definitions placed below this.
 //******************************************************************* //
@@ -75,7 +81,8 @@ template <class SimulationType>
 int runSimulation(const std::string& a_advection_method,
                   const std::string& a_reconstruction_method, const double a_dt,
                   const double a_end_time,
-                  const int a_visualization_frequency) {
+                  const int a_visualization_frequency,
+                  const std::string& a_visualization_type) {
   // Set mesh
   BasicMesh cc_mesh = SimulationType::setMesh();
 
@@ -112,7 +119,17 @@ int runSimulation(const std::string& a_advection_method,
   writeDiagnosticsHeader();
   std::string output_folder = "viz";
   const int dir_err = mkdir(output_folder.c_str(), 0777);
-  writeOutMesh(cc_mesh);
+
+  // Visualization in the first time step
+  if (a_visualization_type == "VIZ") { // file for python or matlab
+    writeOutMesh(cc_mesh);
+    writeOutVisualization(iteration, a_visualization_frequency,
+                          simulation_time, liquid_volume_fraction);
+  } else { // VTK file
+    writeOutVisualizationVTK(iteration, a_visualization_frequency,
+                          simulation_time, liquid_volume_fraction);
+  }
+
   std::chrono::duration<double> advect_VOF_time(0.0);
   std::chrono::duration<double> recon_time(0.0);
   writeOutDiagnostics(iteration, a_dt, simulation_time, velU, velV, velW,
@@ -143,10 +160,24 @@ int runSimulation(const std::string& a_advection_method,
 
     if (a_visualization_frequency > 0 &&
         iteration % a_visualization_frequency == 0) {
-      writeOutVisualization(iteration, a_visualization_frequency,
-                            simulation_time, liquid_volume_fraction);
+      if (a_visualization_type == "VIZ") {
+        writeOutVisualization(iteration, a_visualization_frequency,
+                              simulation_time, liquid_volume_fraction);
+      } else {
+        writeOutVisualizationVTK(iteration, a_visualization_frequency,
+                              simulation_time, liquid_volume_fraction);
+      }
     }
     ++iteration;
+
+  }
+  // Visualization in the last time step
+  if(a_visualization_type == "VIZ"){
+    writeOutVisualization(iteration, a_visualization_frequency,
+                          simulation_time, liquid_volume_fraction);
+  } else{
+    writeOutVisualizationVTK(iteration, a_visualization_frequency,
+                          simulation_time, liquid_volume_fraction);
   }
 
   // L1 Difference between Starting VOF and ending VOF
