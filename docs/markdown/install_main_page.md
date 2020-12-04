@@ -18,6 +18,7 @@ Several additional options can be passed to the CMake configuration to tailor IR
 * `-D BUILD_TESTING=ON` ----- Turns on building of unit tests, which are not built by default.  If building tests, GoogleTest will be downloaded and compiled unless the GOOGLETEST_DIR CMake flag is given. 
 * `-D GOOGLETEST_DIR=/path/to/google_test` ----- Provides path to [Google Test](https://github.com/google/googletest) that will be used if when building tests (if turned on).
 * `-D USE_ABSL=OFF` ----- IRL ships with a version of [Google Abseil](https://github.com/abseil/abseil-cpp) for use of its `inlined_vector` and `flat_hash_map` classes. By turning it off, IRL will revert back to its own implementation. This is strongly discouraged for performance reasons.
+* `-D BUILD_SHARED_LIBS=TRUE` ----- Build IRL as a shared library
 
 
 ## External Dependencies

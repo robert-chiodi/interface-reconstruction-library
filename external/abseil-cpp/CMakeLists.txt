@@ -109,7 +109,12 @@ if(BUILD_TESTING)
   )
 endif()
 
-add_library(absl_all STATIC)
+if(BUILD_SHARED_LIBS)
+  add_library(absl_all SHARED)
+else()
+  add_library(absl_all STATIC)
+endif()
+
 target_include_directories(absl_all PUBLIC ".")
 add_subdirectory(absl)
 install(TARGETS absl_all EXPORT "absl_all_exp" ARCHIVE DESTINATION "./absl/lib")
