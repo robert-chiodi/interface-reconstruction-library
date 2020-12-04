@@ -77,9 +77,15 @@ endif()
 set( CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
 
 # Add IRL Libraries that we are creating
-add_library(irl STATIC)
-add_library(irl_c STATIC)
-add_library(irl_fortran STATIC)
+if(BUILD_SHARED_LIBS)
+  add_library(irl SHARED)
+  add_library(irl_c SHARED)
+  add_library(irl_fortran SHARED)
+else()
+  add_library(irl STATIC)
+  add_library(irl_c STATIC)
+  add_library(irl_fortran STATIC)
+endif()
 
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")
