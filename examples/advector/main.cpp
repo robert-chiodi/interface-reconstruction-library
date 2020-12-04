@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Reconstruction method. Options: ELVIRA2D, LVIRA2D, MOF2D, "
                  "AdvectedNormals, R2P2D\n";
     std::cout << "Time step size, dt (double)\n";
-    std::cout << "Simulation duration(double)\n";
+    std::cout << "Number of cycles (integer)\n";
     std::cout
         << "Amount of time steps between visualization output (integer)\n";
     std::exit(-1);
@@ -36,8 +36,20 @@ int main(int argc, char* argv[]) {
   std::string advection_method = argv[2];
   std::string reconstruction_method = argv[3];
   double time_step_size = std::stod(argv[4]);
-  double time_duration = std::stod(argv[5]);
+  int n_cycles = std::atoi(argv[5]);
   int viz_frequency = atoi(argv[6]);
+
+  double time_duration;
+  if (simulation_type == "Deformation2D") {
+    time_duration = static_cast<double>(n_cycles) * 8.0;
+
+  } else if (simulation_type == "CircleRotation2D") {
+    time_duration = static_cast<double>(n_cycles) * 1.0;
+
+  } else {
+    std::cout << "Unknown simulation type of " << simulation_type << std::endl;
+    return -1;
+  }
 
   auto start = std::chrono::system_clock::now();
   startSimulation(simulation_type, advection_method, reconstruction_method,
