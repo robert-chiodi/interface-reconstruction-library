@@ -4,6 +4,7 @@
 
 #include "examples/advector/circle_rotation_2d.h"
 #include "examples/advector/deformation_2d.h"
+#include "examples/advector/deformation_3d.h"
 #include "examples/advector/reconstruction_types.h"
 #include "examples/advector/solver.h"
 #include "examples/advector/vof_advection.h"
@@ -21,7 +22,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Incorrect amount of command line arguments supplied. \n";
     std::cout << "Arguments should be \n";
     std::cout
-        << "Simulation to run. Options: Deformation2D, CircleRotation2D\n";
+        << "Simulation to run. Options: Deformation2D, Deformation3D, CircleRotation2D\n";
     std::cout << "Advection method. Options: SemiLagrangian, "
                  "SemiLagrangianCorrected, FullLagrangian\n";
     std::cout << "Reconstruction method. Options: ELVIRA2D, LVIRA2D, MOF2D, "
@@ -46,7 +47,8 @@ int main(int argc, char* argv[]) {
   double time_duration;
   if (simulation_type == "Deformation2D") {
     time_duration = static_cast<double>(n_cycles) * 8.0;
-
+  } else if (simulation_type == "Deformation3D") {
+    time_duration = static_cast<double>(n_cycles) * 3.0;
   } else if (simulation_type == "CircleRotation2D") {
     time_duration = static_cast<double>(n_cycles) * 1.0;
 
@@ -83,6 +85,10 @@ static int startSimulation(const std::string& a_simulation_type,
         a_time_duration, a_viz_frequency, a_viz_type);
   } else if (a_simulation_type == "Deformation2D") {
     return runSimulation<Deformation2D>(
+        a_advection_method, a_reconstruction_method, a_time_step_size,
+        a_time_duration, a_viz_frequency, a_viz_type);
+  } else if (a_simulation_type == "Deformation3D") {
+    return runSimulation<Deformation3D>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
         a_time_duration, a_viz_frequency, a_viz_type);
   } else {

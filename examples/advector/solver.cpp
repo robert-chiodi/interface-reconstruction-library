@@ -200,7 +200,7 @@ void writeOutVisualizationVTK(const int a_iteration,
   // Create zero-filled file name
   int iteration_digits = 6;
   std::string number = std::to_string(a_iteration / a_visualization_frequency);
-  assert(iteration_digits > number.length);
+  assert(iteration_digits > number.length());
   std::string id_suffix =
       std::string(iteration_digits - number.length(), '0') + number;
   std::string file_name = "viz/file_" + id_suffix + ".vtk";
