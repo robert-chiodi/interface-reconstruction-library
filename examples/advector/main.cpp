@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Advection method. Options: SemiLagrangian, "
                  "SemiLagrangianCorrected, FullLagrangian\n";
     std::cout << "Reconstruction method. Options: ELVIRA2D, LVIRA2D, MOF2D, "
-                 "AdvectedNormals, R2P2D, ELVIRA3D, LVIRA3D\n";
+                 "AdvectedNormals, R2P2D, ELVIRA3D, LVIRA3D, MOF3D, AdvectedNormals3D\n";
     std::cout << "Time step size, dt (double)\n";
     std::cout << "Number of cycles (integer)\n";
     std::cout
