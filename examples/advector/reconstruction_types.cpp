@@ -65,11 +65,15 @@ void getReconstruction(
     AdvectedNormals3D::getReconstruction(
         a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid,
         a_localized_separator_link, a_dt, a_U, a_V, a_W, a_interface);
+  } else if (a_reconstruction_method == "R2P3D") {
+    R2P3D::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                             a_gas_centroid, a_localized_separator_link, a_dt,
+                             a_U, a_V, a_W, a_interface);
   } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
     std::cout << "Value entries are: ELVIRA2D, LVIRA2D, MOF2D, "
-                 "AdvectedNormals, R2P2D, ELVIRA3D. \n";
+                 "AdvectedNormals, R2P2D, ELVIRA3D, LVIRA3D, MOF3D, AdvectedNormals3D, R2P3D. \n";
     std::exit(-1);
   }
 }
@@ -808,6 +812,149 @@ void R2P2D::getReconstruction(
       }
       (*a_interface)(i, j, k) =
           reconstructionWithR2P2D(neighborhood, (*a_interface)(i, j, k));
+    }
+  }
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void R2P3D::getReconstruction(
+    const Data<double>& a_liquid_volume_fraction,
+    const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
+    const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+    const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface) {
+  // Get mesh everything is living on.
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  // Container for moments from advection
+  Data<IRL::ListedVolumeMoments<IRL::VolumeMomentsAndNormal>> listed_moments(
+      &mesh);
+
+  // const int k = 0;
+  // const int kk = 0;
+  for (int i = mesh.imino() + 1; i <= mesh.imaxo() - 1; ++i) {
+    for (int j = mesh.jmino() + 1; j <= mesh.jmaxo() - 1; ++j) {
+      for (int k = mesh.kmino() + 1; k <= mesh.kmaxo() - 1; ++k) {
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        const auto localizer_link =
+            IRL::LocalizerLinkFromLocalizedSeparatorLink(
+                &a_localized_separator_link(i, j, k));
+        for (IRL::UnsignedIndex_t n = 0;
+             n < (*a_interface)(i, j, k).getNumberOfPlanes(); ++n) {
+          IRL::Polygon interface_poly =
+              IRL::getPlanePolygonFromReconstruction<IRL::Polygon>(
+                  cell, (*a_interface)(i, j, k), (*a_interface)(i, j, k)[n]);
+          if (interface_poly.getNumberOfVertices() == 0) {
+            continue;
+          }
+          for (IRL::UnsignedIndex_t tri = 0;
+               tri < interface_poly.getNumberOfSimplicesInDecomposition();
+               ++tri) {
+            IRL::Tri simplex = static_cast<IRL::Tri>(
+                interface_poly.getSimplexFromDecomposition(tri));
+            for (auto& vertex : simplex) {
+              vertex = back_project_vertex(vertex, a_dt, a_U, a_V, a_W);
+            }
+            simplex.calculateAndSetPlaneOfExistence();
+            auto new_moments =
+                IRL::getVolumeMoments<IRL::TaggedAccumulatedListedVolumeMoments<
+                    IRL::VolumeMomentsAndNormal>>(simplex, localizer_link);
+            for (IRL::UnsignedIndex_t moment = 0; moment < new_moments.size();
+                 ++moment) {
+              auto index_for_tag =
+                  getIndexFromTag(mesh, new_moments.getTagForIndex(moment));
+              listed_moments(index_for_tag[0], index_for_tag[1],
+                             index_for_tag[2]) +=
+                  new_moments.getMomentsForIndex(moment);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Now have all of the advected moments. Get and store the reconstructions
+  // from this by partitioning with Kmeans (i.e., AdvectedNormals).
+  IRL::R2PNeighborhood<IRL::RectangularCuboid> neighborhood;
+  ////////////////////////////////////////////////
+  neighborhood.resize(27);
+  neighborhood.setCenterOfStencil(13);
+  IRL::RectangularCuboid stencil_cells[27];
+  IRL::SeparatedMoments<IRL::VolumeMoments> stencil_moments[27];
+  int num_mof = 0;
+  int num_adv = 0;
+  int num_adv2 = 0;
+  ////////////////////////////////////////////////
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) >
+                IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(1.0, a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+          continue;
+        }
+
+        // Set up R2P neighborhood
+        for (int ii = i - 1; ii < i + 2; ++ii) {
+          for (int jj = j - 1; jj < j + 2; ++jj) {
+            for (int kk = k - 1; kk < k + 2; ++kk) {
+              const int ind =
+                  (ii - i + 1) * 9 + (jj - j + 1) * 3 + (kk - k + 1);
+              stencil_cells[ind] = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                  IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+              double vol = stencil_cells[ind].calculateVolume();
+              stencil_moments[ind] = IRL::SeparatedMoments<IRL::VolumeMoments>(
+                  IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk) * vol,
+                                     a_liquid_centroid(ii, jj, kk)),
+                  IRL::VolumeMoments(
+                      (1.0 - a_liquid_volume_fraction(ii, jj, kk)) * vol,
+                      a_gas_centroid(ii, jj, kk)));
+              neighborhood.setMember(static_cast<IRL::UnsignedIndex_t>(ind),
+                                     &stencil_cells[ind],
+                                     &stencil_moments[ind]);
+            }
+          }
+        }
+
+        if (listed_moments(i, j, k).size() == 0) {
+          // No interface advected in, use MoF
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(
+              IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+              IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          double vol = cell.calculateVolume();
+          IRL::SeparatedMoments<IRL::VolumeMoments> svm(
+              IRL::VolumeMoments(a_liquid_volume_fraction(i, j, k) * vol,
+                                 a_liquid_centroid(i, j, k)),
+              IRL::VolumeMoments(
+                  (1.0 - a_liquid_volume_fraction(i, j, k)) * vol,
+                  a_gas_centroid(i, j, k)));
+          (*a_interface)(i, j, k) = IRL::reconstructionWithMOF3D(cell, svm);
+          ++num_mof;
+          neighborhood.setSurfaceArea(
+              getReconstructionSurfaceArea(cell, (*a_interface)(i, j, k)));
+        } else {
+          (*a_interface)(i, j, k) = IRL::reconstructionWithAdvectedNormals(
+              listed_moments(i, j, k), neighborhood);
+          ++num_adv;
+          if ((*a_interface)(i, j, k).getNumberOfPlanes() == 2) {
+            ++num_adv2;
+          }
+          double area_sum = 0.0;
+          for (const auto& moment : listed_moments(i, j, k)) {
+            area_sum += moment.volumeMoments().volume();
+          }
+          neighborhood.setSurfaceArea(area_sum);
+        }
+        (*a_interface)(i, j, k) =
+            reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+      }
     }
   }
   a_interface->updateBorder();
