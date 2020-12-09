@@ -50,11 +50,18 @@ void getReconstruction(
     R2P2D::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
                              a_gas_centroid, a_localized_separator_link, a_dt,
                              a_U, a_V, a_W, a_interface);
+  } else if (a_reconstruction_method == "ELVIRA3D") {
+    ELVIRA3D::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
+                                a_interface);
+  } else if (a_reconstruction_method == "LVIRA3D") {
+    LVIRA3D::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                               a_gas_centroid, a_dt, a_U, a_V, a_W,
+                               a_interface);
   } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
     std::cout << "Value entries are: ELVIRA2D, LVIRA2D, MOF2D, "
-                 "AdvectedNormals, R2P2D. \n";
+                 "AdvectedNormals, R2P2D, ELVIRA3D. \n";
     std::exit(-1);
   }
 }
@@ -97,6 +104,53 @@ void ELVIRA2D::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
       // Now perform actual ELVIRA and obtain interface PlanarSeparator
       (*a_interface)(i, j, k) = reconstructionWithELVIRA2D(neighborhood);
+    }
+  }
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void ELVIRA3D::getReconstruction(const Data<double>& a_liquid_volume_fraction,
+                                 const double a_dt, const Data<double>& a_U,
+                                 const Data<double>& a_V,
+                                 const Data<double>& a_W,
+                                 Data<IRL::PlanarSeparator>* a_interface) {
+  IRL::ELVIRANeighborhood neighborhood;
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  neighborhood.resize(27);
+  IRL::RectangularCuboid cells[27];
+  // Loop over cells in domain. Skip if cell is not mixed phase.
+  // const int k = 0;
+  // const int kk = 0;
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(1.0, a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+          continue;
+        }
+        // Build surrounding stencil information for ELVIRA.
+        for (int ii = i - 1; ii < i + 2; ++ii) {
+          for (int jj = j - 1; jj < j + 2; ++jj) {
+            for (int kk = k - 1; kk < k + 2; ++kk) {
+              // Reversed order, bad for cache locality but thats okay..
+              cells[9 * (kk - k + 1 ) + (jj - j + 1) * 3 + (ii - i + 1)] =
+                  IRL::RectangularCuboid::fromBoundingPts(
+                      IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                      IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+              neighborhood.setMember(&cells[9 * (kk - k + 1 ) + (jj - j + 1) * 3 + (ii - i + 1)],
+                                    &a_liquid_volume_fraction(ii, jj, kk), ii - i,
+                                    jj - j, kk - k);
+            }
+          }
+        }
+        // Now perform actual ELVIRA and obtain interface PlanarSeparator
+        (*a_interface)(i, j, k) = reconstructionWithELVIRA3D(neighborhood);
+      }
     }
   }
   a_interface->updateBorder();
@@ -158,6 +212,71 @@ void LVIRA2D::getReconstruction(const Data<double>& a_liquid_volume_fraction,
 
       (*a_interface)(i, j, k) =
           reconstructionWithLVIRA2D(neighborhood, (*a_interface)(i, j, k));
+    }
+  }
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void LVIRA3D::getReconstruction(const Data<double>& a_liquid_volume_fraction,
+                                const Data<IRL::Pt>& a_liquid_centroid,
+                                const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface) {
+  IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  neighborhood.resize(27);
+  neighborhood.setCenterOfStencil(13);
+  IRL::RectangularCuboid cells[27];
+  // Loop over cells in domain. Skip if cell is not mixed phase.
+  // const int k = 0;
+  // const int kk = 0;
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) >
+                IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(1.0, a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+          continue;
+        }
+        // Build surrounding stencil information for ELVIRA.
+        for (int ii = i - 1; ii < i + 2; ++ii) {
+          for (int jj = j - 1; jj < j + 2; ++jj) {
+            for (int kk = k - 1; kk < k + 2; ++kk) {
+              // Reversed order, bad for cache locality but thats okay..
+              const int local_index =
+                  (kk - k + 1) * 9 + (jj - j + 1) * 3 + (ii - i + 1);
+              cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                  IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+              neighborhood.setMember(
+                  static_cast<IRL::UnsignedIndex_t>(local_index),
+                  &cells[local_index], &a_liquid_volume_fraction(ii, jj, kk));
+            }
+          }
+        }
+        // Now create initial guess using centroids
+        auto bary_normal = IRL::Normal::fromPtNormalized(
+            a_gas_centroid(i, j, k) - a_liquid_centroid(i, j, k));
+        bary_normal.normalize();
+        const double initial_distance =
+            bary_normal * neighborhood.getCenterCell().calculateCentroid();
+        (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+            IRL::Plane(bary_normal, initial_distance));
+        setDistanceToMatchVolumeFractionPartialFill(
+            neighborhood.getCenterCell(),
+            neighborhood.getCenterCellStoredMoments(),
+            &(*a_interface)(i, j, k));
+
+        (*a_interface)(i, j, k) =
+            reconstructionWithLVIRA3D(neighborhood, (*a_interface)(i, j, k));
+      }
     }
   }
   a_interface->updateBorder();

@@ -33,7 +33,25 @@ struct ELVIRA2D {
                                 Data<IRL::PlanarSeparator>* a_interface);
 };
 
+struct ELVIRA3D {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface);
+};
+
 struct LVIRA2D {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
+                                const Data<IRL::Pt>& a_liquid_centroid,
+                                const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct LVIRA3D {
   static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
                                 const Data<IRL::Pt>& a_liquid_centroid,
                                 const Data<IRL::Pt>& a_gas_centroid,

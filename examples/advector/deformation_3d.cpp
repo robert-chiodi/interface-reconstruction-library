@@ -30,9 +30,9 @@
 #include "examples/advector/solver.h"
 #include "examples/advector/vof_advection.h"
 
-constexpr int NX = 64;
-constexpr int NY = 64;
-constexpr int NZ = 64;
+constexpr int NX = 50;
+constexpr int NY = 50;
+constexpr int NZ = 50;
 constexpr int GC = 2;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
 constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
