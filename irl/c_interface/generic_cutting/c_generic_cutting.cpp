@@ -580,6 +580,28 @@ void c_getNormMoments_Poly_PlanarLoc_Vol(const c_Poly* a_poly,
       *a_poly->obj_ptr, *a_planar_localizer->obj_ptr, IRL::C_CUTTING_METHOD);
 }
 
+void c_getNormMoments_Tri_PlanarLoc_VM(const c_Tri* a_tri,
+                                       const c_PlanarLoc* a_planar_localizer,
+                                       c_VM* a_moments_to_return) {
+  assert(a_tri != nullptr);
+  assert(a_tri->obj_ptr != nullptr);
+  assert(a_planar_localizer != nullptr);
+  assert(a_planar_localizer->obj_ptr != nullptr);
+  *a_moments_to_return->obj_ptr = IRL::c_RuntimegetMoments<IRL::VolumeMoments>(
+      *a_tri->obj_ptr, *a_planar_localizer->obj_ptr, IRL::C_CUTTING_METHOD);
+}
+
+void c_getNormMoments_Poly_PlanarLoc_VM(const c_Poly* a_poly,
+                                        const c_PlanarLoc* a_planar_localizer,
+                                        c_VM* a_moments_to_return) {
+  assert(a_poly != nullptr);
+  assert(a_poly->obj_ptr != nullptr);
+  assert(a_planar_localizer != nullptr);
+  assert(a_planar_localizer->obj_ptr != nullptr);
+  *a_moments_to_return->obj_ptr = IRL::c_RuntimegetMoments<IRL::VolumeMoments>(
+      *a_poly->obj_ptr, *a_planar_localizer->obj_ptr, IRL::C_CUTTING_METHOD);
+}
+
 void c_getMoments_Tri_LocLink_TagAccListVM_VMAN(
     const c_Tri* a_tri, const c_LocLink* a_localizer_link,
     c_TagAccListVM_VMAN* a_moments_to_return) {

@@ -45,6 +45,7 @@ module f_getMoments
   use f_Tet_class
   use f_Poly_class
   use f_Tri_class
+  use f_VM_class
   use f_SepVM_class
   use f_SepVM_d3_class
   use f_SepVol_class
@@ -117,6 +118,10 @@ module f_getMoments
     module procedure getNormMoments_Tri_PlanarLoc_Vol
     ! Cut Poly by PlanarLoc to get Volume (Surface Area)
     module procedure getNormMoments_Poly_PlanarLoc_Vol
+    ! Cut Tri by PlanarLoc to get VolumeMoments (Surface Area+Centroid)
+    module procedure getNormMoments_Tri_PlanarLoc_VM
+    ! Cut Tri by PlanarLoc to get VolumeMoments (Surface Area+Centroid)
+    module procedure getNormMoments_Poly_PlanarLoc_VM
     ! Cut Tri by LocLink to get TagAccVM<VM>
     module procedure getNormMoments_Tri_LocLink_TagAccVM_VM
     ! Cut CapDod_LLLL by LocSepLink to get TagAccVM<SepVol>
@@ -290,6 +295,10 @@ module f_getMoments
     module procedure getNormMoments_Tri_PlanarLoc_Vol
     ! Cut Poly by PlanarLoc to get Volume (Surface Area)
     module procedure getNormMoments_Poly_PlanarLoc_Vol
+    ! Cut Tri by PlanarLoc to get Volume (Surface Area + Centroid)
+    module procedure getNormMoments_Tri_PlanarLoc_VM
+    ! Cut Poly by PlanarLoc to get Volume (Surface Area + Centroid)
+    module procedure getNormMoments_Poly_PlanarLoc_VM
     ! Cut CapDod_LLLL by LocSepLink to get TagAccVM<SepVol>
     module procedure getNormMoments_CapDod_LLLL_LocSepLink_TagAccVM_SepVol
     ! Cut CapDod_LLLT by LocSepLink to get TagAccVM<SepVol>
@@ -789,6 +798,30 @@ module f_getMoments
       type(c_PlanarLoc) :: a_planar_localizer ! Pointer to PlanarLoc object
       real(C_DOUBLE) :: a_moments_to_return ! Pointer to double to to store volume
     end subroutine F_getNormMoments_Poly_PlanarLoc_Vol
+  end interface
+
+  interface
+    subroutine F_getNormMoments_Tri_PlanarLoc_VM(a_tri, a_planar_localizer, a_moments_to_return) &
+    bind(C, name="c_getNormMoments_Tri_PlanarLoc_VM")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_Tri) :: a_tri ! Pointer to Tri object
+      type(c_PlanarLoc) :: a_planar_localizer ! Pointer to PlanarLoc object
+      type(c_VM) :: a_moments_to_return ! Pointer to VM
+    end subroutine F_getNormMoments_Tri_PlanarLoc_VM
+  end interface
+
+  interface
+    subroutine F_getNormMoments_Poly_PlanarLoc_VM(a_poly, a_planar_localizer, a_moments_to_return) &
+    bind(C, name="c_getNormMoments_Poly_PlanarLoc_VM")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_Poly) :: a_poly ! Pointer to Polygon object
+      type(c_PlanarLoc) :: a_planar_localizer ! Pointer to PlanarLoc object
+      type(c_VM) :: a_moments_to_return ! Pointer to VM
+    end subroutine F_getNormMoments_Poly_PlanarLoc_VM
   end interface
 
   interface
@@ -2122,6 +2155,30 @@ contains
           (a_polygon%c_object, a_planar_localizer%c_object, a_moments_to_return)
 
   end subroutine getNormMoments_Poly_PlanarLoc_Vol
+
+  subroutine getNormMoments_Tri_PlanarLoc_VM(a_tri, a_planar_localizer, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(Tri_type), intent(in) :: a_tri
+      type(PlanarLoc_type), intent(in) :: a_planar_localizer
+      type(VM_type), intent(inout) :: a_moments_to_return
+
+      call F_getNormMoments_Tri_PlanarLoc_VM &
+          (a_tri%c_object, a_planar_localizer%c_object, a_moments_to_return%c_object)
+
+  end subroutine getNormMoments_Tri_PlanarLoc_VM
+
+  subroutine getNormMoments_Poly_PlanarLoc_VM(a_polygon, a_planar_localizer, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(Poly_type), intent(in) :: a_polygon
+      type(PlanarLoc_type), intent(in) :: a_planar_localizer
+      type(VM_type), intent(inout) :: a_moments_to_return
+
+      call F_getNormMoments_Poly_PlanarLoc_VM &
+          (a_polygon%c_object, a_planar_localizer%c_object, a_moments_to_return%c_object)
+
+  end subroutine getNormMoments_Poly_PlanarLoc_VM
 
   subroutine getMoments_TRI_LocLink_TagAccListVM_VMAN(a_tri, a_localizer_link, a_moments_to_return)
     use, intrinsic :: iso_c_binding

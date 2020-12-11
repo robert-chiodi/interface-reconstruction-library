@@ -46,6 +46,7 @@
 #include "irl/c_interface/moments/c_tagged_accumulated_tagged_accumulated_volume.h"
 #include "irl/c_interface/moments/c_tagged_accumulated_volume.h"
 #include "irl/c_interface/moments/c_tagged_accumulated_volume_moments.h"
+#include "irl/c_interface/moments/c_volume_moments.h"
 #include "irl/c_interface/planar_reconstruction/c_localized_separator.h"
 #include "irl/c_interface/planar_reconstruction/c_localized_separator_group_link.h"
 #include "irl/c_interface/planar_reconstruction/c_localized_separator_link.h"
@@ -206,6 +207,14 @@ void c_getNormMoments_Tri_PlanarLoc_Vol(const c_Tri* a_tri,
 void c_getNormMoments_Poly_PlanarLoc_Vol(const c_Poly* a_poly,
                                          const c_PlanarLoc* a_planar_localizer,
                                          double* a_moments_to_return);
+
+void c_getNormMoments_Tri_PlanarLoc_VM(const c_Tri* a_tri,
+                                       const c_PlanarLoc* a_planar_localizer,
+                                       c_VM* a_moments_to_return);
+
+void c_getNormMoments_Poly_PlanarLoc_VM(const c_Poly* a_poly,
+                                        const c_PlanarLoc* a_planar_localizer,
+                                        c_VM* a_moments_to_return);
 
 void c_getMoments_Tri_LocLink_TagAccListVM_VMAN(
     const c_Tri* a_tri, const c_LocLink* a_localizer_link,
@@ -563,4 +572,4 @@ void c_getNormMoments_CapDod_TTTT_LocSep_SepVol(
 
 }  // end extern C
 
-#endif // IRL_C_INTERFACE_GENERIC_CUTTING_C_GENERIC_CUTTING_H_
+#endif  // IRL_C_INTERFACE_GENERIC_CUTTING_C_GENERIC_CUTTING_H_

@@ -2,6 +2,8 @@
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_separated_volume_moments_doubles3.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_separated_volume_moments_doubles3.h)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_separated_volume_moments.cpp)
+target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_volume_moments.h)
+target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_volume_moments.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_separated_volume.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_listedvm_vman.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/moments/c_tagged_accumulated_listed_volume_moments_and_normal.h)

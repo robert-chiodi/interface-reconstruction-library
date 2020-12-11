@@ -2,6 +2,7 @@
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_dodecahedron_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_symmetrichexahedron_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_sepvm_class.f90)
+target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_vm_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_octahedron_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_planarseparator_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_sepvm_doubles3_class.f90)
