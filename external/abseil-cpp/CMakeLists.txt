@@ -111,13 +111,16 @@ endif()
 
 if(BUILD_SHARED_LIBS)
   add_library(absl_all SHARED)
+  if(APPLE)
+    target_link_libraries(absl_all "-framework CoreFoundation")
+  endif()
 else()
   add_library(absl_all STATIC)
 endif()
 
 target_include_directories(absl_all PUBLIC ".")
 add_subdirectory(absl)
-install(TARGETS absl_all EXPORT "absl_all_exp" ARCHIVE DESTINATION "./absl/lib")
+install(TARGETS absl_all EXPORT "absl_all_exp" ARCHIVE DESTINATION "lib")
 
 if(ABSL_ENABLE_INSTALL)
   # absl:lts-remove-begin(system installation is supported for LTS releases)

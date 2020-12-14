@@ -81,6 +81,9 @@ if(BUILD_SHARED_LIBS)
   add_library(irl SHARED)
   add_library(irl_c SHARED)
   add_library(irl_fortran SHARED)
+  if(APPLE AND IRL_USE_ABSL)
+    target_link_libraries(irl PUBLIC "-framework CoreFoundation")
+  endif()
 else()
   add_library(irl STATIC)
   add_library(irl_c STATIC)
@@ -122,7 +125,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
 #add_subdirectory("${PROJECT_SOURCE_DIR}/tools")
 
 # Export targets to be used by other programs
-install(TARGETS irl EXPORT "irl_exp" ARCHIVE DESTINATION "./lib")
+install(TARGETS irl EXPORT "irl_exp" ARCHIVE DESTINATION "lib")
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/irl" # source directory
         DESTINATION "include" # target directory
         FILES_MATCHING # install only matched files
