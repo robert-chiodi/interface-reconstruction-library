@@ -33,6 +33,13 @@ inline PlanarSeparator reconstructionWithR2P3D(
     const R2PNeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
 
+/// \brief Perform R2P reconstruction with user-defined weights for a 3D problem.
+template <class CellType>
+inline PlanarSeparator reconstructionWithR2P3D(
+    const R2PNeighborhood<CellType>& a_neighborhood_geometry,
+    PlanarSeparator a_initial_reconstruction,
+    const R2PWeighting& a_r2p_weighting);
+
 /// \brief Perform ELVIRA Reconstruction for 2D.
 inline PlanarSeparator reconstructionWithELVIRA2D(
     const ELVIRANeighborhood& a_neighborhood_geometry);

@@ -82,6 +82,42 @@ static constexpr UnsignedIndex_t R2P_3D2P_rows = 7 * R2P_3D2P_ncells + 1;
 /// which is equal to parameters being fit.
 static constexpr UnsignedIndex_t R2P_3D2P_columns = 6;
 
+/// \brief Struct to contain R2P optimization parameters
+struct OptimizationBehavior
+{
+  // /// \brief If `this->calculateScalarError()` is less than this, exit.
+  // static constexpr double acceptable_error_m = 1.0e-4 * 1.0e-4;
+  // /// \brief Maximum number of attempted iterations before exiting.
+  // static constexpr UnsignedIndex_t maximum_iterations_m = 20;
+  // /// \brief Minimum change in angle related delta below which minimum is
+  // /// deemed reached.
+  // static constexpr double minimum_angle_change_m = 0.0001745329;
+  // /// \brief Minimum change in distance related delta below which minimum is
+  // /// deemed reached.
+  // static constexpr double minimum_distance_change_m = 1.0e-4;
+  // /// \brief Increase factor for lambda if more damping needed.
+  // static constexpr double lambda_increase_m = 5.0;
+  // /// \brief Decrease factor for lambda if new best solution is found.
+  // static constexpr double lambda_decrease_m = 1.0 / 10.0;
+  // /// \brief Number of iterations to allow between calculating a new Jacobian.
+  // static constexpr UnsignedIndex_t delay_jacobian_amount_m = 0;
+  // /// \brief Initial angle to use when first calculating Jacobian, equal to
+  // /// 5 degrees in radians.
+  // static constexpr double initial_angle_m =
+  //     0.001 * 0.0174533; // 1e-3 Deg in radians
+  // /// \brief Initial distance to use when first calculating Jacobian.
+  // static constexpr double initial_distance_m = 0.001;
+};
+
+/// \brief Struct to contain R2P optimization parameters
+struct R2PWeighting
+{
+  double importance_of_liquid_volume_fraction = 0.0;
+  double importance_of_liquid_centroid_relative_to_gas = 0.5;
+  double importance_of_centroid = 1.0;
+  double importance_of_surface_area = 0.0;
+};
+
 template <class CellType> class R2P_2D1P;
 template <class CellType> class R2P_3D1P;
 template <class CellType> class R2P_2D2P;
@@ -156,6 +192,12 @@ public:
 
   /// \brief Return the final reconstruction to be used.
   PlanarSeparator getFinalReconstruction(void);
+
+  /// \brief Set the optimization parameters.
+  void setOptimizationBehavior(const OptimizationBehavior &a_parameters);
+
+  /// \brief Set the cost function relative weights.
+  void setCostFunctionBehavior(const R2PWeighting &a_parameters);
 
   /// \brief Calculate the vector error a_correct_vector - a_attempt_vector
   /// where both vectors are weighted geometry vectors.
@@ -308,6 +350,10 @@ public:
   CellType system_center_cell_m;
   /// \brief Center cell centroid to be used for shifting.
   Pt initial_center_cell_centroid_m;
+  /// \brief Struct of optimization parameters.
+  OptimizationBehavior optimization_behavior_m;
+  /// \brief Struct of cost function relative weights.
+  R2PWeighting weight_importance_m;
   //----------------------------------------------------------------------
 
   //---------------------- Working variables  ----------------------------

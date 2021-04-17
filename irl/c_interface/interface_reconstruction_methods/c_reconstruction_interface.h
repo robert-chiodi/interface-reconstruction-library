@@ -19,6 +19,7 @@
 #include "irl/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_tet.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_rectangular_cuboid.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_r2p_neighborhood_rectangular_cuboid.h"
+#include "irl/c_interface/interface_reconstruction_methods/c_r2p_weighting.h"
 #include "irl/c_interface/moments/c_listedvm_vman.h"
 #include "irl/c_interface/moments/c_separated_volume_moments.h"
 #include "irl/c_interface/planar_reconstruction/c_separators.h"
@@ -109,6 +110,10 @@ void c_reconstructR2P2D_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
 
 void c_reconstructR2P3D_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
                                 c_PlanarSep* a_separator);
+
+void c_reconstructR2P3DwWeights_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
+                                c_PlanarSep* a_separator,
+                                const c_R2PWeighting* a_r2p_weighting);
 
 void c_reconstructR2P2DDbg_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
                                    c_PlanarSep* a_separator);

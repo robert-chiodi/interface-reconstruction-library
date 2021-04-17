@@ -43,6 +43,18 @@ PlanarSeparator R2PCommon<CellType, kColumns>::getFinalReconstruction(void) {
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
+void R2PCommon<CellType, kColumns>::setOptimizationBehavior(
+    const OptimizationBehavior &a_parameters) {
+  optimization_behavior_m = a_parameters;
+}
+
+template <class CellType, UnsignedIndex_t kColumns>
+void R2PCommon<CellType, kColumns>::setCostFunctionBehavior(
+    const R2PWeighting &a_parameters) {
+  weight_importance_m = a_parameters;
+}
+
+template <class CellType, UnsignedIndex_t kColumns>
 Eigen::Matrix<double, Eigen::Dynamic, 1>
 R2PCommon<CellType, kColumns>::calculateVectorError(void) {
   return (correct_values_m - guess_values_m);
@@ -615,7 +627,10 @@ void R2P_3D1P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
   double volume_weight_switch = {1.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
-  this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, 0.0);
+  this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
+                                            this->weight_importance_m.importance_of_liquid_centroid_relative_to_gas, 
+                                            this->weight_importance_m.importance_of_centroid, 
+                                            0.0);
   this->correct_values_m = this->correct_values_m.cwiseProduct(this->weights_m);
 
   this->best_reference_frame_m =
@@ -864,7 +879,11 @@ void R2P_3D2P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
   double weight_surface_area =
       0.75 *
       std::pow(2.0 * (0.5 - this->stencil_average_volume_fraction_m), 2.0);
-  this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, weight_surface_area);
+  // this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, weight_surface_area);
+  this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
+                                            this->weight_importance_m.importance_of_liquid_centroid_relative_to_gas, 
+                                            this->weight_importance_m.importance_of_centroid, 
+                                            weight_surface_area);
   this->correct_values_m = this->correct_values_m.cwiseProduct(this->weights_m);
 
   Normal tangent0;
