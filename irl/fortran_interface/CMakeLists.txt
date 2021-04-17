@@ -67,3 +67,4 @@ target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_sepvol_
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_symmetrictet_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_cappeddodecahedron_LLTT_class.f90)
 target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_cappeddodecahedron_LLLL_class.f90)
+target_sources(irl_fortran PRIVATE ${IRL_SOURCE_DIR}/fortran_interface/f_r2pweighting_class.f90)

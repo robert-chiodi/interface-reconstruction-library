@@ -84,5 +84,6 @@ module irl_fortran_interface
   use f_ReconstructionInterface
   use f_Serializer
   use f_ByteBuffer_class
+  use f_r2pweighting_class
 
 end module irl_fortran_interface

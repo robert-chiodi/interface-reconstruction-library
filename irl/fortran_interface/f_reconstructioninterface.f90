@@ -32,6 +32,7 @@ module f_ReconstructionInterface
   use f_LVIRANeigh_Hex_class
   use f_LVIRANeigh_Tet_class  
   use f_R2PNeigh_RectCub_class
+  use f_R2PWeighting_class
   implicit none
 
   ! ELVIRA is already a plain name, reconstructELVIRA2D, reconstructELVIRA3D
@@ -82,6 +83,8 @@ module f_ReconstructionInterface
   interface reconstructR2P3D
     ! 3D R2P on a RectCub mesh
     module procedure reconstructR2P3D_RectCub
+    ! 3D R2P with user-defined weighting on a RectCub mesh
+    module procedure reconstructR2P3DwWeights_RectCub
   end interface reconstructR2P3D
 
   interface reconstructR2P2DDbg
@@ -316,6 +319,18 @@ module f_ReconstructionInterface
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep
     end subroutine F_reconstructR2P3D_RectCub
   end interface
+
+  interface
+    subroutine F_reconstructR2P3DwWeights_RectCub(a_neighborhood, a_planar_separator, a_importances) &
+    bind(C, name="c_reconstructR2P3DwWeights_RectCub")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_R2PNeigh_RectCub) :: a_neighborhood ! Pointer to a R2PNeigh<RectCub>
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep
+      type(c_R2PWeighting) :: a_importances ! Pointer for R2PWeighting
+    end subroutine F_reconstructR2P3DwWeights_RectCub
+  end interface  
 
   interface
     subroutine F_reconstructR2P2DDbg_RectCub(a_neighborhood, a_planar_separator) &
@@ -594,6 +609,15 @@ module f_ReconstructionInterface
       type(PlanarSep_type), intent(inout) :: a_planar_separator
       call F_reconstructR2P3D_RectCub(a_neighborhood%c_object, a_planar_separator%c_object)
   end subroutine reconstructR2P3D_RectCub
+
+  subroutine reconstructR2P3DwWeights_RectCub(a_neighborhood, a_planar_separator, a_importances)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(R2PNeigh_RectCub_type), intent(in) :: a_neighborhood
+      type(PlanarSep_type), intent(inout) :: a_planar_separator
+      type(R2PWeighting_type), intent(in) :: a_importances
+      call F_reconstructR2P3DwWeights_RectCub(a_neighborhood%c_object, a_planar_separator%c_object, a_importances%c_object)
+  end subroutine reconstructR2P3DwWeights_RectCub  
 
   subroutine reconstructR2P2DDbg_RectCub(a_neighborhood, a_planar_separator)
     use, intrinsic :: iso_c_binding

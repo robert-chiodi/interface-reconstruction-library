@@ -13,3 +13,5 @@ target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruct
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_tet.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_rectangular_cuboid.cpp)
 target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruction_methods/c_r2p_neighborhood_rectangular_cuboid.h)
+target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruction_methods/c_r2p_weighting.h)
+target_sources(irl_c PRIVATE ${IRL_SOURCE_DIR}/c_interface/interface_reconstruction_methods/c_r2p_weighting.cpp)

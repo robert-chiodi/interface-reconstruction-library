@@ -48,6 +48,27 @@ PlanarSeparator reconstructionWithR2P3D(
   }
 }
 
+template <class CellType>
+PlanarSeparator reconstructionWithR2P3D(
+    const R2PNeighborhood<CellType>& a_neighborhood_geometry,
+    PlanarSeparator a_initial_reconstruction,
+    const R2PWeighting& a_r2p_weighting) {
+  cleanReconstruction(
+      a_neighborhood_geometry.getCenterCell(),
+      (a_neighborhood_geometry.getCenterCellStoredMoments())[0].volume() /
+          a_neighborhood_geometry.getCenterCell().calculateVolume(),
+      &a_initial_reconstruction);
+  if (a_initial_reconstruction.getNumberOfPlanes() == 1) {
+    R2P_3D1P<CellType> r2p_system;
+    r2p_system.setCostFunctionBehavior(a_r2p_weighting);
+    return r2p_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
+  } else {
+    R2P_3D2P<CellType> r2p_system;
+    r2p_system.setCostFunctionBehavior(a_r2p_weighting);
+    return r2p_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
+  }
+}
+
 PlanarSeparator reconstructionWithELVIRA2D(
     const ELVIRANeighborhood& a_neighborhood_geometry) {
   ELVIRA_2D elvira_system;
