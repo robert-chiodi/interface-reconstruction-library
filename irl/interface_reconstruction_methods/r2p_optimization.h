@@ -24,6 +24,7 @@
 #include "irl/geometry/general/rotations.h"
 #include "irl/geometry/polygons/polygon.h"
 #include "irl/interface_reconstruction_methods/r2p_neighborhood.h"
+#include "irl/interface_reconstruction_methods/optimization_behavior.h"
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/optimization/bfgs.h"
 #include "irl/optimization/levenberg_marquardt.h"
@@ -83,33 +84,6 @@ static constexpr UnsignedIndex_t R2P_3D2P_rows = 7 * R2P_3D2P_ncells + 1;
 static constexpr UnsignedIndex_t R2P_3D2P_columns = 6;
 
 /// \brief Struct to contain R2P optimization parameters
-struct OptimizationBehavior
-{
-  // /// \brief If `this->calculateScalarError()` is less than this, exit.
-  // static constexpr double acceptable_error_m = 1.0e-4 * 1.0e-4;
-  // /// \brief Maximum number of attempted iterations before exiting.
-  // static constexpr UnsignedIndex_t maximum_iterations_m = 20;
-  // /// \brief Minimum change in angle related delta below which minimum is
-  // /// deemed reached.
-  // static constexpr double minimum_angle_change_m = 0.0001745329;
-  // /// \brief Minimum change in distance related delta below which minimum is
-  // /// deemed reached.
-  // static constexpr double minimum_distance_change_m = 1.0e-4;
-  // /// \brief Increase factor for lambda if more damping needed.
-  // static constexpr double lambda_increase_m = 5.0;
-  // /// \brief Decrease factor for lambda if new best solution is found.
-  // static constexpr double lambda_decrease_m = 1.0 / 10.0;
-  // /// \brief Number of iterations to allow between calculating a new Jacobian.
-  // static constexpr UnsignedIndex_t delay_jacobian_amount_m = 0;
-  // /// \brief Initial angle to use when first calculating Jacobian, equal to
-  // /// 5 degrees in radians.
-  // static constexpr double initial_angle_m =
-  //     0.001 * 0.0174533; // 1e-3 Deg in radians
-  // /// \brief Initial distance to use when first calculating Jacobian.
-  // static constexpr double initial_distance_m = 0.001;
-};
-
-/// \brief Struct to contain R2P optimization parameters
 struct R2PWeighting
 {
   double importance_of_liquid_volume_fraction = 0.0;
@@ -145,29 +119,6 @@ template <class CellType, UnsignedIndex_t kColumns> class R2PCommon {
   friend R2P_3D2P<CellType>;
 
 public:
-  /// \brief If `this->calculateScalarError()` is less than this, exit.
-  static constexpr double acceptable_error_m = 1.0e-4 * 1.0e-4;
-  /// \brief Maximum number of attempted iterations before exiting.
-  static constexpr UnsignedIndex_t maximum_iterations_m = 20;
-  /// \brief Minimum change in angle related delta below which minimum is
-  /// deemed reached.
-  static constexpr double minimum_angle_change_m = 0.0001745329;
-  /// \brief Minimum change in distance related delta below which minimum is
-  /// deemed reached.
-  static constexpr double minimum_distance_change_m = 1.0e-4;
-  /// \brief Increase factor for lambda if more damping needed.
-  static constexpr double lambda_increase_m = 5.0;
-  /// \brief Decrease factor for lambda if new best solution is found.
-  static constexpr double lambda_decrease_m = 1.0 / 10.0;
-  /// \brief Number of iterations to allow between calculating a new Jacobian.
-  static constexpr UnsignedIndex_t delay_jacobian_amount_m = 0;
-  /// \brief Initial angle to use when first calculating Jacobian, equal to
-  /// 5 degrees in radians.
-  static constexpr double initial_angle_m =
-      0.001 * 0.0174533; // 1e-3 Deg in radians
-  /// \brief Initial distance to use when first calculating Jacobian.
-  static constexpr double initial_distance_m = 0.001;
-
   // Default constructor
   R2PCommon(void) = default;
 

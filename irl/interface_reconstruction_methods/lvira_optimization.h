@@ -25,6 +25,7 @@
 #include "irl/geometry/general/unit_quaternion.h"
 #include "irl/geometry/polygons/polygon.h"
 #include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
+#include "irl/interface_reconstruction_methods/optimization_behavior.h"
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/optimization/bfgs.h"
 #include "irl/optimization/levenberg_marquardt.h"
@@ -74,23 +75,6 @@ class LVIRACommon {
   friend LVIRA_3D<CellType>;
 
  public:
-  /// \brief If `this->calculateScalarError()` is less than this, exit.
-  static constexpr double acceptable_error_m = 1.0e-4 * 1.0e-4;
-  /// \brief Maximum number of attempted iterations before exiting.
-  static constexpr UnsignedIndex_t maximum_iterations_m = 20;
-  /// \brief Minimum change in angle related delta below which minimum is
-  /// deemed reached.
-  static constexpr double minimum_angle_change_m = 0.0001745329;
-  /// \brief Increase factor for lambda if more damping needed.
-  static constexpr double lambda_increase_m = 5.0;
-  /// \brief Decrease factor for lambda if new best solution is found.
-  static constexpr double lambda_decrease_m = 1.0 / 10.0;
-  /// \brief Number of iterations to allow between calculating a new Jacobian.
-  static constexpr UnsignedIndex_t delay_jacobian_amount_m = 0;
-  /// \brief Angle change to use when calculating finite-difference Jacobian.
-  static constexpr double fininite_difference_angle_m =
-      0.001 * 0.0174533;  // 1e-3 Deg in radians
-
   // Default constructor
   LVIRACommon(void) = default;
 
@@ -115,6 +99,9 @@ class LVIRACommon {
 
   /// \brief Return the final reconstruction to be used.
   PlanarSeparator getFinalReconstruction(void);
+
+  /// \brief Set the optimization parameters.
+  void setOptimizationBehavior(const OptimizationBehavior &a_parameters);
 
   /// \brief Calculate the vector error correct_values_m - guess_values_m
   /// where both vectors already have weight applied.
@@ -210,6 +197,8 @@ class LVIRACommon {
   Eigen::Matrix<double, Eigen::Dynamic, 1> weights_m;
   /// \brief Weigted vector of correct values we are trying to match.
   Eigen::Matrix<double, Eigen::Dynamic, 1> correct_values_m;
+  /// \brief Struct of optimization parameters.
+  OptimizationBehavior optimization_behavior_m;
   //----------------------------------------------------------------------
 
   //---------------------- Working variables  ----------------------------

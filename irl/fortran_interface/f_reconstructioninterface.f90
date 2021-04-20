@@ -32,6 +32,7 @@ module f_ReconstructionInterface
   use f_LVIRANeigh_Hex_class
   use f_LVIRANeigh_Tet_class  
   use f_R2PNeigh_RectCub_class
+  use f_OptimizationBehavior_class
   use f_R2PWeighting_class
   implicit none
 
@@ -85,6 +86,8 @@ module f_ReconstructionInterface
     module procedure reconstructR2P3D_RectCub
     ! 3D R2P with user-defined weighting on a RectCub mesh
     module procedure reconstructR2P3DwWeights_RectCub
+    ! 3D R2P with user-defined optimization parameters and weighting on a RectCub mesh
+    module procedure reconstructR2P3DChangeBehavior_RectCub      
   end interface reconstructR2P3D
 
   interface reconstructR2P2DDbg
@@ -331,6 +334,20 @@ module f_ReconstructionInterface
       type(c_R2PWeighting) :: a_importances ! Pointer for R2PWeighting
     end subroutine F_reconstructR2P3DwWeights_RectCub
   end interface  
+
+  interface
+    subroutine F_reconstructR2P3DChangeBehavior_RectCub(a_neighborhood, a_planar_separator, a_parameters, &
+      a_importances) &
+    bind(C, name="c_reconstructR2P3DChangeBehavior_RectCub")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_R2PNeigh_RectCub) :: a_neighborhood ! Pointer to a R2PNeigh<RectCub>
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep
+      type(c_OptimizationBehavior) :: a_parameters ! Pointer for OptimizationBehavior
+      type(c_R2PWeighting) :: a_importances ! Pointer for R2PWeighting
+    end subroutine F_reconstructR2P3DChangeBehavior_RectCub
+  end interface 
 
   interface
     subroutine F_reconstructR2P2DDbg_RectCub(a_neighborhood, a_planar_separator) &
@@ -618,6 +635,18 @@ module f_ReconstructionInterface
       type(R2PWeighting_type), intent(in) :: a_importances
       call F_reconstructR2P3DwWeights_RectCub(a_neighborhood%c_object, a_planar_separator%c_object, a_importances%c_object)
   end subroutine reconstructR2P3DwWeights_RectCub  
+
+  subroutine reconstructR2P3DChangeBehavior_RectCub(a_neighborhood, a_planar_separator, a_parameters, &
+    a_importances)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(R2PNeigh_RectCub_type), intent(in) :: a_neighborhood
+      type(PlanarSep_type), intent(inout) :: a_planar_separator
+      type(OptimizationBehavior_type), intent(in) :: a_parameters
+      type(R2PWeighting_type), intent(in) :: a_importances
+      call F_reconstructR2P3DChangeBehavior_RectCub(a_neighborhood%c_object, a_planar_separator%c_object, a_parameters%c_object, &
+      a_importances%c_object)
+  end subroutine reconstructR2P3DChangeBehavior_RectCub  
 
   subroutine reconstructR2P2DDbg_RectCub(a_neighborhood, a_planar_separator)
     use, intrinsic :: iso_c_binding
