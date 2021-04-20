@@ -241,6 +241,22 @@ void c_reconstructR2P3DwWeights_RectCub(const c_R2PNeigh_RectCub* a_neighborhood
       *a_neighborhood->obj_ptr, *a_separator->obj_ptr, *a_r2p_weighting->obj_ptr);
 }
 
+void c_reconstructR2P3DChangeBehavior_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
+                                c_PlanarSep* a_separator,
+                                const c_OptimizationBehavior* a_optimization_behavior,
+                                const c_R2PWeighting* a_r2p_weighting) {
+  assert(a_neighborhood != nullptr);
+  assert(a_neighborhood->obj_ptr != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(a_optimization_behavior != nullptr);
+  assert(a_optimization_behavior->obj_ptr != nullptr);    
+  assert(a_r2p_weighting != nullptr);
+  assert(a_r2p_weighting->obj_ptr != nullptr);  
+  (*a_separator->obj_ptr) = IRL::reconstructionWithR2P3D(
+      *a_neighborhood->obj_ptr, *a_separator->obj_ptr, *a_optimization_behavior->obj_ptr, *a_r2p_weighting->obj_ptr);
+}
+
 void c_reconstructR2P2DDbg_RectCub(const c_R2PNeigh_RectCub* a_neighborhood,
                                    c_PlanarSep* a_separator) {
   assert(a_neighborhood != nullptr);

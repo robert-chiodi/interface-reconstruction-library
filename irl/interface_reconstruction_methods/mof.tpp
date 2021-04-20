@@ -37,6 +37,12 @@ PlanarSeparator MOFCommon<CellType>::getFinalReconstruction(void) {
 }
 
 template <class CellType>
+void MOFCommon<CellType>::setOptimizationBehavior(
+    const OptimizationBehavior& a_parameters) {
+  optimization_behavior_m = a_parameters;
+}
+
+template <class CellType>
 double MOFCommon<CellType>::calculateScalarError(void) {
   return (correct_values_m - guess_values_m).squaredNorm();
 }
@@ -53,28 +59,28 @@ Eigen::Matrix<double, 6, 1> MOFCommon<CellType>::calculateChangeInGuess(void) {
 
 template <class CellType>
 void MOFCommon<CellType>::increaseLambda(double* a_lambda) {
-  (*a_lambda) *= lambda_increase_m;
+  (*a_lambda) *= optimization_behavior_m.lambda_increase;
 }
 
 template <class CellType>
 void MOFCommon<CellType>::decreaseLambda(double* a_lambda) {
-  (*a_lambda) *= lambda_decrease_m;
+  (*a_lambda) *= optimization_behavior_m.lambda_decrease;
 }
 
 template <class CellType>
 bool MOFCommon<CellType>::errorTooHigh(const double a_error) {
-  return a_error > acceptable_error_m;
+  return a_error > optimization_behavior_m.acceptable_error;
 }
 
 template <class CellType>
 bool MOFCommon<CellType>::iterationTooHigh(const UnsignedIndex_t a_iteration) {
-  return a_iteration > maximum_iterations_m;
+  return a_iteration > optimization_behavior_m.maximum_iterations;
 }
 
 template <class CellType>
 bool MOFCommon<CellType>::shouldComputeJacobian(
     const UnsignedIndex_t a_iteration, const UnsignedIndex_t a_last_jacobian) {
-  return a_iteration - a_last_jacobian > delay_jacobian_amount_m;
+  return a_iteration - a_last_jacobian > optimization_behavior_m.delay_jacobian_amount;
 }
 
 template <class CellType>
@@ -198,7 +204,7 @@ PlanarSeparator MOF_2D<CellType>::solve(
 template <class CellType>
 auto MOF_2D<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1>& {
-  initial_delta_m(0) = MOFCommon<CellType>::initial_angle_m;
+  initial_delta_m(0) = MOFCommon<CellType>::optimization_behavior_m.initial_angle;
   return initial_delta_m;
 }
 
@@ -217,7 +223,7 @@ void MOF_2D<CellType>::updateGuess(
 template <class CellType>
 bool MOF_2D<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> a_delta) {
-  return std::fabs(a_delta(0)) < MOFCommon<CellType>::minimum_angle_change_m;
+  return std::fabs(a_delta(0)) < MOFCommon<CellType>::optimization_behavior_m.minimum_angle_change;
 }
 
 template <class CellType>
@@ -264,8 +270,8 @@ PlanarSeparator MOF_3D<CellType>::solve(
 template <class CellType>
 auto MOF_3D<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1>& {
-  initial_delta_m(0) = MOFCommon<CellType>::initial_angle_m;
-  initial_delta_m(1) = MOFCommon<CellType>::initial_angle_m;
+  initial_delta_m(0) = MOFCommon<CellType>::optimization_behavior_m.initial_angle;
+  initial_delta_m(1) = MOFCommon<CellType>::optimization_behavior_m.initial_angle;
   return initial_delta_m;
 }
 
@@ -284,8 +290,8 @@ void MOF_3D<CellType>::updateGuess(
 template <class CellType>
 bool MOF_3D<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> a_delta) {
-  return (std::fabs(a_delta(0)) < MOFCommon<CellType>::minimum_angle_change_m &&
-          std::fabs(a_delta(1)) < MOFCommon<CellType>::minimum_angle_change_m);
+  return (std::fabs(a_delta(0)) < MOFCommon<CellType>::optimization_behavior_m.minimum_angle_change &&
+          std::fabs(a_delta(1)) < MOFCommon<CellType>::optimization_behavior_m.minimum_angle_change);
 }
 
 template <class CellType>
@@ -372,4 +378,4 @@ void MOFDebug<MOFType>::writeOutCentroidsAndWeights(void) {
 
 }  // namespace IRL
 
-#endif // IRL_INTERFACE_RECONSTRUCTION_METHODS_MOF_TPP_
+#endif  // IRL_INTERFACE_RECONSTRUCTION_METHODS_MOF_TPP_

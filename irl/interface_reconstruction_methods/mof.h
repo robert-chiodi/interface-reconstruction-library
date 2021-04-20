@@ -20,6 +20,7 @@
 #include "irl/geometry/general/rotations.h"
 #include "irl/geometry/polygons/polygon.h"
 #include "irl/interface_reconstruction_methods/volume_fraction_matching.h"
+#include "irl/interface_reconstruction_methods/optimization_behavior.h"
 #include "irl/moments/cell_grouped_moments.h"
 #include "irl/moments/separated_volume_moments.h"
 #include "irl/optimization/bfgs.h"
@@ -41,24 +42,6 @@ class MOFCommon {
   friend MOF_3D<CellType>;
 
  public:
-  /// \brief If `this->calculateScalarError()` is less than this, exit.
-  static constexpr double acceptable_error_m = 1.0e-4 * 1.0e-4;
-  /// \brief Maximum number of attempted iterations before exiting.
-  static constexpr UnsignedIndex_t maximum_iterations_m = 40;
-  /// \brief Minimum change in angle related delta below which minimum is
-  /// deemed reached.
-  static constexpr double minimum_angle_change_m = 0.0001 * 0.0174533;
-  /// \brief Increase factor for lambda if more damping needed.
-  static constexpr double lambda_increase_m = 5.0;
-  /// \brief Decrease factor for lambda if new best solution is found.
-  static constexpr double lambda_decrease_m = 1.0 / 10.0;
-  /// \brief Number of iterations to allow between calculating a new Jacobian.
-  static constexpr UnsignedIndex_t delay_jacobian_amount_m = 0;
-  /// \brief Initial angle to use when first calculating Jacobian, equal to
-  /// 5 degrees in radians.
-  static constexpr double initial_angle_m =
-      0.0001 * 0.0174533;  // 1e-4 Deg in radians
-
   /// \brief Default constructor
   MOFCommon(void) = default;
 
@@ -73,6 +56,9 @@ class MOFCommon {
   /// re-rotation and flipping of the reconstruction (while
   /// `getBestReconstruction()` and `getGuessReconstruction()` does not.
   PlanarSeparator getFinalReconstruction(void);
+
+  /// \brief Set the optimization parameters.
+  void setOptimizationBehavior(const OptimizationBehavior &a_parameters);
 
   /// \brief Calculate the error ||a_correct_vector - a_attempt_vector||^2
   /// where both vectors are weighted geometry vectors.
@@ -156,6 +142,8 @@ class MOFCommon {
   Eigen::Matrix<double, 6, 1> correct_values_m;
   /// \brief Volume fraction in cell being reconstructed.
   double volume_fraction_m;
+  /// \brief Struct of optimization parameters.
+  OptimizationBehavior optimization_behavior_m;
   //----------------------------------------------------------------------
 
   //---------------------- Working variables  ----------------------------
@@ -334,4 +322,4 @@ class MOFDebug : public MOFType {
 }  // namespace IRL
 
 #include "irl/interface_reconstruction_methods/mof.tpp"
-#endif // IRL_INTERFACE_RECONSTRUCTION_METHODS_MOF_H_
+#endif  // IRL_INTERFACE_RECONSTRUCTION_METHODS_MOF_H_
