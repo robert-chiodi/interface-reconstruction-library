@@ -24,13 +24,13 @@ void c_R2PWeighting_delete(c_R2PWeighting* a_self);
 
 void c_R2PWeighting_setImportances(c_R2PWeighting* a_self, const double* a_importances);
 
-void c_R2PWeighting_setImpOfLiqVolFrac(c_R2PWeighting* a_self, const double* a_importance);
+void c_R2PWeighting_setImportanceOfLiquidVolumeFraction(c_R2PWeighting* a_self, const double a_importance);
 
-void c_R2PWeighting_setImpOfLiqCentRelToGas(c_R2PWeighting* a_self, const double* a_importance);
+void c_R2PWeighting_setImportanceOfLiquidCentroidRelativeToGas(c_R2PWeighting* a_self, const double a_importance);
 
-void c_R2PWeighting_setImpOfCentroid(c_R2PWeighting* a_self, const double* a_importance);
+void c_R2PWeighting_setImportanceOfCentroid(c_R2PWeighting* a_self, const double a_importance);
 
-void c_R2PWeighting_setImpOfSurfArea(c_R2PWeighting* a_self, const double* a_importance);
+void c_R2PWeighting_setImportanceOfSurfaceArea(c_R2PWeighting* a_self, const double a_importance);
 
 void c_R2PWeighting_getImportances(c_R2PWeighting* a_self, double* a_importances);
 
