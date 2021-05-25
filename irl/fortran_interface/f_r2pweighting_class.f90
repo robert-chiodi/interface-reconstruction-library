@@ -78,35 +78,35 @@ module f_R2PWeighting_class
     end subroutine F_R2PWeighting_setImportances
 
     subroutine F_R2PWeighting_setImpOfLiqVolFrac(this, a_importance) &
-      bind(C, name="c_R2PWeighting_setImpOfLiqVolFrac")
+      bind(C, name="c_R2PWeighting_setImportanceOfLiquidVolumeFraction")
       import
       implicit none
       type(c_R2PWeighting) :: this
-      real(C_DOUBLE), intent(in) :: a_importance
+      real(C_DOUBLE), value, intent(in) :: a_importance
     end subroutine F_R2PWeighting_setImpOfLiqVolFrac
 
     subroutine F_R2PWeighting_setImpOfLiqCentRelToGas(this, a_importance) &
-      bind(C, name="c_R2PWeighting_setImpOfLiqCentRelToGas")
+      bind(C, name="c_R2PWeighting_setImportanceOfLiquidCentroidRelativeToGas")
       import
       implicit none
       type(c_R2PWeighting) :: this
-      real(C_DOUBLE), intent(in) :: a_importance
+      real(C_DOUBLE), value, intent(in) :: a_importance
     end subroutine F_R2PWeighting_setImpOfLiqCentRelToGas
 
     subroutine F_R2PWeighting_setImpOfCentroid(this, a_importance) &
-      bind(C, name="c_R2PWeighting_setImpOfCentroid")
+      bind(C, name="c_R2PWeighting_setImportanceOfCentroid")
       import
       implicit none
       type(c_R2PWeighting) :: this
-      real(C_DOUBLE), intent(in) :: a_importance
+      real(C_DOUBLE), value, intent(in) :: a_importance
     end subroutine F_R2PWeighting_setImpOfCentroid
 
     subroutine F_R2PWeighting_setImpOfSurfArea(this, a_importance) &
-      bind(C, name="c_R2PWeighting_setImpOfSurfArea")
+      bind(C, name="c_R2PWeighting_setImportanceOfSurfaceArea")
       import
       implicit none
       type(c_R2PWeighting) :: this
-      real(C_DOUBLE), intent(in) :: a_importance
+      real(C_DOUBLE), value, intent(in) :: a_importance
     end subroutine F_R2PWeighting_setImpOfSurfArea
 
     subroutine F_R2PWeighting_getImportances(this, a_importances) &

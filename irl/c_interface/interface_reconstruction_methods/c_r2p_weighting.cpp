@@ -31,33 +31,34 @@ void c_R2PWeighting_setImportances(c_R2PWeighting* a_self, const double* a_impor
   (*a_self->obj_ptr).importance_of_surface_area = a_importances[3];
 }
 
-void c_R2PWeighting_setImpOfLiqVolFrac(c_R2PWeighting* a_self, const double* a_importance) {
+void c_R2PWeighting_setImportanceOfLiquidVolumeFraction(c_R2PWeighting* a_self, const double a_importance) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
-  (*a_self->obj_ptr).importance_of_liquid_volume_fraction = *a_importance;
+  (*a_self->obj_ptr).importance_of_liquid_volume_fraction = a_importance;
 }
 
-void c_R2PWeighting_setImpOfLiqCentRelToGas(c_R2PWeighting* a_self, const double* a_importance) {
+void c_R2PWeighting_setImportanceOfLiquidCentroidRelativeToGas(c_R2PWeighting* a_self, const double a_importance) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
-  (*a_self->obj_ptr).importance_of_liquid_centroid_relative_to_gas = *a_importance;
+  (*a_self->obj_ptr).importance_of_liquid_centroid_relative_to_gas = a_importance;
 }
 
-void c_R2PWeighting_setImpOfCentroid(c_R2PWeighting* a_self, const double* a_importance) {
+void c_R2PWeighting_setImportanceOfCentroid(c_R2PWeighting* a_self, const double a_importance) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
-  (*a_self->obj_ptr).importance_of_centroid = *a_importance;
+  (*a_self->obj_ptr).importance_of_centroid = a_importance;
 }
 
-void c_R2PWeighting_setImpOfSurfArea(c_R2PWeighting* a_self, const double* a_importance) {
+void c_R2PWeighting_setImportanceOfSurfaceArea(c_R2PWeighting* a_self, const double a_importance) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
-  (*a_self->obj_ptr).importance_of_surface_area = *a_importance;
+  (*a_self->obj_ptr).importance_of_surface_area = a_importance;
 }
 
 void c_R2PWeighting_getImportances(c_R2PWeighting* a_self, double* a_importances) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
+  assert(a_importances != nullptr);
   a_importances[0] = (*a_self->obj_ptr).importance_of_liquid_volume_fraction;
   a_importances[1] = (*a_self->obj_ptr).importance_of_liquid_centroid_relative_to_gas;
   a_importances[2] = (*a_self->obj_ptr).importance_of_centroid;
