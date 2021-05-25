@@ -61,13 +61,13 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>
-inline PlanarSeparator reconstructionWithELVIRA2D(
+inline PlanarSeparator reconstructionWithLVIRA2D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
 
 /// \brief Perform LVIRA Reconstruction for 3D.
 template <class CellType>
-inline PlanarSeparator reconstructionWithELVIRA3D(
+inline PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
 
