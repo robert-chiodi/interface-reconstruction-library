@@ -28,7 +28,7 @@ void c_OptimizationBehavior_setMaxIterations(c_OptimizationBehavior* a_self, con
 
 void c_OptimizationBehavior_setMinAngleChange(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setMinDistChange(c_OptimizationBehavior* a_self, const double a_parameter);
+void c_OptimizationBehavior_setMinDistanceChange(c_OptimizationBehavior* a_self, const double a_parameter);
 
 void c_OptimizationBehavior_setLambdaIncrease(c_OptimizationBehavior* a_self, const double a_parameter);
 

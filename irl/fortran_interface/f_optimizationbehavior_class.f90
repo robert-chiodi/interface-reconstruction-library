@@ -109,7 +109,7 @@ module f_OptimizationBehavior_class
     end subroutine F_OptimizationBehavior_setMinAngleChange
 
     subroutine F_OptimizationBehavior_setMinDistChange(this, a_parameter) &
-      bind(C, name="c_OptimizationBehavior_setMinDistChange")
+      bind(C, name="c_OptimizationBehavior_setMinDistanceChange")
       import
       implicit none
       type(c_OptimizationBehavior) :: this
@@ -133,7 +133,7 @@ module f_OptimizationBehavior_class
     end subroutine F_OptimizationBehavior_setLambdaDecrease
 
     subroutine F_OptimizationBehavior_setDelayJacobianAmt(this, a_parameter) &
-      bind(C, name="c_OptimizationBehavior_setDelayJacobianAmt")
+      bind(C, name="c_OptimizationBehavior_setDelayJacobianAmount")
       import
       implicit none
       type(c_OptimizationBehavior) :: this
@@ -157,7 +157,7 @@ module f_OptimizationBehavior_class
     end subroutine F_OptimizationBehavior_setInitialDistance
 
     subroutine F_OptimizationBehavior_setFinDiffAngle(this, a_parameter) &
-      bind(C, name="c_OptimizationBehavior_setFinDiffAngle")
+      bind(C, name="c_OptimizationBehavior_setFiniteDifferenceAngle")
       import
       implicit none
       type(c_OptimizationBehavior) :: this

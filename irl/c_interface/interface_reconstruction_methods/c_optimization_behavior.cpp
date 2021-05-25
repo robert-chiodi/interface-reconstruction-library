@@ -43,7 +43,7 @@ void c_OptimizationBehavior_setMinAngleChange(c_OptimizationBehavior* a_self, co
   (*a_self->obj_ptr).minimum_angle_change = a_parameter;
 }
 
-void c_OptimizationBehavior_setMinDistChange(c_OptimizationBehavior* a_self, const double a_parameter) {
+void c_OptimizationBehavior_setMinDistanceChange(c_OptimizationBehavior* a_self, const double a_parameter) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
   (*a_self->obj_ptr).minimum_distance_change = a_parameter;
