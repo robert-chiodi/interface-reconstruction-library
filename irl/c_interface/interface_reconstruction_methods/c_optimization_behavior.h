@@ -22,25 +22,25 @@ void c_OptimizationBehavior_new(c_OptimizationBehavior* a_self);
 
 void c_OptimizationBehavior_delete(c_OptimizationBehavior* a_self);
 
-void c_OptimizationBehavior_setAcceptableError(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setAcceptableError(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setMaxIterations(c_OptimizationBehavior* a_self, const int* a_parameter);
+void c_OptimizationBehavior_setMaxIterations(c_OptimizationBehavior* a_self, const int a_parameter);
 
-void c_OptimizationBehavior_setMinAngleChange(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setMinAngleChange(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setMinDistChange(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setMinDistChange(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setLambdaIncrease(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setLambdaIncrease(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setLambdaDecrease(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setLambdaDecrease(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setDelayJacobianAmt(c_OptimizationBehavior* a_self, const int* a_parameter);
+void c_OptimizationBehavior_setDelayJacobianAmount(c_OptimizationBehavior* a_self, const int a_parameter);
 
-void c_OptimizationBehavior_setInitialAngle(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setInitialAngle(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setInitialDistance(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setInitialDistance(c_OptimizationBehavior* a_self, const double a_parameter);
 
-void c_OptimizationBehavior_setFinDiffAngle(c_OptimizationBehavior* a_self, const double* a_parameter);
+void c_OptimizationBehavior_setFiniteDifferenceAngle(c_OptimizationBehavior* a_self, const double a_parameter);
 
 void c_OptimizationBehavior_getParameters(c_OptimizationBehavior* a_self, double* a_parameters);
 
