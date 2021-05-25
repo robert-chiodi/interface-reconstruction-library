@@ -877,8 +877,11 @@ void R2P_3D2P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   double weight_surface_area =
-      0.75 *
-      std::pow(2.0 * (0.5 - this->stencil_average_volume_fraction_m), 2.0);
+      this->weight_importance_m.importance_of_surface_area < 0.0
+          ? 0.75 *
+                std::pow(2.0 * (0.5 - this->stencil_average_volume_fraction_m),
+                         2.0)
+          : this->weight_importance_m.importance_of_surface_area;
   // this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, weight_surface_area);
   this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
                                             this->weight_importance_m.importance_of_liquid_centroid_relative_to_gas, 
