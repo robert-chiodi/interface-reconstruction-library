@@ -89,7 +89,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setAcceptableError
 
     subroutine F_OptimizationBehavior_setMaxIterations(this, a_parameter) &
@@ -97,7 +97,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      integer(C_INT), intent(in) :: a_parameter
+      integer(C_INT), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setMaxIterations
 
     subroutine F_OptimizationBehavior_setMinAngleChange(this, a_parameter) &
@@ -105,7 +105,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setMinAngleChange
 
     subroutine F_OptimizationBehavior_setMinDistChange(this, a_parameter) &
@@ -113,7 +113,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setMinDistChange
 
     subroutine F_OptimizationBehavior_setLambdaIncrease(this, a_parameter) &
@@ -121,7 +121,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setLambdaIncrease
 
     subroutine F_OptimizationBehavior_setLambdaDecrease(this, a_parameter) &
@@ -129,7 +129,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setLambdaDecrease
 
     subroutine F_OptimizationBehavior_setDelayJacobianAmt(this, a_parameter) &
@@ -137,7 +137,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      integer(C_INT), intent(in) :: a_parameter
+      integer(C_INT), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setDelayJacobianAmt
 
     subroutine F_OptimizationBehavior_setInitialAngle(this, a_parameter) &
@@ -145,7 +145,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setInitialAngle
 
     subroutine F_OptimizationBehavior_setInitialDistance(this, a_parameter) &
@@ -153,7 +153,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setInitialDistance
 
     subroutine F_OptimizationBehavior_setFinDiffAngle(this, a_parameter) &
@@ -161,7 +161,7 @@ module f_OptimizationBehavior_class
       import
       implicit none
       type(c_OptimizationBehavior) :: this
-      real(C_DOUBLE), intent(in) :: a_parameter
+      real(C_DOUBLE), value, intent(in) :: a_parameter
     end subroutine F_OptimizationBehavior_setFinDiffAngle
 
     subroutine F_OptimizationBehavior_getParameters(this, a_parameters) &

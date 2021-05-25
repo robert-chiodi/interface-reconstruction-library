@@ -33,7 +33,7 @@ struct OptimizationBehavior {
   /// \brief Number of iterations to allow between calculating a new Jacobian.
   UnsignedIndex_t delay_jacobian_amount = 0;
   /// \brief Initial angle to use when first calculating Jacobian, equal to
-  /// 5 degrees in radians.
+  /// 1e-3 degrees in radians.
   double initial_angle = 0.001 * 0.0174533;  // 1e-3 Deg in radians
   /// \brief Initial distance to use when first calculating Jacobian.
   double initial_distance = 0.001;
