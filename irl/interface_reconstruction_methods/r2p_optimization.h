@@ -89,7 +89,7 @@ struct R2PWeighting
   double importance_of_liquid_volume_fraction = 0.0;
   double importance_of_liquid_centroid_relative_to_gas = 0.5;
   double importance_of_centroid = 1.0;
-  double importance_of_surface_area = 0.0;
+  double importance_of_surface_area = -1.0;
 };
 
 template <class CellType> class R2P_2D1P;
