@@ -204,6 +204,10 @@ void c_getNormMoments_Tri_PlanarLoc_Vol(const c_Tri* a_tri,
                                         const c_PlanarLoc* a_planar_localizer,
                                         double* a_moments_to_return);
 
+void c_getNormMoments_Poly_PlanarSep_Vol(const c_Poly* a_poly,
+                                         const c_PlanarSep* a_planar_separator,
+                                         double* a_moments_to_return);
+
 void c_getNormMoments_Poly_PlanarLoc_Vol(const c_Poly* a_poly,
                                          const c_PlanarLoc* a_planar_localizer,
                                          double* a_moments_to_return);
