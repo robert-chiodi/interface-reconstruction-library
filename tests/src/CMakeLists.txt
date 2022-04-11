@@ -44,3 +44,4 @@ target_sources(irl_test PRIVATE ${IRL_TEST_SOURCE_DIR}/planar_reconstruction_tes
 target_sources(irl_test PRIVATE ${IRL_TEST_SOURCE_DIR}/partitioning_test.cpp)
 target_sources(irl_test PRIVATE ${IRL_TEST_SOURCE_DIR}/helper_test.cpp)
 target_sources(irl_test PRIVATE ${IRL_TEST_SOURCE_DIR}/brep_to_half_edge_test.cpp)
+target_sources(irl_test PRIVATE ${IRL_TEST_SOURCE_DIR}/paraboloid_intersection_test.cpp)

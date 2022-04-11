@@ -62,6 +62,9 @@ class VolumeMoments {
   /// \brief Overload assignment to assign constant value to moments.
   VolumeMoments& operator=(const double a_value);
 
+  // Unary - operator
+  VolumeMoments operator-(void) const;
+
   /// \brief Default destructor.
   ~VolumeMoments(void) = default;
 
@@ -100,4 +103,4 @@ inline VolumeMoments operator*(const VolumeMoments& a_vm,
 
 #include "irl/moments/volume_moments.tpp"
 
-#endif // IRL_MOMENTS_VOLUME_MOMENTS_H_
+#endif  // IRL_MOMENTS_VOLUME_MOMENTS_H_

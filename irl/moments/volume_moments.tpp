@@ -76,6 +76,10 @@ inline VolumeMoments& VolumeMoments::operator=(const double a_value) {
   return (*this);
 }
 
+inline VolumeMoments VolumeMoments::operator-(void) const {
+  return VolumeMoments(-volume_m, -centroid_m);
+}
+
 inline constexpr VolumeMoments::VolumeMoments(const double* a_list)
     : volume_m(a_list[0]), centroid_m{a_list[1], a_list[2], a_list[3]} {}
 
@@ -112,4 +116,4 @@ inline VolumeMoments operator*(const VolumeMoments& a_vm,
 
 }  // namespace IRL
 
-#endif // IRL_MOMENTS_VOLUME_MOMENTS_TPP_
+#endif  // IRL_MOMENTS_VOLUME_MOMENTS_TPP_

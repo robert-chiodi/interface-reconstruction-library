@@ -11,7 +11,7 @@ project(IRL VERSION 0.1.0
 	DESCRIPTION "Interface Reconstruction Library"
 	LANGUAGES CXX Fortran)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Inform CMake where to look for CMake files.
@@ -89,6 +89,13 @@ else()
   add_library(irl_c STATIC)
   add_library(irl_fortran STATIC)
 endif()
+
+if(NOT DEFINED USE_TRIANGLE OR (DEFINED USE_TRIANGLE AND USE_TRIANGLE))
+  target_sources(irl PRIVATE "external/triangle/triangle.h")
+  target_sources(irl PRIVATE "external/triangle/triangle.cpp")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGs} -D IRL_USE_TRIANGLE")
+endif()
+
 
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")

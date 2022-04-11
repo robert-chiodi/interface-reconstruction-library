@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <initializer_list>
 #include <iomanip>
 #include <iostream>
 
@@ -28,6 +29,8 @@ class StackVector {
       typename std::array<ObjectType, kMaxSize>::const_iterator;
 
   StackVector(void);
+
+  StackVector(std::initializer_list<ObjectType> a_list);
 
   template <UnsignedIndex_t kOtherMaxSize>
   explicit StackVector(const StackVector<ObjectType, kOtherMaxSize>& other);
@@ -88,4 +91,4 @@ inline std::ostream& operator<<(
 
 #include "irl/data_structures/stack_vector.tpp"
 
-#endif // IRL_DATA_STRUCTURES_STACK_VECTOR_H_
+#endif  // IRL_DATA_STRUCTURES_STACK_VECTOR_H_

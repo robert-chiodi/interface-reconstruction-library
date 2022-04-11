@@ -36,3 +36,14 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/simplex_cutting/sim
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/simplex_cutting/simplex_cutting.tpp)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/simplex_cutting/simplex_cutting.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/simplex_cutting/simplex_cutting_initializer.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/paraboloid_intersection.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/paraboloid_intersection.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/wedge_computation.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/wedge_computation.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/paraboloid_intersection_amr.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/paraboloid_intersection_amr.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/surface_output.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/generic_cutting/paraboloid_intersection/surface_output.h)
+
+
+

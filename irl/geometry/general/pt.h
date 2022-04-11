@@ -117,7 +117,7 @@ class Pt : public Expr<Pt> {
   UnsignedIndex_t maxComponent(void) const;
 
   // \brief Unary minus operator
-  Pt operator-(void);
+  Pt operator-(void) const;
 
   /// \brief Increment this point by another point.
   Pt& operator+=(const Pt& a_rhs);
@@ -165,4 +165,4 @@ class Pt : public Expr<Pt> {
 
 #include "irl/geometry/general/pt.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_PT_H_
+#endif  // IRL_GEOMETRY_GENERAL_PT_H_
