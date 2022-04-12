@@ -37,7 +37,6 @@ class ParametrizedSurfaceOutput {
   /// \brief Default constructor.
   ParametrizedSurfaceOutput(void) = default;
   ParametrizedSurfaceOutput(const AlignedParaboloid& a_paraboloid);
-  ~ParametrizedSurfaceOutput(void) = default;
 
   RationalBezierArc& operator[](const UnsignedIndex_t a_index);
   const RationalBezierArc& operator[](const UnsignedIndex_t a_index) const;
@@ -45,9 +44,9 @@ class ParametrizedSurfaceOutput {
 
   const AlignedParaboloid& getParaboloid(void) const;
   std::vector<RationalBezierArc>& getArcs(void);
-  std::vector<Pt>& getPts(void);
+  std::vector<Pt*>& getPts(void);
   void addArc(const RationalBezierArc& a_rational_bezier_arc);
-  void addPt(const Pt& a_pt);
+  void addPt(Pt* a_pt);
   void clearArcs(void);
   void clearPts(void);
   void clear(void);
@@ -56,9 +55,11 @@ class ParametrizedSurfaceOutput {
       const double a_length_scale = -1.0,
       const UnsignedIndex_t a_nsplit = 5) const;
 
+  ~ParametrizedSurfaceOutput(void);
+
  private:
   AlignedParaboloid paraboloid_m;
-  std::vector<Pt> pt_from_bezier_split_m;
+  std::vector<Pt*> pt_from_bezier_split_m;
   std::vector<RationalBezierArc> arc_list_m;
 };
 

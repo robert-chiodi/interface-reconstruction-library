@@ -14,6 +14,7 @@
 #include <cassert>
 
 #include "irl/data_structures/stack_vector.h"
+#include "irl/geometry/general/plane.h"
 #include "irl/geometry/general/polynomial.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/unit_quaternion.h"

@@ -19,52 +19,63 @@ inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     const AlignedParaboloid& a_paraboloid)
     : paraboloid_m{a_paraboloid} {}
 
-RationalBezierArc& ParametrizedSurfaceOutput::operator[](
+inline RationalBezierArc& ParametrizedSurfaceOutput::operator[](
     const UnsignedIndex_t a_index) {
   return arc_list_m[a_index];
 }
 
-const RationalBezierArc& ParametrizedSurfaceOutput::operator[](
+inline const RationalBezierArc& ParametrizedSurfaceOutput::operator[](
     const UnsignedIndex_t a_index) const {
   return arc_list_m[a_index];
 }
 
-const AlignedParaboloid& ParametrizedSurfaceOutput::getParaboloid(void) const {
+inline const AlignedParaboloid& ParametrizedSurfaceOutput::getParaboloid(
+    void) const {
   return paraboloid_m;
 }
 
-std::vector<RationalBezierArc>& ParametrizedSurfaceOutput::getArcs(void) {
+inline std::vector<RationalBezierArc>& ParametrizedSurfaceOutput::getArcs(
+    void) {
   return arc_list_m;
 }
-std::vector<Pt>& ParametrizedSurfaceOutput::getPts(void) {
+
+inline std::vector<Pt*>& ParametrizedSurfaceOutput::getPts(void) {
   return pt_from_bezier_split_m;
 }
-void ParametrizedSurfaceOutput::addArc(
+
+inline void ParametrizedSurfaceOutput::addArc(
     const RationalBezierArc& a_rational_bezier_arc) {
   arc_list_m.push_back(a_rational_bezier_arc);
 }
 
-void ParametrizedSurfaceOutput::addPt(const Pt& a_pt) {
+inline void ParametrizedSurfaceOutput::addPt(Pt* a_pt) {
   pt_from_bezier_split_m.push_back(a_pt);
 }
 
-const std::vector<RationalBezierArc>::size_type ParametrizedSurfaceOutput::size(
-    void) const {
+inline const std::vector<RationalBezierArc>::size_type
+ParametrizedSurfaceOutput::size(void) const {
   return arc_list_m.size();
 }
 
-void ParametrizedSurfaceOutput::clearArcs(void) { arc_list_m.clear(); }
+inline void ParametrizedSurfaceOutput::clearArcs(void) { arc_list_m.clear(); }
 
-void ParametrizedSurfaceOutput::clearPts(void) {
+inline void ParametrizedSurfaceOutput::clearPts(void) {
+  for (auto& elem : pt_from_bezier_split_m) {
+    delete elem;
+  }
   pt_from_bezier_split_m.clear();
 }
 
-void ParametrizedSurfaceOutput::clear(void) {
+inline void ParametrizedSurfaceOutput::clear(void) {
   this->clearArcs();
   this->clearPts();
 }
 
-TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
+inline ParametrizedSurfaceOutput::~ParametrizedSurfaceOutput(void) {
+  this->clear();
+}
+
+inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const double a_length_scale, const UnsignedIndex_t a_nsplit) const {
 #ifndef IRL_USE_TRIANGLE
   std::cout << "IRL not compiled with the Triangle library. Exiting..."

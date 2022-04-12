@@ -7,8 +7,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef IRL_TRIANGULATED_SURFACE_H_
-#define IRL_TRIANGULATED_SURFACE_H_
+#ifndef IRL_SURFACE_MESH_TRIANGULATED_SURFACE_H_
+#define IRL_SURFACE_MESH_TRIANGULATED_SURFACE_H_
 
 #include <fstream>
 #include <functional>
@@ -69,4 +69,4 @@ inline std::ostream& operator<<(
 
 #include "irl/surface_mesher/triangulated_surface.tpp"
 
-#endif  // IRL_TRIANGULATED_SURFACE_H_
+#endif  // IRL_SURFACE_MESH_TRIANGULATED_SURFACE_H_

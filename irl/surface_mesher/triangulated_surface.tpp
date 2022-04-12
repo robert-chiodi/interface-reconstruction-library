@@ -7,56 +7,64 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef IRL_TRIANGULATED_SURFACE_TPP_
-#define IRL_TRIANGULATED_SURFACE_TPP_
+#ifndef IRL_SURFACE_MESH_TRIANGULATED_SURFACE_TPP_
+#define IRL_SURFACE_MESH_TRIANGULATED_SURFACE_TPP_
 
 namespace IRL {
 
-void TriangulatedSurfaceOutput::addVertex(const Pt& a_vertex) {
+inline void TriangulatedSurfaceOutput::addVertex(const Pt& a_vertex) {
   vertices_m.push_back(a_vertex);
 }
-void TriangulatedSurfaceOutput::addTriangle(const UnsignedIndex_t a,
-                                            const UnsignedIndex_t b,
-                                            const UnsignedIndex_t c) {
+
+inline void TriangulatedSurfaceOutput::addTriangle(const UnsignedIndex_t a,
+                                                   const UnsignedIndex_t b,
+                                                   const UnsignedIndex_t c) {
   triangles_m.push_back(
       ProxyTri<PointStorage>::fromNoExistencePlane(vertices_m, {a, b, c}));
 }
 
-TriangulatedSurfaceOutput::PointStorage&
+inline TriangulatedSurfaceOutput::PointStorage&
 TriangulatedSurfaceOutput::getVertexList(void) {
   return vertices_m;
 }
-const TriangulatedSurfaceOutput::PointStorage&
+
+inline const TriangulatedSurfaceOutput::PointStorage&
 TriangulatedSurfaceOutput::getVertexList(void) const {
   return vertices_m;
 }
 
-TriangulatedSurfaceOutput::TriangleStorage&
+inline TriangulatedSurfaceOutput::TriangleStorage&
 TriangulatedSurfaceOutput::getTriangleList(void) {
   return triangles_m;
 }
-const TriangulatedSurfaceOutput::TriangleStorage&
+
+inline const TriangulatedSurfaceOutput::TriangleStorage&
 TriangulatedSurfaceOutput::getTriangleList(void) const {
   return triangles_m;
 }
 
-TriangulatedSurfaceOutput::PointStorage::size_type
+inline TriangulatedSurfaceOutput::PointStorage::size_type
 TriangulatedSurfaceOutput::nVertices(void) const {
   return vertices_m.size();
 }
-TriangulatedSurfaceOutput::TriangleStorage::size_type
+
+inline TriangulatedSurfaceOutput::TriangleStorage::size_type
 TriangulatedSurfaceOutput::nTriangles(void) const {
   return triangles_m.size();
 }
 
-void TriangulatedSurfaceOutput::clearVertices(void) { vertices_m.clear(); }
-void TriangulatedSurfaceOutput::clearTriangles(void) { triangles_m.clear(); }
-void TriangulatedSurfaceOutput::clearAll(void) {
+inline void TriangulatedSurfaceOutput::clearVertices(void) {
+  vertices_m.clear();
+}
+inline void TriangulatedSurfaceOutput::clearTriangles(void) {
+  triangles_m.clear();
+}
+inline void TriangulatedSurfaceOutput::clearAll(void) {
   vertices_m.clear();
   triangles_m.clear();
 }
 
-void TriangulatedSurfaceOutput::refineSize(
+inline void TriangulatedSurfaceOutput::refineSize(
     const double a_max_size, const UnsignedIndex_t a_compute_dim,
     std::function<double(const double a_x, const double a_y)> a_func) {
   const auto original_number_of_tris = this->nTriangles();
@@ -97,7 +105,7 @@ void TriangulatedSurfaceOutput::refineSize(
   }
 }
 
-void TriangulatedSurfaceOutput::write(std::string& filename) {
+inline void TriangulatedSurfaceOutput::write(std::string& filename) {
   // binary file
   std::string header_info = filename;
   char head[80];
@@ -132,4 +140,4 @@ void TriangulatedSurfaceOutput::write(std::string& filename) {
 }
 }  // namespace IRL
 
-#endif  // IRL_TRIANGULATED_SURFACE_TPP_
+#endif  // IRL_SURFACE_MESH_TRIANGULATED_SURFACE_TPP_

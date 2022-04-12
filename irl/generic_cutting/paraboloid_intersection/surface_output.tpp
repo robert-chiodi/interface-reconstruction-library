@@ -11,9 +11,9 @@
 #define IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_SURFACE_OUTPUT_TPP_
 
 namespace IRL {
-void addEllipseToSurfaceOutput(const AlignedParaboloid& a_aligned_paraboloid,
-                               const Plane& a_face_plane,
-                               ParametrizedSurfaceOutput* a_surface) {
+inline void addEllipseToSurfaceOutput(
+    const AlignedParaboloid& a_aligned_paraboloid, const Plane& a_face_plane,
+    ParametrizedSurfaceOutput* a_surface) {
   assert(a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > 0.0);
   assert(std::fabs(a_face_plane.normal()[2]) > DBL_EPSILON);
   const double alpha = a_aligned_paraboloid.a();

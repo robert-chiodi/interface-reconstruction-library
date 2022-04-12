@@ -33,16 +33,16 @@ ReturnType computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
                                  const Pt& a_pt_1);
 
 template <>
-Volume computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
-                             const Pt& a_pt_1) {
+inline Volume computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
+                                    const Pt& a_pt_1) {
   return (a_ref_pt[2] + a_pt_0[2] + a_pt_1[2]) / 6.0 *
          ((a_pt_0[0] - a_ref_pt[0]) * (a_pt_1[1] - a_ref_pt[1]) -
           (a_pt_1[0] - a_ref_pt[0]) * (a_pt_0[1] - a_ref_pt[1]));
 }
 
 template <>
-VolumeMoments computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
-                                    const Pt& a_pt_1) {
+inline VolumeMoments computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
+                                           const Pt& a_pt_1) {
   std::cout << "Not yet implemented" << std::endl;
   std::exit(-1);
 }
@@ -52,8 +52,9 @@ ReturnType computeV2Contribution(const AlignedParaboloid& a_aligned_paraboloid,
                                  const Pt& a_pt_0, const Pt& a_pt_1);
 
 template <>
-Volume computeV2Contribution(const AlignedParaboloid& a_aligned_paraboloid,
-                             const Pt& a_pt_0, const Pt& a_pt_1) {
+inline Volume computeV2Contribution(
+    const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
+    const Pt& a_pt_1) {
   return (a_pt_0[0] * a_pt_1[1] - a_pt_1[0] * a_pt_0[1]) / 12.0 *
          (-a_pt_0[2] - a_pt_1[2] +
           a_aligned_paraboloid.a() * a_pt_0[0] * a_pt_1[0] +
@@ -61,7 +62,7 @@ Volume computeV2Contribution(const AlignedParaboloid& a_aligned_paraboloid,
 }
 
 template <>
-VolumeMoments computeV2Contribution(
+inline VolumeMoments computeV2Contribution(
     const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
     const Pt& a_pt_1) {
   std::cout << "Not yet implemented" << std::endl;
@@ -158,8 +159,8 @@ ReturnType integrateFaceOnlyIntersection(const AlignedParaboloid& a_paraboloid,
                                          const Plane& a_face_plane);
 
 template <>
-Volume integrateFaceOnlyIntersection(const AlignedParaboloid& a_paraboloid,
-                                     const Plane& a_face_plane) {
+inline Volume integrateFaceOnlyIntersection(
+    const AlignedParaboloid& a_paraboloid, const Plane& a_face_plane) {
   assert(a_paraboloid.a() * a_paraboloid.b() > 0.0);
   assert(std::fabs(a_face_plane.normal()[2]) > DBL_EPSILON);
   const double a = -a_face_plane.normal()[0] / a_face_plane.normal()[2];
@@ -174,7 +175,7 @@ Volume integrateFaceOnlyIntersection(const AlignedParaboloid& a_paraboloid,
 }
 
 template <>
-VolumeMoments integrateFaceOnlyIntersection(
+inline VolumeMoments integrateFaceOnlyIntersection(
     const AlignedParaboloid& a_paraboloid, const Plane& a_face_plane) {
   assert(a_paraboloid.a() * a_paraboloid.b() > 0.0);
   assert(std::fabs(a_face_plane.normal()[2]) > DBL_EPSILON);
@@ -199,6 +200,30 @@ VolumeMoments integrateFaceOnlyIntersection(
        5.0 * a_paraboloid.a() * b * b + 5.0 * a_paraboloid.b() * a * a) /
       (12.0 * a_paraboloid.a() * a_paraboloid.b());
   moments.multiplyByVolume();
+  return moments;
+}
+
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class SurfaceOutputType>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
+                                  HalfEdgePolytopeType* a_complete_polytope,
+                                  const Paraboloid& a_paraboloid,
+                                  SurfaceOutputType* a_surface) {
+  // Compute the AlignedParaboloid and necessary rotation
+  AlignedParaboloid aligned_paraboloid(std::array<double, 3>(
+      {a_paraboloid.a(), a_paraboloid.d(), a_paraboloid.f()}));
+
+  // Rotate base polyhedron
+
+  // Compute intersection
+  auto moments = intersectPolyhedronWithParaboloid(
+      a_polytope, a_complete_polytope, aligned_paraboloid, a_surface);
+
+  // Rotate base polyhedron back
+
+  // Rotate surface representation back, if present
+
   return moments;
 }
 

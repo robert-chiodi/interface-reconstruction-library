@@ -33,9 +33,9 @@ ReturnType calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
                                        const Pt& a_pt_2);
 
 template <>
-Volume calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                   const Pt& a_pt_0, const Pt& a_pt_1,
-                                   const Pt& a_pt_2) {
+inline Volume calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
+                                          const Pt& a_pt_0, const Pt& a_pt_1,
+                                          const Pt& a_pt_2) {
   return (-a_paraboloid.a() * (a_pt_0[0] + a_pt_1[0]) *
               (a_pt_1[0] + a_pt_2[0]) +
           -a_paraboloid.b() * (a_pt_0[1] + a_pt_1[1]) *
@@ -48,9 +48,9 @@ Volume calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
 }
 
 template <>
-VolumeMoments calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                          const Pt& a_pt_0, const Pt& a_pt_1,
-                                          const Pt& a_pt_2) {
+inline VolumeMoments calculateTriangleCorrection(
+    const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
+    const Pt& a_pt_2) {
   auto moments = VolumeMoments::fromScalarConstant(0.0);
   std::cout << "Not yet implemented" << std::endl;
   std::exit(-1);
@@ -241,7 +241,7 @@ bool orientInitialTangents(const HalfEdgeType* a_starting_half_edge,
 //   }
 // }
 
-std::array<double, 3> coeffsV3SeriesOne(const double a_weight) {
+inline std::array<double, 3> coeffsV3SeriesOne(const double a_weight) {
   auto coeffs = std::array<double, 3>({0.0, 0.0, 0.0});
   double x = 1.0;
   for (UnsignedIndex_t i = 0; i <= 40; ++i) {
@@ -253,7 +253,7 @@ std::array<double, 3> coeffsV3SeriesOne(const double a_weight) {
   return coeffs;
 }
 
-std::array<double, 3> coeffsV3SeriesInfinity(const double a_weight) {
+inline std::array<double, 3> coeffsV3SeriesInfinity(const double a_weight) {
   const double wm2 = 1.0 / (a_weight * a_weight);
   const double wm4 = wm2 * wm2;
   const double wm6 = wm4 * wm2;
@@ -271,7 +271,7 @@ std::array<double, 3> coeffsV3SeriesInfinity(const double a_weight) {
            wm8 * (2509.0 / 96.0 - 105.0 * ln2plnw / 4.0)});
 }
 
-std::array<double, 3> coeffsV3Exact(const double a_weight) {
+inline std::array<double, 3> coeffsV3Exact(const double a_weight) {
   const double w2 = a_weight * a_weight;
   const double w3 = w2 * a_weight;
   const double w4 = w2 * w2;
@@ -296,9 +296,9 @@ ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
                                  const Pt& a_cp, const double a_weight);
 
 template <>
-Volume computeV3Contribution<Volume>(const AlignedParaboloid& a_paraboloid,
-                                     const Pt& a_pt_0, const Pt& a_pt_1,
-                                     const Pt& a_cp, const double a_weight) {
+inline Volume computeV3Contribution<Volume>(
+    const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
+    const Pt& a_cp, const double a_weight) {
   const double area_proj_triangle = 0.5 * (a_pt_0[0] * (a_pt_1[1] - a_cp[1]) +
                                            a_pt_1[0] * (a_cp[1] - a_pt_0[1]) +
                                            a_cp[0] * (a_pt_0[1] - a_pt_1[1]));
@@ -322,7 +322,7 @@ Volume computeV3Contribution<Volume>(const AlignedParaboloid& a_paraboloid,
 }
 
 template <>
-VolumeMoments computeV3Contribution<VolumeMoments>(
+inline VolumeMoments computeV3Contribution<VolumeMoments>(
     const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
     const Pt& a_cp, const double a_weight) {
   auto moments = VolumeMoments::fromScalarConstant(0.0);
@@ -350,14 +350,13 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
     Pt& new_point = projected_pt;
     // We need to store this vertex so that its address remains unique over time
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-      a_surface->addPt(projected_pt);
-      const std::vector<Pt>& new_pts = a_surface->getPts();
-      const Pt& new_point = new_pts[new_pts.size() - 1];
+      Pt* new_point = new Pt(projected_pt);
+      a_surface->addPt(new_point);
       return bezierIntegrate<ReturnType>(a_paraboloid, a_plane, a_pt_ref,
-                                         a_pt_0, new_point, a_tangent_0,
+                                         a_pt_0, *new_point, a_tangent_0,
                                          tangent_projected_pt, a_surface) +
              bezierIntegrate<ReturnType>(
-                 a_paraboloid, a_plane, a_pt_ref, new_point, a_pt_1,
+                 a_paraboloid, a_plane, a_pt_ref, *new_point, a_pt_1,
                  -tangent_projected_pt, a_tangent_1, a_surface);
     } else {
       return bezierIntegrate<ReturnType>(a_paraboloid, a_plane, a_pt_ref,

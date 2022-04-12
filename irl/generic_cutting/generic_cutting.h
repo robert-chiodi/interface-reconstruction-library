@@ -17,10 +17,12 @@
 #include "irl/generic_cutting/generic_cutting_definitions.h"
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_drivers.h"
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_initializer.h"
+#include "irl/generic_cutting/paraboloid_intersection/paraboloid_intersection.h"
 #include "irl/generic_cutting/recursive_simplex_cutting/recursive_simplex_cutting_initializer.h"
 #include "irl/generic_cutting/simplex_cutting/simplex_cutting_initializer.h"
 #include "irl/helpers/SFINAE_boiler_plate.h"
 #include "irl/moments/separated_volume_moments.h"
+#include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/planar_reconstruction/null_reconstruction.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 #include "irl/planar_reconstruction/planar_separator_path_group.h"
@@ -45,7 +47,7 @@ struct getVolumeMoments<
 template <class ReturnType, class CuttingMethod, class EncompassingType>
 struct getVolumeMoments<
     ReturnType, CuttingMethod, EncompassingType, PlanarSeparatorPathGroup,
-	enable_if_t<IsPlanarSeparatorPathGroup<PlanarSeparatorPathGroup>::value>>{
+    enable_if_t<IsPlanarSeparatorPathGroup<PlanarSeparatorPathGroup>::value>> {
   inline static ReturnType getVolumeMomentsImplementation(
       const EncompassingType& a_polytope,
       const PlanarSeparatorPathGroup& a_reconstruction);
@@ -57,7 +59,7 @@ struct getVolumeMoments<
     ReturnType, CuttingMethod, EncompassingType, ReconstructionType,
     enable_if_t<isSimplexCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
-				IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
@@ -72,7 +74,7 @@ struct getVolumeMoments<
     ReturnType, CuttingMethod, EncompassingType, ReconstructionType,
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
-				IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
@@ -87,7 +89,7 @@ struct getVolumeMoments<
     ReturnType, CuttingMethod, EncompassingType, ReconstructionType,
     enable_if_t<isRecursiveSimplexCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
-				IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
@@ -117,7 +119,7 @@ template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
     NullReconstruction,
-	enable_if_t<IsNullReconstruction<NullReconstruction>::value>> {
+    enable_if_t<IsNullReconstruction<NullReconstruction>::value>> {
   inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
@@ -128,8 +130,19 @@ template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
+    Paraboloid, enable_if_t<IsParaboloidReconstruction<Paraboloid>::value>> {
+  inline static ReturnType getVolumeMomentsImplementation(
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const Paraboloid& a_reconstruction);
+};
+
+template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
+          class HalfEdgePolytopeType>
+struct getVolumeMomentsProvidedStorage<
+    ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
     PlanarSeparatorPathGroup,
-	enable_if_t<IsPlanarSeparatorPathGroup<PlanarSeparatorPathGroup>::value>> {
+    enable_if_t<IsPlanarSeparatorPathGroup<PlanarSeparatorPathGroup>::value>> {
   inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
@@ -143,7 +156,7 @@ struct getVolumeMomentsProvidedStorage<
     ReconstructionType,
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
-				IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
@@ -173,7 +186,7 @@ struct getVolumeMomentsProvidedStorage<
     ReconstructionType,
     enable_if_t<isSimplexCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
-				IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
@@ -202,4 +215,4 @@ struct getVolumeMomentsProvidedStorage<
 
 #include "irl/generic_cutting/generic_cutting.tpp"
 
-#endif // IRL_GENERIC_CUTTING_GENERIC_CUTTING_H_
+#endif  // IRL_GENERIC_CUTTING_GENERIC_CUTTING_H_

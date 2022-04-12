@@ -12,6 +12,7 @@
 
 #include "irl/generic_cutting/default_cutting_method.h"
 #include "irl/moments/moments_type_traits.h"
+#include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/planar_reconstruction/planar_reconstruction_type_traits.h"
 
 namespace IRL {
@@ -55,6 +56,18 @@ template <class ReconstructionType>
 struct IsNotANullReconstruction {
   static constexpr bool value =
       !IsNullReconstruction<ReconstructionType>::value;
+};
+
+template <class ReconstructionType>
+struct IsParaboloidReconstruction {
+  static constexpr bool value =
+      std::is_same<ReconstructionType, Paraboloid>::value;
+};
+
+template <class ReconstructionType>
+struct IsNotAParaboloidReconstruction {
+  static constexpr bool value =
+      !std::is_same<ReconstructionType, Paraboloid>::value;
 };
 
 template <class ReconstructionType>
@@ -161,4 +174,4 @@ struct IsNotVolume {
 };
 }  // namespace IRL
 
-#endif // IRL_GENERIC_CUTTING_GENERAL_CLASS_CLASSIFICATIONS_H_
+#endif  // IRL_GENERIC_CUTTING_GENERAL_CLASS_CLASSIFICATIONS_H_

@@ -21,6 +21,22 @@
 
 namespace IRL {
 
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
+                                  HalfEdgePolytopeType* a_complete_polytope,
+                                  const Paraboloid& a_paraboloid,
+                                  SurfaceOutputType* a_surface = nullptr);
+
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
+                                  HalfEdgePolytopeType* a_complete_polytope,
+                                  const AlignedParaboloid& a_paraboloid,
+                                  SurfaceOutputType* a_surface = nullptr);
+
 template <class SegmentedHalfEdgePolyhedronType>
 void integrateClipFaceCorrections(
     const SegmentedHalfEdgePolyhedronType& a_polytope,
@@ -67,7 +83,7 @@ template <class ReturnType, class HalfEdgeType,
 ReturnType computeNewEdgeSegmentContribution(
     const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_ref_pt,
     const HalfEdgeType a_entry_half_edge, const HalfEdgeType a_exit_half_edge,
-    const bool skip_first = false, SurfaceOutputType* a_surface = NULL);
+    const bool skip_first = false, SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class HalfEdgeType,
           class SurfaceOutputType = NoSurfaceOutput>
@@ -76,14 +92,13 @@ ReturnType computeContribution(const AlignedParaboloid& a_aligned_paraboloid,
                                const HalfEdgeType a_entry_half_edge,
                                const HalfEdgeType a_exit_half_edge,
                                const bool skip_first = false,
-                               SurfaceOutputType* a_surface = NULL);
+                               SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class HalfEdgeType,
           class SurfaceOutputType = NoSurfaceOutput>
-ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
-                                         HalfEdgeType* a_start,
-                                         HalfEdgeType* a_end,
-                                         SurfaceOutputType* a_surface = NULL);
+ReturnType orientAndApplyWedgeCorrection(
+    const AlignedParaboloid& a_paraboloid, HalfEdgeType* a_start,
+    HalfEdgeType* a_end, SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class HalfEdgeType>
 ReturnType orientAndApplyWedgeCorrectionHyperbolic(
@@ -140,13 +155,6 @@ formParaboloidIntersectionBasesHyperbolic(
     HalfEdgePolytopeType* a_complete_polytope,
     const AlignedParaboloid& a_aligned_paraboloid);
 
-template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
-enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                  HalfEdgePolytopeType* a_complete_polytope,
-                                  const AlignedParaboloid& a_paraboloid,
-                                  SurfaceOutputType* a_surface = NULL);
 }  // namespace IRL
 
 #include "irl/generic_cutting/paraboloid_intersection/paraboloid_intersection.tpp"
