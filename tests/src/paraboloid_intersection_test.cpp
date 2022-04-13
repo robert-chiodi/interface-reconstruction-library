@@ -1541,15 +1541,16 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     std::cout << std::setprecision(20)
               << "translations[2] = " << translations[2] << ";" << std::endl;
 
-    // aligned_paraboloid.a() = 4.48591151200744420180e+00;
-    // aligned_paraboloid.b() = 1.56936856814911607216e+00;
-    // angles[0] = -3.49094039743041095747e-01;
-    // angles[1] = -1.55146826189590747447e-01;
-    // angles[2] = 0.00000000000000000000e+00;
-    // translations[0] = -4.37534559682081380938e-01;
-    // translations[1] = 1.17654591945453912416e-01;
-    // translations[2] = -3.29576283181781393150e-01;
-    // -1.0 + 2.0 * static_cast<double>(i) / static_cast<double>(Ntests);
+    aligned_paraboloid.a() = 2.8218378285037051256;
+    aligned_paraboloid.b() = -4.4625215246677116809;
+    angles[0] = 0;
+    angles[1] = 0;
+    angles[2] = 0;
+    translations[0] = -0.36681315057406371771;
+    translations[1] = -0.43343162293764381232;
+    translations[2] =
+        -0.36585390636640668927;  // -1.0 + 2.0 * static_cast<double>(i) /
+                                  // static_cast<double>(Ntests);
 
     if (first_vertex_on_surface) translations[2] = 0.0;
 
@@ -1591,10 +1592,10 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     dodeca.setHalfEdgeVersion(&half_edge);
     auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
     auto poly_vol = seg_half_edge.calculateVolume();
-    // auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
-    //     &seg_half_edge, &half_edge, aligned_paraboloid, 10,
-    //     poly_filename);  // This prints the AMR triangles
     auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+        poly_filename);  // This prints the AMR triangles
+    amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
     ParametrizedSurfaceOutput surface(aligned_paraboloid);
     auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
@@ -1633,6 +1634,127 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
                  poly_vol / poly_vol;
 
     if (fabs(our_volume - amr_volume) / poly_vol > 1.0e-10) exit(1);
+  }
+  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
+
+  std::cout << "Max error = " << max_error << std::endl;
+  std::cout << "RMS error = " << rms_error << std::endl;
+  std::cout << "-------------------------------------------------------------"
+               "---------------------------------------------------------"
+            << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, TranslatingCube) {
+  AlignedParaboloid aligned_paraboloid;
+  aligned_paraboloid.a() = 1.0;
+  aligned_paraboloid.b() = 1.0;
+  aligned_paraboloid.c() = 0.0;
+
+  int Ntests = 201;
+  double max_error = 0.0, rms_error = 0.0;
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+  for (int i = 0; i < Ntests; i++) {
+    double h = 0.5;
+    double k = (2.0 * h * h + h) * static_cast<double>(i) /
+               static_cast<double>(Ntests - 1);
+    RectangularCuboid cube = unit_cell;
+    for (auto& vertex : cube) {
+      vertex *= h;
+    }
+    for (auto& vertex : cube) {
+      vertex += Pt(0.5 * h, 0.5 * h, 0.5 * h - k);
+    }
+    HalfEdgePolyhedronParaboloid<Pt> half_edge;
+    cube.setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    std::string poly_filename = "cell_" + std::to_string(i);
+    std::string surf_filename = "surface_" + std::to_string(i);
+    auto poly_vol = seg_half_edge.calculateVolume();
+    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+        poly_filename);  // This prints the AMR triangles
+    amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+    ParametrizedSurfaceOutput surface(aligned_paraboloid);
+    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+    const double length_scale = pow(poly_vol, 1.0 / 3.0) * 0.01;
+    TriangulatedSurfaceOutput triangulated_surface =
+        surface.triangulate(length_scale);
+    triangulated_surface.write(surf_filename);
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+    // error = fabs(our_volume - moments[0]);
+    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
+      std::cout << "ELLIPTIC" << std::endl;
+    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
+      std::cout << "HYPERBOLIC" << std::endl;
+    else
+      std::cout << "PARABOLIC" << std::endl;
+    // std::cout << std::setprecision(20) << "Volume polyhedron = " << poly_vol
+    //           << std::endl;
+
+    double exact_volume = k * k * M_PI / 8.0;
+    if (k > h) {
+      std::cout << "Substract high quadrant" << std::endl;
+      exact_volume -= (k - h) * (k - h) * M_PI / 8.0;
+    }
+    if (k > h * h) {
+      std::cout << "Substract 2 low wedges" << std::endl;
+      exact_volume -= (8.0 * h * h * h * sqrt(-h * h + k) -
+                       20.0 * h * k * sqrt(-h * h + k) + 3.0 * k * k * M_PI -
+                       6.0 * k * k * atan(h / sqrt(-h * h + k)) +
+                       6.0 * k * k * atan(sqrt(-1.0 + k / h / h))) /
+                      24.0;
+    }
+    if (k > 2.0 * h * h) {
+      std::cout << "Adding 1 low triangle" << std::endl;
+      exact_volume +=
+          (2.0 * h *
+               (-4.0 * h * h * h + 6.0 * h * k +
+                2.0 * h * h * sqrt(-h * h + k) - 5.0 * k * sqrt(-h * h + k)) -
+           3.0 * k * k * atan(h / sqrt(-h * h + k)) +
+           3.0 * k * k * atan(sqrt(-1.0 + k / (h * h)))) /
+          12.0;
+    }
+    if ((k - h) > h * h) {
+      std::cout << "Adding 2 high wedges" << std::endl;
+      exact_volume +=
+          (20.0 * h * h * sqrt(-h - h * h + k) +
+           8.0 * h * h * h * sqrt(-h - h * h + k) -
+           20.0 * h * k * sqrt(-h - h * h + k) + 3.0 * h * h * M_PI -
+           6.0 * h * k * M_PI + 3.0 * k * k * M_PI +
+           6.0 * (h - k) * (h - k) * atan(sqrt(-((h + h * h - k) / (h * h)))) -
+           6.0 * (h - k) * (h - k) * atan(h / sqrt(-h - h * h + k))) /
+          24.0;
+    }
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped EX  = " << exact_volume / poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
+    std::cout << "Diff EX/IRL = " << fabs(our_volume - exact_volume) / poly_vol
+              << std::endl;
+    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume) / poly_vol
+              << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    max_error = max_error > fabs(our_volume - exact_volume) / poly_vol
+                    ? max_error
+                    : fabs(our_volume - exact_volume) / poly_vol;
+    rms_error += fabs(our_volume - exact_volume) *
+                 fabs(our_volume - exact_volume) / poly_vol / poly_vol;
+
+    if (fabs(our_volume - exact_volume) / poly_vol > 1.0e-10) exit(1);
   }
   rms_error = sqrt(rms_error / static_cast<double>(Ntests));
 
