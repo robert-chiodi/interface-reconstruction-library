@@ -1456,9 +1456,11 @@ TEST(ParaboloidIntersection, ParametrizedSurface) {
   std::cout << "Rational Bezier arc1 = " << arc1 << std::endl;
   std::cout << "Rational Bezier arc2 = " << arc2 << std::endl;
 
-  AlignedParaboloid paraboloid;
-  paraboloid.a() = 1.0;
-  paraboloid.b() = -1.0;
+  ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                       Normal(0.0, 0.0, 1.0));
+
+  Pt datum(0.0, 0.0, 0.0);
+  Paraboloid paraboloid(datum, frame, 1.0, -1.0);
 
   ParametrizedSurfaceOutput surface(paraboloid);
   surface.addArc(arc0);
@@ -1588,6 +1590,7 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     UnitQuaternion x_rotation(angles[0], frame[0]);
     UnitQuaternion y_rotation(angles[1], frame[1]);
     UnitQuaternion z_rotation(angles[2], frame[2]);
+    ReferenceFrame orig_frame = frame;
     frame = x_rotation * y_rotation * z_rotation * frame;
     for (auto& vertex : dodeca) {
       Pt tmp_pt = vertex;
@@ -1642,12 +1645,16 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
       face->setPlane(Plane(normal, normal * start_location));
     }
 
+    Pt datum(0.0, 0.0, 0.0);
+    Paraboloid paraboloid(datum, orig_frame, aligned_paraboloid.a(),
+                          aligned_paraboloid.b());
+
     // auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
     //     &seg_half_edge, &half_edge, aligned_paraboloid, 10,
     //     poly_filename);  // This prints the AMR triangles
     auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
-    ParametrizedSurfaceOutput surface(aligned_paraboloid);
+    ParametrizedSurfaceOutput surface(paraboloid);
     auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     const double length_scale = 0.0025;

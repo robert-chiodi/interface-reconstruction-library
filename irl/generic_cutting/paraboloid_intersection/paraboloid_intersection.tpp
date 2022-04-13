@@ -268,8 +268,6 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
-  // Rotate surface representation back, if present
-
   return moments;
 }
 
