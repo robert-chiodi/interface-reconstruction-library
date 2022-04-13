@@ -8,7 +8,7 @@ inline Paraboloid::Paraboloid(const Pt& a_datum,
                               const double a_coef_a, const double a_coef_b)
     : datum_m(a_datum),
       frame_m(a_reference_frame),
-      paraboloid_m(std::array<double, 3>({a_coef_a, a_coef_b, 0.0})) {
+      paraboloid_m(std::array<double, 2>({a_coef_a, a_coef_b})) {
   assert(frame_m.isOrthonormalBasis());
 }
 
