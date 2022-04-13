@@ -47,7 +47,7 @@ class TriangulatedSurfaceOutput {
   void clearVertices(void);
   void clearTriangles(void);
   void clearAll(void);
-  void write(std::string& filename);
+  void write(const std::string& filename);
 
   /// Refines triangles to be less than a_max_size. Only two of the dimensions
   /// are used, and the third (a_compute_dim) is comptued according to the

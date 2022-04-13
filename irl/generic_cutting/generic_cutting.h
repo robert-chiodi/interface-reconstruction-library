@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "irl/generic_cutting/general/class_classifications.h"
 #include "irl/generic_cutting/generic_cutting_definitions.h"
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_drivers.h"
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_initializer.h"
@@ -22,7 +23,6 @@
 #include "irl/generic_cutting/simplex_cutting/simplex_cutting_initializer.h"
 #include "irl/helpers/SFINAE_boiler_plate.h"
 #include "irl/moments/separated_volume_moments.h"
-#include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/planar_reconstruction/null_reconstruction.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 #include "irl/planar_reconstruction/planar_separator_path_group.h"
@@ -157,6 +157,7 @@ struct getVolumeMomentsProvidedStorage<
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAParaboloidReconstruction<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(

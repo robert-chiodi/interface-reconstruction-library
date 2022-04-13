@@ -13,6 +13,7 @@
 #include <math.h>
 #include <cassert>
 
+#include "irl/geometry/general/plane.h"
 #include "irl/geometry/general/polynomial.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/unit_quaternion.h"

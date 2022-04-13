@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "irl/data_structures/small_vector.h"
+#include "irl/geometry/general/geometry_type_traits.h"
 #include "irl/geometry/general/plane.h"
 #include "irl/geometry/half_edge_structures/half_edge.h"
 #include "irl/geometry/half_edge_structures/segmented_half_edge_polyhedron.h"
