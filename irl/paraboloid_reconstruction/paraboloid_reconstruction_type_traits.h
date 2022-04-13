@@ -25,9 +25,6 @@ struct has_paraboloid_reconstruction<const C>
     : has_paraboloid_reconstruction<C> {};
 
 template <>
-struct has_paraboloid_reconstruction<AlignedParaboloid> : std::true_type {};
-
-template <>
 struct has_paraboloid_reconstruction<Paraboloid> : std::true_type {};
 
 }  // namespace IRL

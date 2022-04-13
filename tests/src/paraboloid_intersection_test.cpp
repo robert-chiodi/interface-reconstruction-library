@@ -1756,7 +1756,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     vertex_list[i] *= scale;
   }
 
-  int Ntests = 200;
+  int Ntests = 1;
   double max_error = 0.0, rms_error = 0.0;
   bool first_vertex_on_surface = true;
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
@@ -1885,8 +1885,17 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     auto datum = -Pt::fromArray(translations);
     Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
-    auto our_volume =
-        getVolumeMoments<Volume, HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+    auto volume_and_surface =
+        getVolumeMoments<AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>,
+                         HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+
+    const auto& our_volume = volume_and_surface.getMoments();
+    const auto& surface = volume_and_surface.getSurface();
+
+    const double length_scale = 0.0025;
+    TriangulatedSurfaceOutput triangulated_surface =
+        surface.triangulate(length_scale);
+    triangulated_surface.write(surf_filename);
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1925,6 +1934,249 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
   std::cout << "RMS error = " << rms_error << std::endl;
   std::cout << "-------------------------------------------------------------"
                "---------------------------------------------------------"
+            << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+}
+
+EST(ParaboloidIntersection, TranslatingCube) {
+  AlignedParaboloid aligned_paraboloid;
+
+  aligned_paraboloid.a() = 1.0;  // DO NOT CHANGE
+
+  aligned_paraboloid.b() = 1.0;  // DO NOT CHANGE
+
+  std::array<double, 3> translations{{0.0, 0.0, 0.0}};
+
+  ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+
+                       Normal(0.0, 0.0, 1.0));
+
+  auto datum = -Pt::fromArray(translations);
+
+  Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+
+                        aligned_paraboloid.b());
+
+  int Ntests = 201;
+
+  double max_error = 0.0, rms_error = 0.0;
+
+  for (int i = 0; i < Ntests; i++) {
+    double h = 0.75;
+
+    double k = (2.0 * h * h + h) * static_cast<double>(i) /
+
+               static_cast<double>(Ntests - 1);
+
+    RectangularCuboid cube =
+
+        RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -k), Pt(h, h, h - k));
+
+    HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+    cube.setHalfEdgeVersion(&half_edge);
+
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+
+    for (auto& face : seg_half_edge) {
+      auto normal = Normal(0.0, 0.0, 0.0);
+
+      const auto starting_half_edge = face->getStartingHalfEdge();
+
+      auto current_half_edge = starting_half_edge;
+
+      auto next_half_edge = starting_half_edge->getNextHalfEdge();
+
+      const auto& start_location =
+
+          starting_half_edge->getPreviousVertex()->getLocation();
+
+      do {
+        normal += crossProduct(
+
+            current_half_edge->getVertex()->getLocation() - start_location,
+
+            next_half_edge->getVertex()->getLocation() - start_location);
+
+        current_half_edge = next_half_edge;
+
+        next_half_edge = next_half_edge->getNextHalfEdge();
+
+      } while (next_half_edge != starting_half_edge);
+
+      normal.normalize();
+
+      face->setPlane(Plane(normal, normal * start_location));
+    }
+
+    std::string poly_filename = "cell_" + std::to_string(i);
+
+    std::string surf_filename = "surface_" + std::to_string(i);
+
+    auto poly_vol = seg_half_edge.calculateVolume();
+
+    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+
+        poly_filename);  // This prints the AMR triangles
+
+    amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+
+        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+
+    ParametrizedSurfaceOutput surface(paraboloid);
+
+    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+
+        &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+
+    const double length_scale = pow(poly_vol, 1.0 / 3.0) * 0.01;
+
+    TriangulatedSurfaceOutput triangulated_surface =
+
+        surface.triangulate(length_scale);
+
+    triangulated_surface.write(surf_filename);
+
+    std::cout << "-------------------------------------------------------------"
+
+                 "---------------------------------------------------------"
+
+              << std::endl;
+
+    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+
+    // error = fabs(our_volume - moments[0]);
+
+    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
+
+      std::cout << "ELLIPTIC" << std::endl;
+
+    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
+
+      std::cout << "HYPERBOLIC" << std::endl;
+
+    else
+
+      std::cout << "PARABOLIC" << std::endl;
+
+    // std::cout << std::setprecision(20) << "Volume polyhedron = " << poly_vol
+
+    //           << std::endl;
+
+    double exact_volume = k * k * M_PI / 8.0;
+
+    if (k > h) {
+      std::cout << "Substract high quadrant" << std::endl;
+
+      exact_volume -= (k - h) * (k - h) * M_PI / 8.0;
+    }
+
+    if (k > h * h) {
+      std::cout << "Substract 2 low wedges" << std::endl;
+
+      exact_volume -= (8.0 * h * h * h * sqrt(-h * h + k) -
+
+                       20.0 * h * k * sqrt(-h * h + k) + 3.0 * k * k * M_PI -
+
+                       6.0 * k * k * atan(h / sqrt(-h * h + k)) +
+
+                       6.0 * k * k * atan(sqrt(-1.0 + k / h / h))) /
+
+                      24.0;
+    }
+
+    if (k > 2.0 * h * h) {
+      std::cout << "Adding 1 low triangle" << std::endl;
+
+      exact_volume +=
+
+          (2.0 * h *
+
+               (-4.0 * h * h * h + 6.0 * h * k +
+
+                2.0 * h * h * sqrt(-h * h + k) - 5.0 * k * sqrt(-h * h + k)) -
+
+           3.0 * k * k * atan(h / sqrt(-h * h + k)) +
+
+           3.0 * k * k * atan(sqrt(-1.0 + k / (h * h)))) /
+
+          12.0;
+    }
+
+    if ((k - h) > h * h) {
+      std::cout << "Adding 2 high wedges" << std::endl;
+
+      exact_volume +=
+
+          (20.0 * h * h * sqrt(-h - h * h + k) +
+
+           8.0 * h * h * h * sqrt(-h - h * h + k) -
+
+           20.0 * h * k * sqrt(-h - h * h + k) + 3.0 * h * h * M_PI -
+
+           6.0 * h * k * M_PI + 3.0 * k * k * M_PI +
+
+           6.0 * (h - k) * (h - k) * atan(sqrt(-((h + h * h - k) / (h * h)))) -
+
+           6.0 * (h - k) * (h - k) * atan(h / sqrt(-h - h * h + k))) /
+
+          24.0;
+    }
+
+    std::cout << std::setprecision(20)
+
+              << "Vfrac unclipped EX  = " << exact_volume / poly_vol
+
+              << std::endl;
+
+    std::cout << std::setprecision(20)
+
+              << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
+
+    std::cout << std::setprecision(20)
+
+              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
+
+    std::cout << "Diff EX/IRL = " << fabs(our_volume - exact_volume) / poly_vol
+
+              << std::endl;
+
+    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume) / poly_vol
+
+              << std::endl;
+
+    std::cout << "-------------------------------------------------------------"
+
+                 "---------------------------------------------------------"
+
+              << std::endl;
+
+    max_error = max_error > fabs(our_volume - exact_volume) / poly_vol
+
+                    ? max_error
+
+                    : fabs(our_volume - exact_volume) / poly_vol;
+
+    rms_error += fabs(our_volume - exact_volume) *
+
+                 fabs(our_volume - exact_volume) / poly_vol / poly_vol;
+
+    if (fabs(our_volume - exact_volume) / poly_vol > 1.0e-10) exit(1);
+  }
+
+  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
+
+  std::cout << "Max error = " << max_error << std::endl;
+
+  std::cout << "RMS error = " << rms_error << std::endl;
+
+  std::cout << "-------------------------------------------------------------"
+
+               "---------------------------------------------------------"
+
             << std::endl;
 
   EXPECT_NEAR(max_error, 0.0, 1.0e-13);

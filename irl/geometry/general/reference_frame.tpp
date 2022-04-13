@@ -29,13 +29,13 @@ inline const Normal& ReferenceFrame::operator[](
 }
 
 inline bool ReferenceFrame::isOrthonormalBasis(void) const {
-  if (std::fabs(axis_m[0] * axis_m[1]) > DBL_MIN) {
+  if (std::fabs(axis_m[0] * axis_m[1]) > DBL_EPSILON) {
     return false;
   }
-  if (std::fabs(axis_m[0] * axis_m[2]) > DBL_MIN) {
+  if (std::fabs(axis_m[0] * axis_m[2]) > DBL_EPSILON) {
     return false;
   }
-  if (std::fabs(axis_m[1] * axis_m[2]) > DBL_MIN) {
+  if (std::fabs(axis_m[1] * axis_m[2]) > DBL_EPSILON) {
     return false;
   }
   return true;
