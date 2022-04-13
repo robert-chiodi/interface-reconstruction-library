@@ -50,6 +50,7 @@ class ParametrizedSurfaceOutput {
   void clearArcs(void);
   void clearPts(void);
   void clear(void);
+  inline double getSurfaceArea(void) const;
 
   TriangulatedSurfaceOutput triangulate(
       const double a_length_scale = -1.0,
