@@ -1933,8 +1933,8 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
 
 TEST(ParaboloidIntersection, TranslatingCube) {
   AlignedParaboloid aligned_paraboloid;
-  aligned_paraboloid.a() = 1.0;
-  aligned_paraboloid.b() = 1.0;
+  aligned_paraboloid.a() = 1.0;  // DO NOT CHANGE
+  aligned_paraboloid.b() = 1.0;  // DO NOT CHANGE
   std::array<double, 3> translations{{0.0, 0.0, 0.0}};
   ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
                        Normal(0.0, 0.0, 1.0));
@@ -1945,16 +1945,11 @@ TEST(ParaboloidIntersection, TranslatingCube) {
   double max_error = 0.0, rms_error = 0.0;
 
   for (int i = 0; i < Ntests; i++) {
-    double h = 0.5;
+    double h = 0.75;
     double k = (2.0 * h * h + h) * static_cast<double>(i) /
                static_cast<double>(Ntests - 1);
-    RectangularCuboid cube = unit_cell;
-    for (auto& vertex : cube) {
-      vertex *= h;
-    }
-    for (auto& vertex : cube) {
-      vertex += Pt(0.5 * h, 0.5 * h, 0.5 * h - k);
-    }
+    RectangularCuboid cube =
+        RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -k), Pt(h, h, h - k));
     HalfEdgePolyhedronParaboloid<Pt> half_edge;
     cube.setHalfEdgeVersion(&half_edge);
     auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
