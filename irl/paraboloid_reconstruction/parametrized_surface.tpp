@@ -12,6 +12,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include "external/quadpackpp/include/workspace.hpp"
 
 namespace IRL {
 
@@ -117,6 +118,51 @@ inline ParametrizedSurfaceOutput::~ParametrizedSurfaceOutput(void) {
   for (auto elem : pt_from_bezier_split_m) {
     delete elem;
   }
+}
+
+inline double ArcContributionToSurfaceArea(
+    double a_t, std::pair<RationalBezierArc, AlignedParaboloid>* a_params) {
+  const auto pt = a_params->first.point(a_t);
+  const auto der = a_params->first.derivative(a_t);
+  const double a = a_params->second.a();
+  const double b = a_params->second.b();
+  double primitive =
+      0.5 * pt[0] *
+          std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
+                    4.0 * b * b * pt[1] * pt[1]) +
+      (1.0 + 4.0 * b * b * pt[1] * pt[1]) *
+          std::log(2.0 * a * a * pt[0] +
+                   a * std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
+                                 4.0 * b * b * pt[1] * pt[1])) /
+          (4.0 * a);
+  return primitive * der[1];
+}
+
+inline double ParametrizedSurfaceOutput::getSurfaceArea(void) const {
+  const UnsignedIndex_t nArcs = this->size();
+  double surface_area = 0.0;
+  size_t limit = 128;
+  size_t m_deg = 10;  // sets (2m+1)-point Gauss-Kronrod
+  Workspace<double> Work(limit, m_deg);
+  for (std::size_t t = 0; t < nArcs; ++t) {
+    auto params = std::pair<RationalBezierArc, AlignedParaboloid>(
+        {arc_list_m[t], paraboloid_m.getAlignedParaboloid()});
+    Function<double, std::pair<RationalBezierArc, AlignedParaboloid>> F(
+        ArcContributionToSurfaceArea, &params);
+    // Set default quadrature tolerance from machine epsilon...
+    double epsabs = 100.0 * DBL_EPSILON, epsrel = 0.0;
+    int status = 0;
+    double result, abserr;
+    try {
+      status = Work.qag(F, 0.0, 1.0, epsabs, epsrel, result, abserr);
+    } catch (const char* reason) {
+      std::cerr << reason << std::endl;
+      return status;
+    }
+    surface_area += result;
+  }
+
+  return surface_area;
 }
 
 inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
