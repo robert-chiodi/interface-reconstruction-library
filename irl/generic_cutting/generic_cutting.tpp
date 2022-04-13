@@ -179,8 +179,8 @@ inline ReturnType getVolumeMomentsProvidedStorage<
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
                                    HalfEdgePolytopeType* a_complete_polytope,
                                    const Paraboloid& a_reconstruction) {
-  return intersectPolyhedronWithParaboloid(a_polytope, a_complete_polytope,
-                                           a_reconstruction);
+  return intersectPolyhedronWithParaboloid<ReturnType>(
+      a_polytope, a_complete_polytope, a_reconstruction);
 }
 
 template <class ReturnType, class CuttingMethod, class EncompassingType>
@@ -261,6 +261,7 @@ inline ReturnType getVolumeMomentsProvidedStorage<
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
+                IsNotAParaboloidReconstruction<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,

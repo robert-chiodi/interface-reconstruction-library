@@ -6,5 +6,6 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/paraboloid_reconstruction/parametri
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/paraboloid_reconstruction/parametrized_surface.tpp)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/paraboloid_reconstruction/rational_bezier_arc.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/paraboloid_reconstruction/rational_bezier_arc.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/paraboloid_reconstruction/paraboloid_reconstruction_type_traits.h)
 
 

@@ -243,10 +243,10 @@ void computeMomentContributionMixedTriangle(
           }
           break;
         } else {
-          const double t1 = (nx0 - d) / (nx0 - nx1);
-          const double t2 = (nx0 - d) / (nx0 - nx2);
-          assert(t1 >= 0.0 && t1 <= 1.0);
-          assert(t2 >= 0.0 && t2 <= 1.0);
+          double t1 = (nx0 - d) / (nx0 - nx1);
+          double t2 = (nx0 - d) / (nx0 - nx2);
+          t1 = std::min(1.0, std::max(0.0, t1));
+          t2 = std::min(1.0, std::max(0.0, t2));
           const Pt new_pt_1 = tris[ids[0]] * (1.0 - t1) + t1 * tris[ids[1]];
           const Pt new_pt_2 = tris[ids[0]] * (1.0 - t2) + t2 * tris[ids[2]];
           const double signed_area_1 =

@@ -105,7 +105,7 @@ inline void TriangulatedSurfaceOutput::refineSize(
   }
 }
 
-inline void TriangulatedSurfaceOutput::write(std::string& filename) {
+inline void TriangulatedSurfaceOutput::write(const std::string& filename) {
   // binary file
   std::string header_info = filename;
   char head[80];

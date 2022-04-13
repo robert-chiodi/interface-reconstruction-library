@@ -13,6 +13,7 @@
 #include <math.h>
 #include <cassert>
 
+#include "irl/geometry/general/plane.h"
 #include "irl/geometry/general/polynomial.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/unit_quaternion.h"
@@ -20,22 +21,19 @@
 
 namespace IRL {
 
-// Paraboloid in the form z + c + a*x^2 + b*y^2 = 0
-class AlignedParaboloid : public Polynomial<3> {
+// Paraboloid in the form z + a*x^2 + b*y^2 = 0
+class AlignedParaboloid : public Polynomial<2> {
  public:
-  using Polynomial<3>::Polynomial;
+  using Polynomial<2>::Polynomial;
 
   AlignedParaboloid flipParaboloid(void) const {
-    return AlignedParaboloid(
-        std::array<double, 3>{{-this->a(), -this->b(), -this->c()}});
+    return AlignedParaboloid(std::array<double, 2>{{-this->a(), -this->b()}});
   }
 
   double& a(void) { return (*this)[0]; }
   double a(void) const { return (*this)[0]; }
   double& b(void) { return (*this)[1]; }
   double b(void) const { return (*this)[1]; }
-  double& c(void) { return (*this)[2]; }
-  double c(void) const { return (*this)[2]; }
 
   // Ellipse in the form Ax^2 + By^2 + Cxy + Dx + Ey + F = 0
   Ellipse intersectWithPlane(const Plane& a_plane) const {

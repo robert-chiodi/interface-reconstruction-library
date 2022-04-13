@@ -44,25 +44,6 @@ void HalfEdgePolyhedronParaboloid<
     *begin_segmented_vertex_iter = &(this->getVertex(n));
     ++begin_segmented_vertex_iter;
   }
-
-  // Fill in face plane information
-  for (auto& face : (*a_polytope)) {
-    auto normal = Normal(0.0, 0.0, 0.0);
-    const auto starting_half_edge = face->getStartingHalfEdge();
-    auto current_half_edge = starting_half_edge;
-    auto next_half_edge = starting_half_edge->getNextHalfEdge();
-    const auto& start_location =
-        starting_half_edge->getPreviousVertex()->getLocation();
-    do {
-      normal += crossProduct(
-          current_half_edge->getVertex()->getLocation() - start_location,
-          next_half_edge->getVertex()->getLocation() - start_location);
-      current_half_edge = next_half_edge;
-      next_half_edge = next_half_edge->getNextHalfEdge();
-    } while (next_half_edge != starting_half_edge);
-    normal.normalize();
-    face->setPlane(Plane(normal, normal * start_location));
-  }
 }
 
 }  // namespace IRL

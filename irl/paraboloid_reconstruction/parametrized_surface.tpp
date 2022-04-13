@@ -16,7 +16,7 @@
 namespace IRL {
 
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
-    const AlignedParaboloid& a_paraboloid)
+    const Paraboloid& a_paraboloid)
     : paraboloid_m{a_paraboloid} {}
 
 inline RationalBezierArc& ParametrizedSurfaceOutput::operator[](
@@ -29,8 +29,7 @@ inline const RationalBezierArc& ParametrizedSurfaceOutput::operator[](
   return arc_list_m[a_index];
 }
 
-inline const AlignedParaboloid& ParametrizedSurfaceOutput::getParaboloid(
-    void) const {
+inline const Paraboloid& ParametrizedSurfaceOutput::getParaboloid(void) const {
   return paraboloid_m;
 }
 
@@ -85,6 +84,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
   const UnsignedIndex_t nArcs = this->size();
   double length_scale = DBL_MAX;
+  const auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
 
   std::cout << "Triangulating parametrized surface with " << nArcs
             << " arcs:" << std::endl;
@@ -223,8 +223,21 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     for (UnsignedIndex_t i = 0; i < out.numberofpoints; ++i) {
       const double x = out.pointlist[2 * i + 0];
       const double y = out.pointlist[2 * i + 1];
-      const double z = -paraboloid_m.a() * x * x - paraboloid_m.b() * y * y;
+      const double z =
+          -aligned_paraboloid.a() * x * x - aligned_paraboloid.b() * y * y;
       vlist[i] = Pt(x, y, z);
+    }
+
+    // Translate and rotate triangulated surface vertices
+    const auto& datum = paraboloid_m.getDatum();
+    const auto& ref_frame = paraboloid_m.getReferenceFrame();
+    for (auto& vertex : vlist) {
+      const Pt base_pt = vertex + datum;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          vertex[n] += ref_frame[d][n] * base_pt[n];
+        }
+      }
     }
 
     auto& tlist = returned_surface.getTriangleList();
@@ -277,9 +290,11 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 inline std::ostream& operator<<(
     std::ostream& out,
     const ParametrizedSurfaceOutput& a_parametrized_surface) {
+  const auto& aligned_paraboloid =
+      a_parametrized_surface.getParaboloid().getAlignedParaboloid();
   out.precision(16);
-  out << std::scientific << a_parametrized_surface.getParaboloid().a() << " "
-      << a_parametrized_surface.getParaboloid().b() << std::endl;
+  out << std::scientific << aligned_paraboloid.a() << " "
+      << aligned_paraboloid.b() << std::endl;
   for (UnsignedIndex_t i = 0; i < a_parametrized_surface.size(); ++i) {
     out << a_parametrized_surface[i];
     if (i < a_parametrized_surface.size() - 1) out << std::endl;

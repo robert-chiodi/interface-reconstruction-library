@@ -16,8 +16,8 @@
 #include "external/triangle/triangle.h"
 #endif
 
-#include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/paraboloid_reconstruction/ellipse.h"
+#include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/rational_bezier_arc.h"
 #include "irl/surface_mesher/triangulated_surface.h"
 
@@ -36,13 +36,13 @@ class ParametrizedSurfaceOutput {
  public:
   /// \brief Default constructor.
   ParametrizedSurfaceOutput(void) = default;
-  ParametrizedSurfaceOutput(const AlignedParaboloid& a_paraboloid);
+  ParametrizedSurfaceOutput(const Paraboloid& a_paraboloid);
 
   RationalBezierArc& operator[](const UnsignedIndex_t a_index);
   const RationalBezierArc& operator[](const UnsignedIndex_t a_index) const;
   const std::vector<RationalBezierArc>::size_type size(void) const;
 
-  const AlignedParaboloid& getParaboloid(void) const;
+  const Paraboloid& getParaboloid(void) const;
   std::vector<RationalBezierArc>& getArcs(void);
   std::vector<Pt*>& getPts(void);
   void addArc(const RationalBezierArc& a_rational_bezier_arc);
@@ -58,7 +58,7 @@ class ParametrizedSurfaceOutput {
   ~ParametrizedSurfaceOutput(void);
 
  private:
-  AlignedParaboloid paraboloid_m;
+  Paraboloid paraboloid_m;
   std::vector<Pt*> pt_from_bezier_split_m;
   std::vector<RationalBezierArc> arc_list_m;
 };

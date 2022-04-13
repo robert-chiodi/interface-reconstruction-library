@@ -168,6 +168,7 @@ inline Volume integrateFaceOnlyIntersection(
   const double c = a_face_plane.distance() / a_face_plane.normal()[2];
   const double factor = 4.0 * a_paraboloid.a() * a_paraboloid.b() * c -
                         a_paraboloid.a() * b * b - a_paraboloid.b() * a * a;
+  std::cout << a << " " << b << " " << c << " " << factor << std::endl;
   return std::copysign(
       M_PI * factor * factor /
           (32.0 * std::pow(a_paraboloid.a() * a_paraboloid.b(), 2.5)),
@@ -210,19 +211,62 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                                   HalfEdgePolytopeType* a_complete_polytope,
                                   const Paraboloid& a_paraboloid,
                                   SurfaceOutputType* a_surface) {
-  // Compute the AlignedParaboloid and necessary rotation
-  AlignedParaboloid aligned_paraboloid(std::array<double, 3>(
-      {a_paraboloid.a(), a_paraboloid.d(), a_paraboloid.f()}));
+  // Move into reconstruction reference frame
+  const UnsignedIndex_t original_number_of_vertices =
+      a_polytope->getNumberOfVertices();
+  const auto& datum = a_paraboloid.getDatum();
+  const auto& ref_frame = a_paraboloid.getReferenceFrame();
+  assert(ref_frame.isOrthonormalBasis());
 
-  // Rotate base polyhedron
+  for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
+    const auto& original_pt = a_polytope->getVertex(v)->getLocation().getPt();
+    typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
+    auto& pt = projected_location.getPt();
+    for (UnsignedIndex_t n = 0; n < 3; ++n) {
+      pt[n] = ref_frame[n] * original_pt - datum[n];
+    }
+    a_polytope->getVertex(v)->setLocation(projected_location);
+  }
+
+  // Recalculate in face plane information
+  for (auto& face : (*a_polytope)) {
+    auto normal = Normal(0.0, 0.0, 0.0);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    const auto& start_location =
+        starting_half_edge->getPreviousVertex()->getLocation();
+    do {
+      normal += crossProduct(
+          current_half_edge->getVertex()->getLocation() - start_location,
+          next_half_edge->getVertex()->getLocation() - start_location);
+      current_half_edge = next_half_edge;
+      next_half_edge = next_half_edge->getNextHalfEdge();
+    } while (next_half_edge != starting_half_edge);
+    normal.normalize();
+    face->setPlane(Plane(normal, normal * start_location));
+  }
 
   // Compute intersection
-  auto moments = intersectPolyhedronWithParaboloid(
-      a_polytope, a_complete_polytope, aligned_paraboloid, a_surface);
+  auto moments = intersectPolyhedronWithParaboloid<ReturnType>(
+      a_polytope, a_complete_polytope, a_paraboloid.getAlignedParaboloid(),
+      a_surface);
 
   // Rotate base polyhedron back
-
-  // Rotate surface representation back, if present
+  const UnsignedIndex_t number_of_vertices = a_polytope->getNumberOfVertices();
+  for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
+    const auto original_pt =
+        a_polytope->getVertex(v)->getLocation().getPt() + datum;
+    typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
+    auto& pt = projected_location.getPt();
+    pt = Pt(0.0, 0.0, 0.0);
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      for (UnsignedIndex_t n = 0; n < 3; ++n) {
+        pt[n] += ref_frame[d][n] * original_pt[n];
+      }
+    }
+    a_polytope->getVertex(v)->setLocation(projected_location);
+  }
 
   return moments;
 }
@@ -235,25 +279,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                                   const AlignedParaboloid& a_paraboloid,
                                   SurfaceOutputType* a_surface) {
   // Assumed a_polytope is already rotated to be in same coordinate system
-  // as a_paraboloid. Will lift this later in different function that
-  // performs the transformation.
-
-  const double shift = -a_paraboloid.c();
-  AlignedParaboloid paraboloid = a_paraboloid;
-  paraboloid.c() = 0.0;
-
-  // Shift polyhedron in z
-  const UnsignedIndex_t original_number_of_vertices =
-      a_polytope->getNumberOfVertices();
-  for (UnsignedIndex_t n = 0; n < original_number_of_vertices; ++n) {
-    Pt shifted_location =
-        a_polytope->getVertex(n)->getLocation() + Pt(0.0, 0.0, shift);
-    a_polytope->getVertex(n)->setLocation(shifted_location);
-  }
+  // as a_paraboloid.
 
   // Below function computes the entire integration
   const auto moments = formParaboloidIntersectionBases<ReturnType>(
-      a_polytope, a_complete_polytope, paraboloid, 0, a_surface);
+      a_polytope, a_complete_polytope, a_paraboloid, 0, a_surface);
 
   return moments;
 }
@@ -828,6 +858,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                                      starting_half_edge)) {
             const auto face_integ = integrateFaceOnlyIntersection<ReturnType>(
                 a_aligned_paraboloid, face_plane);
+            std::cout << "HAS FACE ONLY " << face_plane << " " << face_integ
+                      << std::endl;
             full_moments += face_integ;
             // Return surface parametrization
             if constexpr (!std::is_same<SurfaceOutputType,

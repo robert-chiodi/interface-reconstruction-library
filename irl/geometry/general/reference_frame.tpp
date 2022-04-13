@@ -28,6 +28,19 @@ inline const Normal& ReferenceFrame::operator[](
   return axis_m[a_axis];
 }
 
+inline bool ReferenceFrame::isOrthonormalBasis(void) const {
+  if (std::fabs(axis_m[0] * axis_m[1]) > DBL_MIN) {
+    return false;
+  }
+  if (std::fabs(axis_m[0] * axis_m[2]) > DBL_MIN) {
+    return false;
+  }
+  if (std::fabs(axis_m[1] * axis_m[2]) > DBL_MIN) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_REFERENCE_FRAME_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_REFERENCE_FRAME_TPP_

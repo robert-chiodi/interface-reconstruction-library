@@ -34,6 +34,8 @@ class ReferenceFrame {
   /// \brief Const version of verload `operator[]` for access.
   const Normal& operator[](const UnsignedIndex_t a_axis) const;
 
+  bool isOrthonormalBasis(void) const;
+
   /// \brief Default destructor.
   ~ReferenceFrame(void) = default;
 
@@ -46,4 +48,4 @@ class ReferenceFrame {
 
 #include "irl/geometry/general/reference_frame.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_REFERENCE_FRAME_H_
+#endif  // IRL_GEOMETRY_GENERAL_REFERENCE_FRAME_H_
