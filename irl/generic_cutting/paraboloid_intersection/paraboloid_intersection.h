@@ -22,12 +22,11 @@
 namespace IRL {
 
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
+          class HalfEdgePolytopeType>
 enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
 intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                                   HalfEdgePolytopeType* a_complete_polytope,
-                                  const Paraboloid& a_paraboloid,
-                                  SurfaceOutputType* a_surface = nullptr);
+                                  const Paraboloid& a_paraboloid);
 
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
           class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>

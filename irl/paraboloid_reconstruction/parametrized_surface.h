@@ -23,9 +23,39 @@
 
 namespace IRL {
 
+template <class MomentType, class SurfaceType>
+class AddSurfaceOutput {
+ public:
+  using moment_type = MomentType;
+  using surface_type = SurfaceType;
+
+  AddSurfaceOutput(void) = default;
+
+  MomentType& getMoments(void);
+  const MomentType& getMoments(void) const;
+
+  SurfaceType& getSurface(void);
+  const SurfaceType& getSurface(void) const;
+
+ private:
+  MomentType volume_moments_m;
+  SurfaceType surface_m;
+};
+
+template <class C>
+struct has_paraboloid_surface : std::false_type {};
+
+template <class C>
+struct has_paraboloid_surface<const C> : has_paraboloid_surface<C> {};
+
+template <class MomentType, class SurfaceType>
+struct has_paraboloid_surface<AddSurfaceOutput<MomentType, SurfaceType>>
+    : std::true_type {};
+
 class NoSurfaceOutput {
  public:
   NoSurfaceOutput(void) = default;
+  ~NoSurfaceOutput(void) = default;
 
  private:
 };
@@ -37,6 +67,15 @@ class ParametrizedSurfaceOutput {
   /// \brief Default constructor.
   ParametrizedSurfaceOutput(void) = default;
   ParametrizedSurfaceOutput(const Paraboloid& a_paraboloid);
+
+  ParametrizedSurfaceOutput(const ParametrizedSurfaceOutput& a_rhs) = delete;
+  ParametrizedSurfaceOutput(ParametrizedSurfaceOutput&& a_rhs);
+
+  ParametrizedSurfaceOutput& operator=(const ParametrizedSurfaceOutput& a_rhs) =
+      delete;
+  ParametrizedSurfaceOutput& operator=(ParametrizedSurfaceOutput&& a_rhs);
+
+  void setParaboloid(const Paraboloid& a_paraboloid);
 
   RationalBezierArc& operator[](const UnsignedIndex_t a_index);
   const RationalBezierArc& operator[](const UnsignedIndex_t a_index) const;

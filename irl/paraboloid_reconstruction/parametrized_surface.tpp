@@ -16,9 +16,52 @@
 
 namespace IRL {
 
+template <class MomentType, class SurfaceType>
+MomentType& AddSurfaceOutput<MomentType, SurfaceType>::getMoments(void) {
+  return volume_moments_m;
+}
+
+template <class MomentType, class SurfaceType>
+const MomentType& AddSurfaceOutput<MomentType, SurfaceType>::getMoments(
+    void) const {
+  return volume_moments_m;
+}
+
+template <class MomentType, class SurfaceType>
+SurfaceType& AddSurfaceOutput<MomentType, SurfaceType>::getSurface(void) {
+  return surface_m;
+}
+
+template <class MomentType, class SurfaceType>
+const SurfaceType& AddSurfaceOutput<MomentType, SurfaceType>::getSurface(
+    void) const {
+  return surface_m;
+}
+
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     const Paraboloid& a_paraboloid)
     : paraboloid_m{a_paraboloid} {}
+
+inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
+    ParametrizedSurfaceOutput&& a_rhs)
+    : paraboloid_m(a_rhs.paraboloid_m),
+      pt_from_bezier_split_m(std::move(a_rhs.pt_from_bezier_split_m)),
+      arc_list_m(std::move(a_rhs.arc_list_m)) {}
+
+inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
+    ParametrizedSurfaceOutput&& a_rhs) {
+  if (this != &a_rhs) {
+    paraboloid_m = a_rhs.paraboloid_m;
+    pt_from_bezier_split_m = std::move(a_rhs.pt_from_bezier_split_m);
+    arc_list_m = std::move(a_rhs.arc_list_m);
+  }
+  return *this;
+}
+
+inline void ParametrizedSurfaceOutput::setParaboloid(
+    const Paraboloid& a_paraboloid) {
+  paraboloid_m = a_paraboloid;
+}
 
 inline RationalBezierArc& ParametrizedSurfaceOutput::operator[](
     const UnsignedIndex_t a_index) {
@@ -72,7 +115,9 @@ inline void ParametrizedSurfaceOutput::clear(void) {
 }
 
 inline ParametrizedSurfaceOutput::~ParametrizedSurfaceOutput(void) {
-  this->clear();
+  for (auto elem : pt_from_bezier_split_m) {
+    delete elem;
+  }
 }
 
 inline double ArcContributionToSurfaceArea(
@@ -278,11 +323,11 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const auto& datum = paraboloid_m.getDatum();
     const auto& ref_frame = paraboloid_m.getReferenceFrame();
     for (auto& vertex : vlist) {
-      const Pt base_pt = vertex;
-      vertex = datum;
+      const Pt base_pt = vertex + datum;
+      vertex = Pt(0.0, 0.0, 0.0);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
-          vertex[d] += ref_frame[d][n] * base_pt[n];
+          vertex[n] += ref_frame[d][n] * base_pt[d];
         }
       }
     }

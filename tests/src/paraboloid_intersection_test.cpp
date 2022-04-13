@@ -1757,7 +1757,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     vertex_list[i] *= scale;
   }
 
-  int Ntests = 200;
+  int Ntests = 1;
   double max_error = 0.0, rms_error = 0.0;
   bool first_vertex_on_surface = true;
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
@@ -1886,8 +1886,17 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     auto datum = -Pt::fromArray(translations);
     Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
-    auto our_volume =
-        getVolumeMoments<Volume, HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+    auto volume_and_surface =
+        getVolumeMoments<AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>,
+                         HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+
+    const auto& our_volume = volume_and_surface.getMoments();
+    const auto& surface = volume_and_surface.getSurface();
+
+    const double length_scale = 0.0025;
+    TriangulatedSurfaceOutput triangulated_surface =
+        surface.triangulate(length_scale);
+    triangulated_surface.write(surf_filename);
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
