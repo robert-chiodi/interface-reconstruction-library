@@ -16,6 +16,7 @@
 #include "external/triangle/triangle.h"
 #endif
 
+#include "irl/geometry/general/normal.h"
 #include "irl/paraboloid_reconstruction/ellipse.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/rational_bezier_arc.h"
@@ -89,7 +90,12 @@ class ParametrizedSurfaceOutput {
   void clearArcs(void);
   void clearPts(void);
   void clear(void);
-  inline double getSurfaceArea(void) const;
+  inline double getSurfaceArea(void);
+  inline double getMeanCurvatureIntegral(void);
+  inline double getGaussianCurvatureIntegral(void);
+  inline Normal getAverageNormal(void);
+  inline double getAverageMeanCurvature(void);
+  inline double getAverageGaussianCurvature(void);
 
   TriangulatedSurfaceOutput triangulate(
       const double a_length_scale = -1.0,
@@ -98,6 +104,14 @@ class ParametrizedSurfaceOutput {
   ~ParametrizedSurfaceOutput(void);
 
  private:
+  bool knows_surface_area_m;
+  double surface_area_m;
+  bool knows_avg_normal_m;
+  Normal avg_normal_m;
+  bool knows_int_mean_curv_m;
+  double int_mean_curv_m;
+  bool knows_int_gaussian_curv_m;
+  double int_gaussian_curv_m;
   Paraboloid paraboloid_m;
   std::vector<Pt*> pt_from_bezier_split_m;
   std::vector<RationalBezierArc> arc_list_m;
