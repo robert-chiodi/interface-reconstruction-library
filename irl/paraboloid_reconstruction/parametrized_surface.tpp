@@ -12,7 +12,8 @@
 
 #include <fstream>
 #include <iomanip>
-#include "external/quadpackpp/include/workspace.hpp"
+
+#include "external/NumericalIntegration/NumericalIntegration.h"
 
 namespace IRL {
 
@@ -120,45 +121,58 @@ inline ParametrizedSurfaceOutput::~ParametrizedSurfaceOutput(void) {
   }
 }
 
-inline double ArcContributionToSurfaceArea(
-    double a_t, std::pair<RationalBezierArc, AlignedParaboloid>* a_params) {
-  const auto pt = a_params->first.point(a_t);
-  const auto der = a_params->first.derivative(a_t);
-  const double a = a_params->second.a();
-  const double b = a_params->second.b();
-  double primitive =
-      0.5 * pt[0] *
-          std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
-                    4.0 * b * b * pt[1] * pt[1]) +
-      (1.0 + 4.0 * b * b * pt[1] * pt[1]) *
-          std::log(2.0 * a * a * pt[0] +
-                   a * std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
-                                 4.0 * b * b * pt[1] * pt[1])) /
-          (4.0 * a);
-  return primitive * der[1];
-}
+class ArcContributionToSurfaceArea_Functor {
+ public:
+  ArcContributionToSurfaceArea_Functor(const RationalBezierArc& a_arc,
+                                       const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
+
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive =
+        0.5 * pt[0] *
+            std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
+                      4.0 * b * b * pt[1] * pt[1]) +
+        (1.0 + 4.0 * b * b * pt[1] * pt[1]) *
+            std::log(2.0 * a * a * pt[0] +
+                     a * std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
+                                   4.0 * b * b * pt[1] * pt[1])) /
+            (4.0 * a);
+    return primitive * der[1];
+  }
+
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
 
 inline double ParametrizedSurfaceOutput::getSurfaceArea(void) const {
   const UnsignedIndex_t nArcs = this->size();
   double surface_area = 0.0;
   size_t limit = 128;
-  size_t m_deg = 10;  // sets (2m+1)-point Gauss-Kronrod
-  Workspace<double> Work(limit, m_deg);
+
+  const double epsabs = 100.0 * DBL_EPSILON;
+  const double epsrel = 0.0;
+  auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
   for (std::size_t t = 0; t < nArcs; ++t) {
-    auto params = std::pair<RationalBezierArc, AlignedParaboloid>(
-        {arc_list_m[t], paraboloid_m.getAlignedParaboloid()});
-    Function<double, std::pair<RationalBezierArc, AlignedParaboloid>> F(
-        ArcContributionToSurfaceArea, &params);
-    // Set default quadrature tolerance from machine epsilon...
-    double epsabs = 100.0 * DBL_EPSILON, epsrel = 0.0;
-    int status = 0;
-    double result, abserr;
-    try {
-      status = Work.qag(F, 0.0, 1.0, epsabs, epsrel, result, abserr);
-    } catch (const char* reason) {
-      std::cerr << reason << std::endl;
-      return status;
-    }
+    // Define the functor
+    ArcContributionToSurfaceArea_Functor functor(arc_list_m[t],
+                                                 aligned_paraboloid);
+
+    // Define the integrator.
+    Eigen::Integrator<double> integrator(limit);
+
+    // Define a quadrature rule.
+    Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+        Eigen::Integrator<double>::GaussKronrod61;
+
+    // Integrate.
+    double result = integrator.quadratureAdaptive(functor, 0.0, 1.0, epsabs,
+                                                  epsrel, quadrature_rule);
+
     surface_area += result;
   }
 
