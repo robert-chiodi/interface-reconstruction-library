@@ -17,9 +17,11 @@
 #include "irl/geometry/general/normal.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/reference_frame.h"
+#include "irl/graphs/un_directed_graph_node.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/planar_reconstruction/joined_reconstructions.h"
 #include "irl/planar_reconstruction/planar_localizer.h"
+#include "irl/planar_reconstruction/reconstruction_link.h"
 
 namespace IRL {
 
@@ -53,6 +55,8 @@ class Paraboloid {
 };
 
 using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
+using LocalizedParaboloidLink =
+    ReconstructionLink<LocalizedParaboloid, UnDirectedGraphNode>;
 
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_pt);

@@ -210,6 +210,13 @@ enable_if_t<is_polygon<EncompassingGeometryType>::value,
                                      typename PolytopeType::vertex_type>>
 generateSegmentedVersion(PolytopeType* a_complete_polytope);
 
+template <class EncompassingGeometryType, class PolytopeType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value,
+    SegmentedHalfEdgePolyhedronParaboloid<typename PolytopeType::face_type,
+                                          typename PolytopeType::vertex_type>>
+generateSegmentedVersionParaboloid(PolytopeType* a_complete_polytope);
+
 //******************************************************************* //
 //     Function template definitions placed below this
 //******************************************************************* //
@@ -218,10 +225,11 @@ ReturnType cutThroughHalfEdgeStructures(
     const EncompassingType& a_polytope,
     const ReconstructionType& a_reconstruction) {
   ReturnType moments;
-  if constexpr (IsParaboloidReconstruction<ReconstructionType>::value) {
+  if constexpr (HasAParaboloidReconstruction<ReconstructionType>::value) {
     auto& complete_polytope = setHalfEdgeStructureParaboloid(a_polytope);
     auto half_edge_polytope =
-        generateSegmentedVersion<EncompassingType>(&complete_polytope);
+        generateSegmentedVersionParaboloid<EncompassingType>(
+            &complete_polytope);
     assert(half_edge_polytope.checkValidHalfEdgeStructure());
     moments = getVolumeMoments<ReturnType, HalfEdgeCutting>(
         &half_edge_polytope, &complete_polytope, a_reconstruction);
@@ -304,7 +312,7 @@ HalfEdgePolyhedron<VertexType>& getHalfEdgePolyhedron(
 }
 
 template <class VertexType, class GeometryType>
-HalfEdgePolyhedron<VertexType>& getHalfEdgePolyhedronParaboloid(
+HalfEdgePolyhedronParaboloid<VertexType>& getHalfEdgePolyhedronParaboloid(
     const GeometryType& a_geometry) {
   auto& storage = getHalfEdgePolyhedronStorageParaboloid<VertexType>();
   return storage.getHalfEdgePolytopeBase(a_geometry);
@@ -429,6 +437,15 @@ generateSegmentedVersion(PolytopeType* a_complete_polytope) {
   segmented_half_edge_geometry_template.setPlaneOfExistence(
       &a_complete_polytope->getPlaneOfExistence());
   return segmented_half_edge_geometry_template;
+}
+
+template <class EncompassingGeometryType, class PolytopeType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value,
+    SegmentedHalfEdgePolyhedronParaboloid<typename PolytopeType::face_type,
+                                          typename PolytopeType::vertex_type>>
+generateSegmentedVersionParaboloid(PolytopeType* a_complete_polytope) {
+  return a_complete_polytope->generateSegmentedPolyhedron();
 }
 
 }  // namespace IRL

@@ -59,9 +59,21 @@ struct IsNotANullReconstruction {
 };
 
 template <class ReconstructionType>
-struct IsParaboloidReconstruction {
+struct HasAParaboloidReconstruction {
   static constexpr bool value =
       has_paraboloid_reconstruction<ReconstructionType>::value;
+};
+
+template <class ReconstructionType>
+struct DoesNotHaveAParaboloidReconstruction {
+  static constexpr bool value =
+      !HasAParaboloidReconstruction<ReconstructionType>::value;
+};
+
+template <class ReconstructionType>
+struct IsParaboloidReconstruction {
+  static constexpr bool value =
+      is_paraboloid_reconstruction<ReconstructionType>::value;
 };
 
 template <class ReconstructionType>

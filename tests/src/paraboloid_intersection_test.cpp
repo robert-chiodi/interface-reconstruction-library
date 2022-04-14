@@ -1773,8 +1773,8 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
   std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
   std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
 
+  PolyhedronConnectivity connectivity(face_mapping);
   for (int i = 0; i < Ntests; i++) {
-    PolyhedronConnectivity connectivity(face_mapping);
     GeneralPolyhedron dodeca(vertex_list, &connectivity);
     GeneralPolyhedron dodeca_unrotated(vertex_list, &connectivity);
     AlignedParaboloid aligned_paraboloid;
@@ -2225,6 +2225,441 @@ TEST(ParaboloidIntersection, TranslatingCube) {
             << std::endl;
 
   EXPECT_NEAR(max_volume_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, LocalizedParaboloid) {
+  RectangularCuboid uc = unit_cell;
+  PlanarLocalizer localizer = uc.getLocalizer();
+
+  RectangularCuboid bigger_cube = RectangularCuboid::fromBoundingPts(
+      Pt(-1.0, -1.0, -1.0), Pt(1.0, 1.0, 1.0));
+
+  int Ntests = 2000;
+  double max_error = 0.0, rms_error = 0.0;
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+  // Rotate cube
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
+  static const int ncycles = 1;
+  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
+                                                         0.5 * M_PI);
+  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+
+  for (int i = 0; i < Ntests; i++) {
+    AlignedParaboloid aligned_paraboloid;
+    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                         Normal(0.0, 0.0, 1.0));
+    std::array<double, 3> angles{
+        {random_rotation(eng), random_rotation(eng), 0.0}};
+    std::array<double, 3> translations{{random_translation(eng),
+                                        random_translation(eng),
+                                        random_translation(eng)}};
+
+    aligned_paraboloid.a() = random_coeffs_a(eng);
+    aligned_paraboloid.b() = random_coeffs_b(eng);
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Case setup." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.a() = " << aligned_paraboloid.a() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.b() = " << aligned_paraboloid.b() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[0] = " << angles[0] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[1] = " << angles[1] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[2] = " << angles[2] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[0] = " << translations[0] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[1] = " << translations[1] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[2] = " << translations[2] << ";" << std::endl;
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "IRL volume computation." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::string poly_filename = "cell_" + std::to_string(i);
+    std::string surf_filename = "surface_" + std::to_string(i);
+
+    bigger_cube.setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    localizeInternalToReconstruction(&seg_half_edge, &half_edge, localizer);
+
+    UnitQuaternion x_rotation(angles[0], frame[0]);
+    UnitQuaternion y_rotation(angles[1], frame[1]);
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    auto total_rotation = x_rotation * y_rotation * z_rotation;
+    total_rotation.normalize();
+    frame = total_rotation * frame;
+
+    for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices(); ++v) {
+      const auto tmp_pt = seg_half_edge.getVertex(v)->getLocation().getPt();
+      auto new_pt = tmp_pt;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        new_pt[d] = frame[d] * tmp_pt + translations[d];
+      }
+      seg_half_edge.getVertex(v)->setLocation(new_pt);
+    }
+
+    auto poly_vol = seg_half_edge.calculateVolume();
+
+    for (auto& face : seg_half_edge) {
+      auto normal = Normal(0.0, 0.0, 0.0);
+      const auto starting_half_edge = face->getStartingHalfEdge();
+      auto current_half_edge = starting_half_edge;
+      auto next_half_edge = starting_half_edge->getNextHalfEdge();
+      const auto& start_location =
+          starting_half_edge->getPreviousVertex()->getLocation();
+      do {
+        normal += crossProduct(
+            current_half_edge->getVertex()->getLocation() - start_location,
+            next_half_edge->getVertex()->getLocation() - start_location);
+        current_half_edge = next_half_edge;
+        next_half_edge = next_half_edge->getNextHalfEdge();
+      } while (next_half_edge != starting_half_edge);
+      normal.normalize();
+      face->setPlane(Plane(normal, normal * start_location));
+    }
+
+    // auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+    //     &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+    //     poly_filename);  // This prints the AMR triangles
+    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+
+    auto datum = -Pt::fromArray(translations);
+    Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+                          aligned_paraboloid.b());
+
+    LocalizedParaboloid localized_paraboloid(&localizer, &paraboloid);
+    // auto volume_and_surface =
+    //     getVolumeMoments<AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>,
+    //                      HalfEdgeCutting>(bigger_cube, localized_paraboloid);
+
+    // const auto& our_volume = volume_and_surface.getMoments();
+    // const auto& surface = volume_and_surface.getSurface();
+
+    // const double length_scale = 0.0025;
+    // TriangulatedSurfaceOutput triangulated_surface =
+    //     surface.triangulate(length_scale);
+    // triangulated_surface.write(surf_filename);
+
+    auto our_volume = getVolumeMoments<Volume, HalfEdgeCutting>(
+        bigger_cube, localized_paraboloid);
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+    // error = fabs(our_volume - moments[0]);
+    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
+      std::cout << "ELLIPTIC" << std::endl;
+    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
+      std::cout << "HYPERBOLIC" << std::endl;
+    else
+      std::cout << "PARABOLIC" << std::endl;
+    std::cout << std::setprecision(20) << "Volume polyhedron = " << poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
+    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume) / poly_vol
+              << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    max_error = max_error > fabs(our_volume - amr_volume) / poly_vol
+                    ? max_error
+                    : fabs(our_volume - amr_volume) / poly_vol;
+    rms_error += fabs(our_volume - amr_volume) * fabs(our_volume - amr_volume) /
+                 poly_vol / poly_vol;
+
+    if (fabs(our_volume - amr_volume) / poly_vol > 1.0e-10) exit(1);
+  }
+  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
+
+  std::cout << "Max error = " << max_error << std::endl;
+  std::cout << "RMS error = " << rms_error << std::endl;
+  std::cout << "-------------------------------------------------------------"
+               "---------------------------------------------------------"
+            << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
+  RectangularCuboid uc = unit_cell;
+  auto localizer = uc.getLocalizer();
+
+  Paraboloid paraboloid;
+  std::array<std::array<std::array<RectangularCuboid, 3>, 3>, 3> grid;
+  std::array<std::array<std::array<PlanarLocalizer, 3>, 3>, 3> localizers;
+  std::array<std::array<std::array<LocalizedParaboloidLink, 3>, 3>, 3>
+      locpar_link;
+  const double dx = 1.0 / 3.0;
+  for (UnsignedIndex_t i = 0; i < 3; ++i) {
+    for (UnsignedIndex_t j = 0; j < 3; ++j) {
+      for (UnsignedIndex_t k = 0; k < 3; ++k) {
+        Pt lower(-0.5 + static_cast<double>(i) * dx,
+                 -0.5 + static_cast<double>(j) * dx,
+                 -0.5 + static_cast<double>(k) * dx);
+        Pt upper = lower + Pt(dx, dx, dx);
+        grid[i][j][k] = RectangularCuboid::fromBoundingPts(lower, upper);
+        localizers[i][j][k] = grid[i][j][k].getLocalizer();
+        locpar_link[i][j][k] =
+            LocalizedParaboloidLink(&(localizers[i][j][k]), &paraboloid);
+
+        locpar_link[i][j][k].setId(k + j * 3 + i * 9);
+        locpar_link[i][j][k].setEdgeConnectivity(
+            0, i == 0 ? nullptr : &(locpar_link[i - 1][j][k]));
+        locpar_link[i][j][k].setEdgeConnectivity(
+            1, i == 2 ? nullptr : &(locpar_link[i + 1][j][k]));
+        locpar_link[i][j][k].setEdgeConnectivity(
+            2, j == 0 ? nullptr : &(locpar_link[i][j - 1][k]));
+        locpar_link[i][j][k].setEdgeConnectivity(
+            3, j == 2 ? nullptr : &(locpar_link[i][j + 1][k]));
+        locpar_link[i][j][k].setEdgeConnectivity(
+            4, k == 0 ? nullptr : &(locpar_link[i][j][k - 1]));
+        locpar_link[i][j][k].setEdgeConnectivity(
+            5, k == 2 ? nullptr : &(locpar_link[i][j][k + 1]));
+      }
+    }
+  }
+
+  RectangularCuboid bigger_cube = RectangularCuboid::fromBoundingPts(
+      Pt(-1.0, -1.0, -1.0), Pt(1.0, 1.0, 1.0));
+
+  int Ntests = 500;
+  double max_error = 0.0, rms_error = 0.0;
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+  // Rotate cube
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
+  static const int ncycles = 1;
+  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
+                                                         0.5 * M_PI);
+  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+
+  for (int i = 0; i < Ntests; i++) {
+    AlignedParaboloid aligned_paraboloid;
+    ReferenceFrame orig_frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                              Normal(0.0, 0.0, 1.0));
+    std::array<double, 3> angles{
+        {random_rotation(eng), random_rotation(eng), 0.0}};
+    std::array<double, 3> translations{{random_translation(eng),
+                                        random_translation(eng),
+                                        random_translation(eng)}};
+
+    aligned_paraboloid.a() = random_coeffs_a(eng);
+    aligned_paraboloid.b() = random_coeffs_b(eng);
+
+    // aligned_paraboloid.a() = 3.7232624152992084277;
+    // aligned_paraboloid.b() = 1.8950188549060298371;
+    // angles[0] = -1.3487640961867572997;
+    // angles[1] = -0.69355356026013836868;
+    // angles[2] = 0;
+    // translations[0] = -0.2621252177522989113;
+    // translations[1] = 0.29240199304985992068;
+    // translations[2] = -0.45452163691874047924;
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Case setup." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.a() = " << aligned_paraboloid.a() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.b() = " << aligned_paraboloid.b() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[0] = " << angles[0] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[1] = " << angles[1] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[2] = " << angles[2] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[0] = " << translations[0] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[1] = " << translations[1] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[2] = " << translations[2] << ";" << std::endl;
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "IRL volume computation." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::string poly_filename = "cell_" + std::to_string(i);
+    std::string surf_filename = "surface_" + std::to_string(i);
+
+    UnitQuaternion x_rotation(angles[0], orig_frame[0]);
+    UnitQuaternion y_rotation(angles[1], orig_frame[1]);
+    UnitQuaternion z_rotation(angles[2], orig_frame[2]);
+    auto total_rotation = x_rotation * y_rotation * z_rotation;
+    total_rotation.normalize();
+    ReferenceFrame frame = total_rotation * orig_frame;
+
+    std::array<std::array<std::array<double, 3>, 3>, 3> amr_volumes;
+    double total_amr_volume = 0.0;
+    for (UnsignedIndex_t i = 0; i < 3; ++i) {
+      for (UnsignedIndex_t j = 0; j < 3; ++j) {
+        for (UnsignedIndex_t k = 0; k < 3; ++k) {
+          grid[i][j][k].setHalfEdgeVersion(&half_edge);
+          auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+          localizeInternalToReconstruction(&seg_half_edge, &half_edge,
+                                           localizer);
+
+          for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices();
+               ++v) {
+            const auto tmp_pt =
+                seg_half_edge.getVertex(v)->getLocation().getPt();
+            auto new_pt = tmp_pt;
+            for (UnsignedIndex_t d = 0; d < 3; ++d) {
+              new_pt[d] = frame[d] * tmp_pt + translations[d];
+            }
+            seg_half_edge.getVertex(v)->setLocation(new_pt);
+          }
+
+          for (auto& face : seg_half_edge) {
+            auto normal = Normal(0.0, 0.0, 0.0);
+            const auto starting_half_edge = face->getStartingHalfEdge();
+            auto current_half_edge = starting_half_edge;
+            auto next_half_edge = starting_half_edge->getNextHalfEdge();
+            const auto& start_location =
+                starting_half_edge->getPreviousVertex()->getLocation();
+            do {
+              normal += crossProduct(
+                  current_half_edge->getVertex()->getLocation() -
+                      start_location,
+                  next_half_edge->getVertex()->getLocation() - start_location);
+              current_half_edge = next_half_edge;
+              next_half_edge = next_half_edge->getNextHalfEdge();
+            } while (next_half_edge != starting_half_edge);
+            normal.normalize();
+            face->setPlane(Plane(normal, normal * start_location));
+          }
+
+          // auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+          //     &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+          //     poly_filename);  // This prints the AMR triangles
+
+          amr_volumes[i][j][k] = intersectPolyhedronWithParaboloidAMR<Volume>(
+              &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+          total_amr_volume += amr_volumes[i][j][k];
+        }
+      }
+    }
+
+    auto datum = -Pt::fromArray(translations);
+    paraboloid = Paraboloid(datum, frame, aligned_paraboloid.a(),
+                            aligned_paraboloid.b());
+
+    // auto volume_and_surface =
+    //     getVolumeMoments<AddSurfaceOutput<Volume,
+    //     ParametrizedSurfaceOutput>,
+    //                      HalfEdgeCutting>(bigger_cube,
+    //                      localized_paraboloid);
+
+    // const auto& our_volume = volume_and_surface.getMoments();
+    // const auto& surface = volume_and_surface.getSurface();
+
+    // const double length_scale = 0.0025;
+    // TriangulatedSurfaceOutput triangulated_surface =
+    //     surface.triangulate(length_scale);
+    // triangulated_surface.write(surf_filename);
+
+    auto our_volume =
+        getVolumeMoments<TaggedAccumulatedVolumeMoments<Volume>,
+                         HalfEdgeCutting>(bigger_cube, locpar_link[1][1][1]);
+
+    double total_our_volume = 0.0;
+    for (UnsignedIndex_t i = 0; i < 3; ++i) {
+      for (UnsignedIndex_t j = 0; j < 3; ++j) {
+        for (UnsignedIndex_t k = 0; k < 3; ++k) {
+          const UnsignedIndex_t ind = k + j * 3 + i * 9;
+          const double cell_volume = grid[i][j][k].calculateVolume();
+          const double irl_vfrac = our_volume[ind] / cell_volume;
+          const double amr_vfrac = amr_volumes[i][j][k] / cell_volume;
+
+          total_our_volume += our_volume[ind];
+
+          max_error = max_error > fabs(irl_vfrac - amr_vfrac)
+                          ? max_error
+                          : fabs(irl_vfrac - amr_vfrac);
+          rms_error +=
+              fabs(irl_vfrac - amr_vfrac) * fabs(irl_vfrac - amr_vfrac);
+
+          if (std::fabs(irl_vfrac - amr_vfrac) > 1.0e-10) {
+            std::cout << "CELL: " << ind << std::endl;
+            std::cout << "IRL VFRAC " << irl_vfrac << std::endl;
+            std::cout << "AMR VFRAC " << amr_vfrac << std::endl;
+            exit(1);
+          }
+        }
+      }
+    }
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+    // error = fabs(our_volume - moments[0]);
+    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
+      std::cout << "ELLIPTIC" << std::endl;
+    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
+      std::cout << "HYPERBOLIC" << std::endl;
+    else
+      std::cout << "PARABOLIC" << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped IRL = " << total_our_volume << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped AMR = " << total_amr_volume << std::endl;
+    std::cout << "Diff AMR/IRL = "
+              << std::fabs(total_our_volume - total_amr_volume) << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+  }
+  rms_error = sqrt(rms_error / static_cast<double>(Ntests * 27));
+
+  std::cout << "Max error = " << max_error << std::endl;
+  std::cout << "RMS error = " << rms_error << std::endl;
+  std::cout << "-------------------------------------------------------------"
+               "---------------------------------------------------------"
+            << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
 }
 
 }  // namespace
