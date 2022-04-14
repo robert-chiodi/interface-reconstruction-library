@@ -41,13 +41,25 @@ const SurfaceType& AddSurfaceOutput<MomentType, SurfaceType>::getSurface(
 
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     const Paraboloid& a_paraboloid)
-    : paraboloid_m{a_paraboloid} {}
+    : paraboloid_m{a_paraboloid},
+      knows_surface_area_m{false},
+      knows_avg_normal_m{false},
+      knows_int_mean_curv_m{false},
+      knows_int_gaussian_curv_m{false} {}
 
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     ParametrizedSurfaceOutput&& a_rhs)
     : paraboloid_m(a_rhs.paraboloid_m),
       pt_from_bezier_split_m(std::move(a_rhs.pt_from_bezier_split_m)),
-      arc_list_m(std::move(a_rhs.arc_list_m)) {}
+      arc_list_m(std::move(a_rhs.arc_list_m)),
+      knows_surface_area_m(a_rhs.knows_surface_area_m),
+      surface_area_m(a_rhs.surface_area_m),
+      knows_avg_normal_m(a_rhs.knows_avg_normal_m),
+      avg_normal_m(a_rhs.avg_normal_m),
+      knows_int_mean_curv_m(a_rhs.knows_int_mean_curv_m),
+      int_mean_curv_m(a_rhs.int_mean_curv_m),
+      knows_int_gaussian_curv_m(a_rhs.knows_int_gaussian_curv_m),
+      int_gaussian_curv_m(a_rhs.int_gaussian_curv_m) {}
 
 inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
     ParametrizedSurfaceOutput&& a_rhs) {
@@ -55,6 +67,14 @@ inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
     paraboloid_m = a_rhs.paraboloid_m;
     pt_from_bezier_split_m = std::move(a_rhs.pt_from_bezier_split_m);
     arc_list_m = std::move(a_rhs.arc_list_m);
+    knows_surface_area_m = a_rhs.knows_surface_area_m;
+    surface_area_m = a_rhs.surface_area_m;
+    knows_avg_normal_m = a_rhs.knows_avg_normal_m;
+    avg_normal_m = a_rhs.avg_normal_m;
+    knows_int_mean_curv_m = a_rhs.knows_int_mean_curv_m;
+    int_mean_curv_m = a_rhs.int_mean_curv_m;
+    knows_int_gaussian_curv_m = a_rhs.knows_int_gaussian_curv_m;
+    int_gaussian_curv_m = a_rhs.int_gaussian_curv_m;
   }
   return *this;
 }
@@ -149,34 +169,249 @@ class ArcContributionToSurfaceArea_Functor {
   const AlignedParaboloid& paraboloid_m;
 };
 
-inline double ParametrizedSurfaceOutput::getSurfaceArea(void) const {
-  const UnsignedIndex_t nArcs = this->size();
-  double surface_area = 0.0;
-  size_t limit = 128;
+class ArcContributionToNormalX_Functor {
+ public:
+  ArcContributionToNormalX_Functor(const RationalBezierArc& a_arc,
+                                   const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
-  const double epsabs = 100.0 * DBL_EPSILON;
-  const double epsrel = 0.0;
-  auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
-  for (std::size_t t = 0; t < nArcs; ++t) {
-    // Define the functor
-    ArcContributionToSurfaceArea_Functor functor(arc_list_m[t],
-                                                 aligned_paraboloid);
-
-    // Define the integrator.
-    Eigen::Integrator<double> integrator(limit);
-
-    // Define a quadrature rule.
-    Eigen::Integrator<double>::QuadratureRule quadrature_rule =
-        Eigen::Integrator<double>::GaussKronrod61;
-
-    // Integrate.
-    double result = integrator.quadratureAdaptive(functor, 0.0, 1.0, epsabs,
-                                                  epsrel, quadrature_rule);
-
-    surface_area += result;
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive = a * pt[0] * pt[0];
+    return primitive * der[1];
   }
 
-  return surface_area;
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
+
+class ArcContributionToNormalY_Functor {
+ public:
+  ArcContributionToNormalY_Functor(const RationalBezierArc& a_arc,
+                                   const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
+
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive = -b * pt[1] * pt[1];
+    return primitive * der[0];
+  }
+
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
+
+class ArcContributionToNormalZ_Functor {
+ public:
+  ArcContributionToNormalZ_Functor(const RationalBezierArc& a_arc,
+                                   const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
+
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive = pt[0];
+    return primitive * der[1];
+  }
+
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
+
+class ArcContributionToMeanCurvature_Functor {
+ public:
+  ArcContributionToMeanCurvature_Functor(const RationalBezierArc& a_arc,
+                                         const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
+
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive =
+        2.0 * b * pt[0] +
+        (a + 4.0 * b * b * (a - b) * pt[1] * pt[1]) *
+            atan(2.0 * a * pt[0] / sqrt(1.0 + 4.0 * b * b * pt[1] * pt[1])) /
+            (a * sqrt(1.0 + 4.0 * b * b * pt[1] * pt[1]));
+    return primitive * der[1];
+  }
+
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
+
+class ArcContributionToGaussianCurvature_Functor {
+ public:
+  ArcContributionToGaussianCurvature_Functor(
+      const RationalBezierArc& a_arc, const AlignedParaboloid& a_paraboloid)
+      : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
+
+  double operator()(double a_t) const {
+    const auto pt = arc_m.point(a_t);
+    const auto der = arc_m.derivative(a_t);
+    const double a = paraboloid_m.a();
+    const double b = paraboloid_m.b();
+    const double primitive =
+        4.0 * a * b * pt[0] /
+        ((1.0 + 4.0 * b * b * pt[1] * pt[1]) *
+         sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] + 4.0 * b * b * pt[1] * pt[1]));
+    return primitive * der[1];
+  }
+
+ private:
+  const RationalBezierArc& arc_m;
+  const AlignedParaboloid& paraboloid_m;
+};
+
+inline double ParametrizedSurfaceOutput::getSurfaceArea(void) {
+  if (!knows_surface_area_m) {
+    const UnsignedIndex_t nArcs = this->size();
+    surface_area_m = 0.0;
+    size_t limit = 128;
+
+    const double epsabs = 10.0 * DBL_EPSILON;
+    const double epsrel = 0.0;
+    auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
+    for (std::size_t t = 0; t < nArcs; ++t) {
+      // Define the functor
+      ArcContributionToSurfaceArea_Functor functor(arc_list_m[t],
+                                                   aligned_paraboloid);
+
+      // Define the integrator.
+      Eigen::Integrator<double> integrator(limit);
+
+      // Define a quadrature rule.
+      Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+          Eigen::Integrator<double>::GaussKronrod61;
+
+      // Integrate.
+      surface_area_m += integrator.quadratureAdaptive(functor, 0.0, 1.0, epsabs,
+                                                      epsrel, quadrature_rule);
+    }
+    knows_surface_area_m = true;
+  }
+  return surface_area_m;
+}
+
+inline Normal ParametrizedSurfaceOutput::getAverageNormal(void) {
+  if (!knows_avg_normal_m) {
+    const UnsignedIndex_t nArcs = this->size();
+    avg_normal_m = Normal();
+    size_t limit = 128;
+
+    const double epsabs = 10.0 * DBL_EPSILON;
+    const double epsrel = 0.0;
+    auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
+    for (std::size_t t = 0; t < nArcs; ++t) {
+      // Define the functor
+      ArcContributionToNormalX_Functor functorx(arc_list_m[t],
+                                                aligned_paraboloid);
+      ArcContributionToNormalY_Functor functory(arc_list_m[t],
+                                                aligned_paraboloid);
+      ArcContributionToNormalZ_Functor functorz(arc_list_m[t],
+                                                aligned_paraboloid);
+
+      // Define the integrator.
+      Eigen::Integrator<double> integrator(limit);
+
+      // Define a quadrature rule.
+      Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+          Eigen::Integrator<double>::GaussKronrod61;
+
+      // Integrate.
+      avg_normal_m[0] += integrator.quadratureAdaptive(
+          functorx, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+      avg_normal_m[1] += integrator.quadratureAdaptive(
+          functory, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+      avg_normal_m[2] += integrator.quadratureAdaptive(
+          functorz, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+    }
+    avg_normal_m.normalize();
+    knows_avg_normal_m = true;
+  }
+  return avg_normal_m;
+}
+
+inline double ParametrizedSurfaceOutput::getMeanCurvatureIntegral(void) {
+  if (!knows_int_mean_curv_m) {
+    const UnsignedIndex_t nArcs = this->size();
+    int_mean_curv_m = 0.0;
+    size_t limit = 128;
+
+    const double epsabs = 10.0 * DBL_EPSILON;
+    const double epsrel = 0.0;
+    auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
+    for (std::size_t t = 0; t < nArcs; ++t) {
+      // Define the functor
+      ArcContributionToMeanCurvature_Functor functor(arc_list_m[t],
+                                                     aligned_paraboloid);
+
+      // Define the integrator.
+      Eigen::Integrator<double> integrator(limit);
+
+      // Define a quadrature rule.
+      Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+          Eigen::Integrator<double>::GaussKronrod61;
+
+      // Integrate.
+      int_mean_curv_m += integrator.quadratureAdaptive(
+          functor, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+    }
+    knows_int_mean_curv_m = true;
+  }
+  return int_mean_curv_m;
+}
+
+inline double ParametrizedSurfaceOutput::getAverageMeanCurvature(void) {
+  return this->getMeanCurvatureIntegral() / safelyTiny(this->getSurfaceArea());
+}
+
+inline double ParametrizedSurfaceOutput::getGaussianCurvatureIntegral(void) {
+  if (!knows_int_gaussian_curv_m) {
+    const UnsignedIndex_t nArcs = this->size();
+    int_gaussian_curv_m = 0.0;
+    size_t limit = 128;
+
+    const double epsabs = 10.0 * DBL_EPSILON;
+    const double epsrel = 0.0;
+    auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
+    for (std::size_t t = 0; t < nArcs; ++t) {
+      // Define the functor
+      ArcContributionToGaussianCurvature_Functor functor(arc_list_m[t],
+                                                         aligned_paraboloid);
+
+      // Define the integrator.
+      Eigen::Integrator<double> integrator(limit);
+
+      // Define a quadrature rule.
+      Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+          Eigen::Integrator<double>::GaussKronrod61;
+
+      // Integrate.
+      int_gaussian_curv_m += integrator.quadratureAdaptive(
+          functor, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+    }
+    knows_int_gaussian_curv_m = true;
+  }
+  return int_gaussian_curv_m;
+}
+
+inline double ParametrizedSurfaceOutput::getAverageGaussianCurvature(void) {
+  return this->getGaussianCurvatureIntegral() /
+         safelyTiny(this->getSurfaceArea());
 }
 
 inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(

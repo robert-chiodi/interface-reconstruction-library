@@ -1998,6 +1998,9 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     auto our_surface_area = surface.getSurfaceArea();
+    auto our_avg_normal = surface.getAverageNormal();
+    auto our_avg_mean_curvature = surface.getAverageMeanCurvature();
+    auto our_avg_gaussian_curvature = surface.getAverageGaussianCurvature();
     const double length_scale = pow(poly_vol, 1.0 / 3.0) * 0.01;
     TriangulatedSurfaceOutput triangulated_surface =
         surface.triangulate(length_scale);
@@ -2166,6 +2169,13 @@ TEST(ParaboloidIntersection, TranslatingCube) {
               << "Surface EXACT  = " << exact_surface_area << std::endl;
     std::cout << std::setprecision(20)
               << "Surface IRL    = " << our_surface_area << std::endl;
+    std::cout << std::setprecision(20) << "Normal IRL     = " << our_avg_normal
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "Mean curv IRL     = " << our_avg_mean_curvature << std::endl;
+    std::cout << std::setprecision(20)
+              << "Gaussian curv IRL = " << our_avg_gaussian_curvature
+              << std::endl;
     std::cout << std::setprecision(20)
               << "Vfrac unclipped EX  = " << exact_volume / poly_vol
               << std::endl;
