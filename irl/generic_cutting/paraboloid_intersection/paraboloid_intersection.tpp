@@ -460,12 +460,7 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
   const auto& second_vertex_location =
       a_end->getVertex()->getLocation().getPt();
 
-  if (squaredMagnitude(second_vertex_location - first_vertex_location) <
-      100.0 * DBL_EPSILON * DBL_EPSILON) {
-    return moments;
-  }
-
-  auto face_plane = a_end->getFace()->getPlane();
+  const auto& face_plane = a_end->getFace()->getPlane();
   std::array<Normal, 2> tangents = {
       computeTangentVectorAtPoint(a_paraboloid, face_plane,
                                   first_vertex_location),

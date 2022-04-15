@@ -341,7 +341,12 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
   const double dot_0 = a_tangent_0 * edge_vector;
   const double dot_1 = a_tangent_1 * edge_vector;
   const Pt average_pt = 0.5 * (a_pt_0 + a_pt_1);
-  if (dot_0 <= 0.0 || dot_1 >= 0.0) {
+  if (squaredMagnitude(a_pt_1 - a_pt_0) < 100.0 * DBL_EPSILON * DBL_EPSILON) {
+    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      a_surface->addArc(RationalBezierArc(a_pt_1, average_pt, a_pt_0, 1.0));
+    }
+    return ReturnType::fromScalarConstant(0.0);
+  } else if (dot_0 <= 0.0 || dot_1 >= 0.0) {
     auto average_tangent = Normal(0.5 * (a_tangent_0 + a_tangent_1));
     Pt projected_pt = projectPtAlongLineOntoParaboloid(
         a_paraboloid, average_tangent, average_pt);
@@ -366,9 +371,7 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
                  a_paraboloid, a_plane, a_pt_ref, projected_pt, a_pt_1,
                  -tangent_projected_pt, a_tangent_1, a_surface);
     }
-  } else if (std::fabs(a_tangent_0 * a_tangent_1 + 1.0) < 10.0 * DBL_EPSILON ||
-             squaredMagnitude(a_pt_1 - a_pt_0) <
-                 100.0 * DBL_EPSILON * DBL_EPSILON) {
+  } else if (std::fabs(a_tangent_0 * a_tangent_1 + 1.0) < 10.0 * DBL_EPSILON) {
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       a_surface->addArc(RationalBezierArc(a_pt_1, average_pt, a_pt_0, 1.0));
     }
