@@ -23,7 +23,7 @@ class JoinedReconstructions {
   /// \brief Default constructor.
   JoinedReconstructions(void);
 
-  /// \brief Construct with providing a pointer to a localizer and separator.
+  /// \brief Construct with providing a pointer to two reconstructions.
   JoinedReconstructions(
       const CurrentReconstruction* a_current_reconstruction_ptr,
       const NextReconstruction* a_next_reconstruction_ptr);
@@ -83,4 +83,4 @@ class JoinedReconstructions<CurrentReconstruction, NullReconstruction> {
 
 #include "irl/planar_reconstruction/joined_reconstructions.tpp"
 
-#endif // IRL_PLANAR_RECONSTRUCTION_JOINED_RECONSTRUCTIONS_H_
+#endif  // IRL_PLANAR_RECONSTRUCTION_JOINED_RECONSTRUCTIONS_H_

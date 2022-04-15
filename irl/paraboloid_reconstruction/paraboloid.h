@@ -14,15 +14,14 @@
 #include <cassert>
 
 #include "irl/data_structures/stack_vector.h"
-#include "irl/geometry/general/plane.h"
-#include "irl/geometry/general/polynomial.h"
-#include "irl/geometry/general/unit_quaternion.h"
-#include "irl/helpers/helper.h"
-
 #include "irl/geometry/general/normal.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/reference_frame.h"
+#include "irl/graphs/un_directed_graph_node.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
+#include "irl/planar_reconstruction/joined_reconstructions.h"
+#include "irl/planar_reconstruction/planar_localizer.h"
+#include "irl/planar_reconstruction/reconstruction_link.h"
 
 namespace IRL {
 
@@ -55,6 +54,10 @@ class Paraboloid {
   AlignedParaboloid paraboloid_m;
 };
 
+using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
+using LocalizedParaboloidLink =
+    ReconstructionLink<LocalizedParaboloid, UnDirectedGraphNode>;
+
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_pt);
 
@@ -65,6 +68,7 @@ inline StackVector<double, 2> solveQuadratic(const double a, const double b,
 inline Pt projectPtAlongLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
+
 }  // namespace IRL
 
 #include "irl/paraboloid_reconstruction/paraboloid.tpp"
