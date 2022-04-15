@@ -8,8 +8,21 @@ inline Paraboloid::Paraboloid(const Pt& a_datum,
                               const double a_coef_a, const double a_coef_b)
     : datum_m(a_datum),
       frame_m(a_reference_frame),
-      paraboloid_m(std::array<double, 2>({a_coef_a, a_coef_b})) {
+      paraboloid_m(std::array<double, 2>({a_coef_a, a_coef_b})),
+      place_infinite_shortcut_m({false, false}) {
   assert(frame_m.isOrthonormalBasis());
+}
+
+inline Paraboloid Paraboloid::createAlwaysAbove(void) {
+  Paraboloid par;
+  par.markAsAlwaysAbove();
+  return par;
+}
+
+inline Paraboloid Paraboloid::createAlwaysBelow(void) {
+  Paraboloid par;
+  par.markAsAlwaysBelow();
+  return par;
 }
 
 inline void Paraboloid::setDatum(const Pt& a_datum) { datum_m = a_datum; }
@@ -33,6 +46,29 @@ inline const ReferenceFrame& Paraboloid::getReferenceFrame(void) const {
 
 inline const AlignedParaboloid& Paraboloid::getAlignedParaboloid(void) const {
   return paraboloid_m;
+}
+
+inline void Paraboloid::markAsRealReconstruction(void) {
+  place_infinite_shortcut_m[0] = true;
+  place_infinite_shortcut_m[1] = true;
+}
+
+inline void Paraboloid::markAsAlwaysAbove(void) {
+  place_infinite_shortcut_m[0] = true;
+  place_infinite_shortcut_m[1] = false;
+}
+
+inline void Paraboloid::markAsAlwaysBelow(void) {
+  place_infinite_shortcut_m[0] = false;
+  place_infinite_shortcut_m[1] = true;
+}
+
+inline bool Paraboloid::isAlwaysAbove(void) const {
+  return place_infinite_shortcut_m[0];
+}
+
+inline bool Paraboloid::isAlwaysBelow(void) const {
+  return place_infinite_shortcut_m[1];
 }
 
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,

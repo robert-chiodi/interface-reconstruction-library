@@ -38,6 +38,10 @@ class Paraboloid {
   Paraboloid(const Pt& a_datum, const ReferenceFrame& a_reference_frame,
              const double a_coef_a, const double a_coef_b);
 
+  static Paraboloid createAlwaysAbove(void);
+
+  static Paraboloid createAlwaysBelow(void);
+
   void setDatum(const Pt& a_datum);
   void setReferenceFrame(const ReferenceFrame& a_reference_frame);
   void setAlignedParaboloid(const AlignedParaboloid& a_aligned_paraboloid);
@@ -46,12 +50,30 @@ class Paraboloid {
   const ReferenceFrame& getReferenceFrame(void) const;
   const AlignedParaboloid& getAlignedParaboloid(void) const;
 
+  /// Indicates that the intersection should actually be performed.
+  void markAsRealReconstruction(void);
+
+  /// Marks paraboloid as being above any polyhedron (so any polyhedron will be
+  /// unclipped).
+  void markAsAlwaysAbove(void);
+
+  /// Marks paraboloid as being below any polyhedron (so any polyhedron will be
+  /// clipped).
+  void markAsAlwaysBelow(void);
+
+  /// Whether the paraboloid has been set to be above any polyhedron.
+  bool isAlwaysAbove(void) const;
+
+  /// Whether the paraboloid has been set to be below any polyhedron.
+  bool isAlwaysBelow(void) const;
+
   ~Paraboloid(void) = default;
 
  private:
   Pt datum_m;
   ReferenceFrame frame_m;
   AlignedParaboloid paraboloid_m;
+  std::array<bool, 2> place_infinite_shortcut_m;
 };
 
 using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
