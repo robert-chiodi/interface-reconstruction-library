@@ -266,6 +266,8 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     face->setPlane(Plane(normal, normal * start_location));
   }
 
+  //  std::cout << *a_polytope << std::endl;
+
   // Compute intersection
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
     moments.getSurface().setParaboloid(a_paraboloid);

@@ -341,7 +341,17 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
   const double dot_0 = a_tangent_0 * edge_vector;
   const double dot_1 = a_tangent_1 * edge_vector;
   const Pt average_pt = 0.5 * (a_pt_0 + a_pt_1);
+  std::cout << dot_0 << " " << dot_1 << std::endl;
+  std::cout << a_tangent_0 << " " << a_tangent_1 << std::endl;
+  std::cout << a_pt_1 << " " << a_pt_0 << std::endl;
+  std::cout << squaredMagnitude(a_pt_1 - a_pt_0) << std::endl;
+  std::cout << a_plane.normal() << std::endl;
   if (squaredMagnitude(a_pt_1 - a_pt_0) < 100.0 * DBL_EPSILON * DBL_EPSILON) {
+    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      a_surface->addArc(RationalBezierArc(a_pt_1, average_pt, a_pt_0, 1.0));
+    }
+    return ReturnType::fromScalarConstant(0.0);
+  } else if (std::fabs(a_tangent_0 * a_tangent_1 + 1.0) < 10.0 * DBL_EPSILON) {
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       a_surface->addArc(RationalBezierArc(a_pt_1, average_pt, a_pt_0, 1.0));
     }
@@ -352,7 +362,7 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
         a_paraboloid, average_tangent, average_pt);
     const Normal tangent_projected_pt = computeAndCorrectTangentVectorAtPt(
         a_paraboloid, a_plane, a_pt_0, a_pt_1, a_tangent_1, projected_pt);
-    Pt& new_point = projected_pt;
+    std::cout << "PROJ POINT " << projected_pt << std::endl;
     // We need to store this vertex so that its address remains unique over time
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       Pt* new_point = new Pt(projected_pt);
@@ -371,11 +381,8 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
                  a_paraboloid, a_plane, a_pt_ref, projected_pt, a_pt_1,
                  -tangent_projected_pt, a_tangent_1, a_surface);
     }
-  } else if (std::fabs(a_tangent_0 * a_tangent_1 + 1.0) < 10.0 * DBL_EPSILON) {
-    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-      a_surface->addArc(RationalBezierArc(a_pt_1, average_pt, a_pt_0, 1.0));
-    }
-    return ReturnType::fromScalarConstant(0.0);
+    std::cout << "DONE SPLITTING " << std::endl;
+
   } else {
     const Normal n_cross_t0 = crossProduct(a_plane.normal(), a_tangent_0);
     assert(std::fabs(n_cross_t0 * a_tangent_1) > DBL_EPSILON);

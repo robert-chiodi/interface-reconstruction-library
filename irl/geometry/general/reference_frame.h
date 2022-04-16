@@ -20,6 +20,9 @@ namespace IRL {
 /// \brief A reference frame with three normals (1 for each direction in 3D
 /// space).
 class ReferenceFrame {
+  using iterator = typename std::array<Normal, 3>::iterator;
+  using const_iterator = typename std::array<Normal, 3>::const_iterator;
+
  public:
   /// \brief Default constructor.
   ReferenceFrame(void) = default;
@@ -35,6 +38,13 @@ class ReferenceFrame {
   const Normal& operator[](const UnsignedIndex_t a_axis) const;
 
   bool isOrthonormalBasis(void) const;
+
+  iterator begin(void) noexcept;
+  const_iterator begin(void) const noexcept;
+  const_iterator cbegin(void) const noexcept;
+  iterator end(void) noexcept;
+  const_iterator end(void) const noexcept;
+  const_iterator cend(void) const noexcept;
 
   /// \brief Default destructor.
   ~ReferenceFrame(void) = default;

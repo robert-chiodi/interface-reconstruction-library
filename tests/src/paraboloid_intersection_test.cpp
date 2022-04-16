@@ -2372,4 +2372,51 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
   EXPECT_NEAR(max_error, 0.0, 1.0e-13);
 }
 
+TEST(ParaboloidIntersection, InfiniteSplit) {
+  ReferenceFrame frame(Normal(0.0, -1.0, 0.0), Normal(0.0, 0.0, 1.0),
+                       Normal(-1.0, 0.0, 0.0));
+  Paraboloid paraboloid(Pt(-0.1, 0.25, 0.0), frame, 5.0, 0.0);
+  auto cell = RectangularCuboid::fromBoundingPts(Pt(-0.1, 0.24, -0.01),
+                                                 Pt(-0.08, 0.26, 0.01));
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+  cell.setHalfEdgeVersion(&half_edge);
+  auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+
+  for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices(); ++v) {
+    const Pt tmp_pt = seg_half_edge.getVertex(v)->getLocation().getPt() -
+                      paraboloid.getDatum();
+    auto new_pt = tmp_pt;
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      new_pt[d] = frame[d] * tmp_pt;
+    }
+    seg_half_edge.getVertex(v)->setLocation(new_pt);
+  }
+
+  for (auto& face : seg_half_edge) {
+    auto normal = Normal(0.0, 0.0, 0.0);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    const auto& start_location =
+        starting_half_edge->getPreviousVertex()->getLocation();
+    do {
+      normal += crossProduct(
+          current_half_edge->getVertex()->getLocation() - start_location,
+          next_half_edge->getVertex()->getLocation() - start_location);
+      current_half_edge = next_half_edge;
+      next_half_edge = next_half_edge->getNextHalfEdge();
+    } while (next_half_edge != starting_half_edge);
+    normal.normalize();
+    face->setPlane(Plane(normal, normal * start_location));
+  }
+
+  std::string poly_filename = "cell_" + std::to_string(0);
+  auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+      &seg_half_edge, &half_edge, paraboloid.getAlignedParaboloid(), 17,
+      poly_filename);  // This prints the AMR triangles
+
+  auto vol_frac = IRL::getVolumeFraction(cell, paraboloid);
+}
+
 }  // namespace

@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include <cassert>
+#include <ostream>
 
 #include "irl/data_structures/stack_vector.h"
 #include "irl/geometry/general/normal.h"
@@ -67,6 +68,16 @@ class Paraboloid {
   /// Whether the paraboloid has been set to be below any polyhedron.
   bool isAlwaysBelow(void) const;
 
+  /// Paraboloid cannot be a flipped reconstruction. Add this for ease of use
+  /// with other routines that usually take planar reconstructions.
+  static constexpr bool isFlipped(void) { return false; }
+
+  /// \brief Since localizers are always convex, never flip.
+  static constexpr double flip(void) { return 1.0; }
+
+  /// \brief Return if cutting for gas phase is needed.
+  static constexpr bool isNotFlipped(void) { return true; }
+
   ~Paraboloid(void) = default;
 
  private:
@@ -90,6 +101,9 @@ inline StackVector<double, 2> solveQuadratic(const double a, const double b,
 inline Pt projectPtAlongLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const Paraboloid& a_paraboloid);
 
 }  // namespace IRL
 

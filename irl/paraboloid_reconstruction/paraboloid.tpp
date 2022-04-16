@@ -141,6 +141,21 @@ inline Pt projectPtAlongLineOntoParaboloid(
   }
 }
 
+inline std::ostream& operator<<(std::ostream& out,
+                                const Paraboloid& a_paraboloid) {
+  const auto& datum = a_paraboloid.getDatum();
+  const auto& frame = a_paraboloid.getReferenceFrame();
+  const auto& aligned_paraboloid = a_paraboloid.getAlignedParaboloid();
+
+  out << "Datum: " << datum << '\n';
+  out << "Frame: \n"
+      << frame[0] << '\n'
+      << frame[1] << '\n'
+      << frame[2] << '\n';
+  out << "Aligned Paraboloid: " << aligned_paraboloid << '\n';
+  return out;
+}
+
 }  // namespace IRL
 
 #endif  // IRL_PARABOLOID_RECONSTRUCTIONS_PARABOLOID_TPP_
