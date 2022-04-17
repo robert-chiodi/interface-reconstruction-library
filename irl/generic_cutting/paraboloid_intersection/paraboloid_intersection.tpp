@@ -209,6 +209,26 @@ enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
 intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                                   HalfEdgePolytopeType* a_complete_polytope,
                                   const Paraboloid& a_paraboloid) {
+  ReturnType moments;
+  if (a_paraboloid.isAlwaysAbove()) {
+    if constexpr (has_paraboloid_surface<ReturnType>::value) {
+      moments.getMoments() =
+          ReturnType::moment_type::calculateMoments(a_polytope);
+      moments.getSurface().setParaboloid(a_paraboloid);
+    } else {
+      moments = ReturnType::calculateMoments(a_polytope);
+    }
+    return moments;
+  } else if (a_paraboloid.isAlwaysBelow()) {
+    if constexpr (has_paraboloid_surface<ReturnType>::value) {
+      moments.getMoments() = 0.0;
+      moments.getSurface().setParaboloid(a_paraboloid);
+    } else {
+      moments = 0.0;
+    }
+    return moments;
+  }
+
   // Move into reconstruction reference frame
   const UnsignedIndex_t original_number_of_vertices =
       a_polytope->getNumberOfVertices();
@@ -217,11 +237,12 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   assert(ref_frame.isOrthonormalBasis());
 
   for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
-    const auto& original_pt = a_polytope->getVertex(v)->getLocation().getPt();
+    const Pt original_pt =
+        a_polytope->getVertex(v)->getLocation().getPt() - datum;
     typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
     auto& pt = projected_location.getPt();
     for (UnsignedIndex_t n = 0; n < 3; ++n) {
-      pt[n] = ref_frame[n] * original_pt - datum[n];
+      pt[n] = ref_frame[n] * original_pt;
     }
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
@@ -245,8 +266,9 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     face->setPlane(Plane(normal, normal * start_location));
   }
 
+  //  std::cout << *a_polytope << std::endl;
+
   // Compute intersection
-  ReturnType moments;
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
     moments.getSurface().setParaboloid(a_paraboloid);
     moments.getMoments() =
@@ -263,8 +285,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   // Rotate base polyhedron back
   const UnsignedIndex_t number_of_vertices = a_polytope->getNumberOfVertices();
   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
-    const auto original_pt =
-        a_polytope->getVertex(v)->getLocation().getPt() + datum;
+    const Pt& original_pt = a_polytope->getVertex(v)->getLocation().getPt();
     typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
     auto& pt = projected_location.getPt();
     pt = Pt(0.0, 0.0, 0.0);
@@ -273,6 +294,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
         pt[n] += ref_frame[d][n] * original_pt[d];
       }
     }
+    pt += datum;
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 

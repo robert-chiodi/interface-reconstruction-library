@@ -924,292 +924,6 @@ TEST(ParaboloidIntersection, HyperbolicFailure) {
   EXPECT_NEAR(our_volume, expected_volume, 1.0e-15);
 }
 
-//#define AMR_VOL_LIBRARY
-
-#ifdef AMR_VOL_LIBRARY
-#include "amrvol.h"
-extern "C" int amr_volume_cube(double* moments, double A, double B,
-                               double* angles, double* translations,
-                               double scale, int maxlevel, int print,
-                               int quiet);
-
-TEST(ParaboloidIntersection, EllipticRandom) {
-  int Ntests = 100;
-  double max_error = 0.0, rms_error = 0.0;
-  HalfEdgePolyhedronParaboloid<Pt> half_edge;
-  // Rotate cube
-  std::random_device
-      rd;  // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
-                              // generator and seed it with entropy.
-  static const int ncycles = 1;
-  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
-                                                         0.5 * M_PI);
-  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
-  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
-  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
-
-  for (int i = 0; i < Ntests; i++) {
-    RectangularCuboid cube = unit_cell;
-    AlignedParaboloid aligned_paraboloid;
-    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
-                         Normal(0.0, 0.0, 1.0));
-    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0},
-           translations[3] = {random_translation(eng), random_translation(eng),
-                              random_translation(eng)};
-    aligned_paraboloid.a() = random_coeffs_a(eng);
-    aligned_paraboloid.b() = random_coeffs_b(eng);
-
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    std::cout << "Case setup." << std::endl;
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-
-    std::cout << std::setprecision(20)
-              << "aligned_paraboloid.a() = " << aligned_paraboloid.a() << ";"
-              << std::endl;
-    std::cout << std::setprecision(20)
-              << "aligned_paraboloid.b() = " << aligned_paraboloid.b() << ";"
-              << std::endl;
-    std::cout << std::setprecision(20) << "angles[0] = " << angles[0] << ";"
-              << std::endl;
-    std::cout << std::setprecision(20) << "angles[1] = " << angles[1] << ";"
-              << std::endl;
-    std::cout << std::setprecision(20) << "angles[2] = " << angles[2] << ";"
-              << std::endl;
-    std::cout << std::setprecision(20)
-              << "translations[0] = " << translations[0] << ";" << std::endl;
-    std::cout << std::setprecision(20)
-              << "translations[1] = " << translations[1] << ";" << std::endl;
-    std::cout << std::setprecision(20)
-              << "translations[2] = " << translations[2] << ";" << std::endl;
-
-    // aligned_paraboloid.a() = -0.26694474228540165939;
-    // aligned_paraboloid.b() = 1.7196560637755800016;
-    // angles[0] = 0.63717543887676297842;
-    // angles[1] = 0.18122299411755848908;
-    // angles[2] = 0;
-    // translations[0] = -0.10572858731641998631;
-    // translations[1] = -0.28009013184210029834;
-    // translations[2] = 0.26245924811106402519;
-    translations[2] = 0.0;
-
-    UnitQuaternion x_rotation(angles[0], frame[0]);
-    UnitQuaternion y_rotation(angles[1], frame[1]);
-    frame = x_rotation * y_rotation * frame;
-    for (auto& vertex : cube) {
-      Pt tmp_pt = vertex;
-      for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        vertex[d] = frame[d] * tmp_pt;
-        vertex[d] += translations[d];
-      }
-    }
-
-    for (auto& vertex : cube) {
-      Pt tmp_pt = vertex;
-      translations[2] = -aligned_paraboloid.a() * vertex[0] * vertex[0] -
-                        aligned_paraboloid.b() * vertex[1] * vertex[1] -
-                        vertex[2];
-      break;
-    }
-    for (auto& vertex : cube) {
-      Pt tmp_pt = vertex;
-      vertex[2] += translations[2];
-    }
-
-    // double error, moments[4];
-    // amr_volume_cube(moments, -aligned_paraboloid.a(),
-    // -aligned_paraboloid.b(),
-    //                 angles, translations, 1.0, 17, 1, 0);
-    // auto AMR_pt = Pt(moments[1], moments[2], moments[3]);
-    // AMR_pt /= moments[0];
-
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    std::cout << "IRL volume computation." << std::endl;
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    cube.setHalfEdgeVersion(&half_edge);
-    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-
-    for (auto& face : seg_half_edge) {
-      auto normal = Normal(0.0, 0.0, 0.0);
-      const auto starting_half_edge = face->getStartingHalfEdge();
-      auto current_half_edge = starting_half_edge;
-      auto next_half_edge = starting_half_edge->getNextHalfEdge();
-      const auto& start_location =
-          starting_half_edge->getPreviousVertex()->getLocation();
-      do {
-        normal += crossProduct(
-            current_half_edge->getVertex()->getLocation() - start_location,
-            next_half_edge->getVertex()->getLocation() - start_location);
-        current_half_edge = next_half_edge;
-        next_half_edge = next_half_edge->getNextHalfEdge();
-      } while (next_half_edge != starting_half_edge);
-      normal.normalize();
-      face->setPlane(Plane(normal, normal * start_location));
-    }
-
-    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
-    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid);
-
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    std::cout << "Test " << i << "/" << Ntests << std::endl;
-    // error = fabs(our_volume - moments[0]);
-    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
-      std::cout << "ELLIPTIC" << std::endl;
-    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
-      std::cout << "HYPERBOLIC" << std::endl;
-    else
-      std::cout << "PARABOLIC" << std::endl;
-    std::cout << std::setprecision(20) << "Volume = " << our_volume
-              << std::endl;
-    std::cout << std::setprecision(20) << "Volume AMR = " << amr_volume
-              << std::endl;
-    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume)
-              << std::endl;
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-
-    max_error = max_error > fabs(our_volume - amr_volume)
-                    ? max_error
-                    : fabs(our_volume - amr_volume);
-    rms_error += fabs(our_volume - amr_volume) * fabs(our_volume - amr_volume);
-
-    if (fabs(our_volume - amr_volume) > 1.0e-10) exit(1);
-  }
-  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
-
-  std::cout << "\n\n Max error = " << max_error << std::endl;
-  std::cout << "\n RMS error = " << rms_error << std::endl;
-
-  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
-}
-
-TEST(ParaboloidIntersection, HyperbolicRandom) {
-  int Ntests = 100;
-  double max_error = 0.0, rms_error = 0.0;
-
-  for (int i = 0; i < Ntests; i++) {
-    RectangularCuboid cube = unit_cell;
-    AlignedParaboloid aligned_paraboloid;
-    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
-                         Normal(0.0, 0.0, 1.0));
-    // Rotate cube
-    std::random_device
-        rd;  // Get a random seed from the OS entropy device, or whatever
-    std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
-                                // generator and seed it with entropy.
-    std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
-                                                           0.5 * M_PI);
-    std::uniform_real_distribution<double> random_coeffs(-5.0, 0.0);
-    std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
-    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0},
-           translations[3] = {random_translation(eng), random_translation(eng),
-                              random_translation(eng)};
-    aligned_paraboloid.a() = random_coeffs(eng);
-    aligned_paraboloid.b() = -random_coeffs(eng);
-
-    aligned_paraboloid.a() = 0.0;
-    aligned_paraboloid.b() = 0.0;
-    angles[0] = 0.0;
-    angles[1] = 6.283185307179586e-01;
-    angles[2] = 0.0;
-    translations[0] = -0.5;
-    translations[1] = -0.5;
-    translations[2] = -0.5;
-
-    aligned_paraboloid.a() = 0.0;
-    aligned_paraboloid.b() = 0.0;
-    angles[0] = 0.0;
-    angles[1] = 0.0;
-    angles[2] = 0.0;
-    translations[0] = -0.5;
-    translations[1] = -0.5;
-    translations[2] = 0.5;
-
-    std::cout << std::setprecision(15) << "Rotations " << angles[0] << " "
-              << angles[1] << std::endl;
-    UnitQuaternion x_rotation(angles[0], frame[0]);
-    UnitQuaternion y_rotation(angles[1], frame[1]);
-    frame = x_rotation * y_rotation * frame;
-    for (auto& vertex : cube) {
-      Pt tmp_pt = vertex;
-      for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        vertex[d] = frame[d] * tmp_pt;
-        vertex[d] += translations[d];
-      }
-      std::cout << vertex << std::endl;
-    }
-
-    double error, moments[4];
-    amr_volume_cube(moments, aligned_paraboloid.a(), aligned_paraboloid.b(),
-                    angles, translations, 1.0, 17, 1, 0);
-
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    std::cout << "IRL volume computation." << std::endl;
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    HalfEdgePolyhedronParaboloid<Pt> half_edge;
-    cube.setHalfEdgeVersion(&half_edge);
-    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-    for (auto& face : seg_half_edge) {
-      auto normal = Normal(0.0, 0.0, 0.0);
-      const auto starting_half_edge = face->getStartingHalfEdge();
-      auto current_half_edge = starting_half_edge;
-      auto next_half_edge = starting_half_edge->getNextHalfEdge();
-      const auto& start_location =
-          starting_half_edge->getPreviousVertex()->getLocation();
-      do {
-        normal += crossProduct(
-            current_half_edge->getVertex()->getLocation() - start_location,
-            next_half_edge->getVertex()->getLocation() - start_location);
-        current_half_edge = next_half_edge;
-        next_half_edge = next_half_edge->getNextHalfEdge();
-      } while (next_half_edge != starting_half_edge);
-      normal.normalize();
-      face->setPlane(Plane(normal, normal * start_location));
-    }
-
-    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid);
-
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    error = fabs(our_volume - moments[0]);
-    std::cout << "Error = " << error << std::endl;
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-
-    max_error = max_error > error ? max_error : error;
-    rms_error += error * error;
-
-    if (error > 1.0e-10) exit(1);
-  }
-  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
-
-  std::cout << "\n\n Max error = " << max_error << std::endl;
-  std::cout << "\n RMS error = " << rms_error << std::endl;
-
-  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
-}
-#endif
-
 TEST(ParaboloidIntersection, Dodecahedron) {
   double tau = (sqrt(5.0) + 1.0) / 2.0;
   Pt M[12] = {Pt(0, tau, 1),       Pt(0.0, -tau, 1.0),  Pt(0.0, tau, -1.0),
@@ -1279,9 +993,9 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     AlignedParaboloid aligned_paraboloid;
     ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
                          Normal(0.0, 0.0, 1.0));
-    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0},
-           translations[3] = {random_translation(eng), random_translation(eng),
-                              random_translation(eng)};
+    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
 
@@ -1327,26 +1041,26 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     UnitQuaternion y_rotation(angles[1], frame[1]);
     frame = x_rotation * y_rotation * frame;
     for (auto& vertex : dodeca) {
-      Pt tmp_pt = vertex;
+      Pt tmp_pt = vertex + translations;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         vertex[d] = frame[d] * tmp_pt;
-        vertex[d] += translations[d];
       }
     }
 
+    double local_space_translation;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;
-        translations[2] = -aligned_paraboloid.a() * vertex[0] * vertex[0] -
-                          aligned_paraboloid.b() * vertex[1] * vertex[1] -
-                          vertex[2];
+        local_space_translation =
+            -aligned_paraboloid.a() * vertex[0] * vertex[0] -
+            aligned_paraboloid.b() * vertex[1] * vertex[1] - vertex[2];
         break;
       }
       for (auto& vertex : dodeca) {
-        Pt tmp_pt = vertex;
-        vertex[2] += translations[2];
+        vertex[2] += local_space_translation;
       }
     }
+    translations += local_space_translation * frame[2];
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1540,11 +1254,11 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     PolyhedronConnectivity connectivity(face_mapping);
     GeneralPolyhedron dodeca(vertex_list, &connectivity);
     AlignedParaboloid aligned_paraboloid;
-    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
-                         Normal(0.0, 0.0, 1.0));
-    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0},
-           translations[3] = {random_translation(eng), random_translation(eng),
-                              random_translation(eng)};
+    ReferenceFrame orig_frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                              Normal(0.0, 0.0, 1.0));
+    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
 
@@ -1588,32 +1302,31 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
 
     if (first_vertex_on_surface) translations[2] = 0.0;
 
+    auto frame = orig_frame;
     UnitQuaternion x_rotation(angles[0], frame[0]);
     UnitQuaternion y_rotation(angles[1], frame[1]);
-    UnitQuaternion z_rotation(angles[2], frame[2]);
-    ReferenceFrame orig_frame = frame;
-    frame = x_rotation * y_rotation * z_rotation * frame;
+    frame = x_rotation * y_rotation * frame;
     for (auto& vertex : dodeca) {
-      Pt tmp_pt = vertex;
+      Pt tmp_pt = vertex + translations;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         vertex[d] = frame[d] * tmp_pt;
-        vertex[d] += translations[d];
       }
     }
 
+    double local_space_translation;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;
-        translations[2] = -aligned_paraboloid.a() * vertex[0] * vertex[0] -
-                          aligned_paraboloid.b() * vertex[1] * vertex[1] -
-                          vertex[2];
+        local_space_translation =
+            -aligned_paraboloid.a() * vertex[0] * vertex[0] -
+            aligned_paraboloid.b() * vertex[1] * vertex[1] - vertex[2];
         break;
       }
       for (auto& vertex : dodeca) {
-        Pt tmp_pt = vertex;
-        vertex[2] += translations[2];
+        vertex[2] += local_space_translation;
       }
     }
+    translations += local_space_translation * frame[2];
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1757,7 +1470,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     vertex_list[i] *= scale;
   }
 
-  int Ntests = 1;
+  int Ntests = 100;
   double max_error = 0.0, rms_error = 0.0;
   bool first_vertex_on_surface = true;
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
@@ -1782,9 +1495,8 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
                          Normal(0.0, 0.0, 1.0));
     std::array<double, 3> angles{
         {random_rotation(eng), random_rotation(eng), 0.0}};
-    std::array<double, 3> translations{{random_translation(eng),
-                                        random_translation(eng),
-                                        random_translation(eng)}};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
 
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
@@ -1820,30 +1532,28 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
 
     UnitQuaternion x_rotation(angles[0], frame[0]);
     UnitQuaternion y_rotation(angles[1], frame[1]);
-    UnitQuaternion z_rotation(angles[2], frame[2]);
-    auto total_rotation = x_rotation * y_rotation * z_rotation;
-    total_rotation.normalize();
-    frame = total_rotation * frame;
+    frame = x_rotation * y_rotation * frame;
     for (auto& vertex : dodeca) {
-      Pt tmp_pt = vertex;
+      Pt tmp_pt = vertex + translations;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        vertex[d] = frame[d] * tmp_pt + translations[d];
+        vertex[d] = frame[d] * tmp_pt;
       }
     }
 
+    double local_space_translation;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;
-        translations[2] = -aligned_paraboloid.a() * vertex[0] * vertex[0] -
-                          aligned_paraboloid.b() * vertex[1] * vertex[1] -
-                          vertex[2];
+        local_space_translation =
+            -aligned_paraboloid.a() * vertex[0] * vertex[0] -
+            aligned_paraboloid.b() * vertex[1] * vertex[1] - vertex[2];
         break;
       }
       for (auto& vertex : dodeca) {
-        Pt tmp_pt = vertex;
-        vertex[2] += translations[2];
+        vertex[2] += local_space_translation;
       }
     }
+    translations += local_space_translation * frame[2];
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1883,7 +1593,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
     auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
 
-    auto datum = -Pt::fromArray(translations);
+    auto datum = -translations;
     Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
     auto volume_and_surface =
@@ -2255,9 +1965,8 @@ TEST(ParaboloidIntersection, LocalizedParaboloid) {
                          Normal(0.0, 0.0, 1.0));
     std::array<double, 3> angles{
         {random_rotation(eng), random_rotation(eng), 0.0}};
-    std::array<double, 3> translations{{random_translation(eng),
-                                        random_translation(eng),
-                                        random_translation(eng)}};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
 
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
@@ -2311,10 +2020,11 @@ TEST(ParaboloidIntersection, LocalizedParaboloid) {
     frame = total_rotation * frame;
 
     for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices(); ++v) {
-      const auto tmp_pt = seg_half_edge.getVertex(v)->getLocation().getPt();
+      const Pt tmp_pt =
+          seg_half_edge.getVertex(v)->getLocation().getPt() + translations;
       auto new_pt = tmp_pt;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        new_pt[d] = frame[d] * tmp_pt + translations[d];
+        new_pt[d] = frame[d] * tmp_pt;
       }
       seg_half_edge.getVertex(v)->setLocation(new_pt);
     }
@@ -2345,7 +2055,7 @@ TEST(ParaboloidIntersection, LocalizedParaboloid) {
     auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
 
-    auto datum = -Pt::fromArray(translations);
+    auto datum = -translations;
     Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
 
@@ -2470,9 +2180,8 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
                               Normal(0.0, 0.0, 1.0));
     std::array<double, 3> angles{
         {random_rotation(eng), random_rotation(eng), 0.0}};
-    std::array<double, 3> translations{{random_translation(eng),
-                                        random_translation(eng),
-                                        random_translation(eng)}};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
 
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
@@ -2542,11 +2251,12 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
 
           for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices();
                ++v) {
-            const auto tmp_pt =
-                seg_half_edge.getVertex(v)->getLocation().getPt();
+            const Pt tmp_pt =
+                seg_half_edge.getVertex(v)->getLocation().getPt() +
+                translations;
             auto new_pt = tmp_pt;
             for (UnsignedIndex_t d = 0; d < 3; ++d) {
-              new_pt[d] = frame[d] * tmp_pt + translations[d];
+              new_pt[d] = frame[d] * tmp_pt;
             }
             seg_half_edge.getVertex(v)->setLocation(new_pt);
           }
@@ -2581,7 +2291,7 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
       }
     }
 
-    auto datum = -Pt::fromArray(translations);
+    auto datum = -translations;
     paraboloid = Paraboloid(datum, frame, aligned_paraboloid.a(),
                             aligned_paraboloid.b());
 
@@ -2660,6 +2370,53 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
             << std::endl;
 
   EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, InfiniteSplit) {
+  ReferenceFrame frame(Normal(0.0, -1.0, 0.0), Normal(0.0, 0.0, 1.0),
+                       Normal(-1.0, 0.0, 0.0));
+  Paraboloid paraboloid(Pt(-0.1, 0.25, 0.0), frame, 5.0, 0.0);
+  auto cell = RectangularCuboid::fromBoundingPts(Pt(-0.1, 0.24, -0.01),
+                                                 Pt(-0.08, 0.26, 0.01));
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+  cell.setHalfEdgeVersion(&half_edge);
+  auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+
+  for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices(); ++v) {
+    const Pt tmp_pt = seg_half_edge.getVertex(v)->getLocation().getPt() -
+                      paraboloid.getDatum();
+    auto new_pt = tmp_pt;
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      new_pt[d] = frame[d] * tmp_pt;
+    }
+    seg_half_edge.getVertex(v)->setLocation(new_pt);
+  }
+
+  for (auto& face : seg_half_edge) {
+    auto normal = Normal(0.0, 0.0, 0.0);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    const auto& start_location =
+        starting_half_edge->getPreviousVertex()->getLocation();
+    do {
+      normal += crossProduct(
+          current_half_edge->getVertex()->getLocation() - start_location,
+          next_half_edge->getVertex()->getLocation() - start_location);
+      current_half_edge = next_half_edge;
+      next_half_edge = next_half_edge->getNextHalfEdge();
+    } while (next_half_edge != starting_half_edge);
+    normal.normalize();
+    face->setPlane(Plane(normal, normal * start_location));
+  }
+
+  std::string poly_filename = "cell_" + std::to_string(0);
+  auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+      &seg_half_edge, &half_edge, paraboloid.getAlignedParaboloid(), 17,
+      poly_filename);  // This prints the AMR triangles
+
+  auto vol_frac = IRL::getVolumeFraction(cell, paraboloid);
 }
 
 }  // namespace

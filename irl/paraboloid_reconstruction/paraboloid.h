@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include <cassert>
+#include <ostream>
 
 #include "irl/data_structures/stack_vector.h"
 #include "irl/geometry/general/normal.h"
@@ -38,6 +39,10 @@ class Paraboloid {
   Paraboloid(const Pt& a_datum, const ReferenceFrame& a_reference_frame,
              const double a_coef_a, const double a_coef_b);
 
+  static Paraboloid createAlwaysAbove(void);
+
+  static Paraboloid createAlwaysBelow(void);
+
   void setDatum(const Pt& a_datum);
   void setReferenceFrame(const ReferenceFrame& a_reference_frame);
   void setAlignedParaboloid(const AlignedParaboloid& a_aligned_paraboloid);
@@ -46,12 +51,40 @@ class Paraboloid {
   const ReferenceFrame& getReferenceFrame(void) const;
   const AlignedParaboloid& getAlignedParaboloid(void) const;
 
+  /// Indicates that the intersection should actually be performed.
+  void markAsRealReconstruction(void);
+
+  /// Marks paraboloid as being above any polyhedron (so any polyhedron will be
+  /// unclipped).
+  void markAsAlwaysAbove(void);
+
+  /// Marks paraboloid as being below any polyhedron (so any polyhedron will be
+  /// clipped).
+  void markAsAlwaysBelow(void);
+
+  /// Whether the paraboloid has been set to be above any polyhedron.
+  bool isAlwaysAbove(void) const;
+
+  /// Whether the paraboloid has been set to be below any polyhedron.
+  bool isAlwaysBelow(void) const;
+
+  /// Paraboloid cannot be a flipped reconstruction. Add this for ease of use
+  /// with other routines that usually take planar reconstructions.
+  static constexpr bool isFlipped(void) { return false; }
+
+  /// \brief Since localizers are always convex, never flip.
+  static constexpr double flip(void) { return 1.0; }
+
+  /// \brief Return if cutting for gas phase is needed.
+  static constexpr bool isNotFlipped(void) { return true; }
+
   ~Paraboloid(void) = default;
 
  private:
   Pt datum_m;
   ReferenceFrame frame_m;
   AlignedParaboloid paraboloid_m;
+  std::array<bool, 2> place_infinite_shortcut_m;
 };
 
 using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
@@ -68,6 +101,9 @@ inline StackVector<double, 2> solveQuadratic(const double a, const double b,
 inline Pt projectPtAlongLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const Paraboloid& a_paraboloid);
 
 }  // namespace IRL
 

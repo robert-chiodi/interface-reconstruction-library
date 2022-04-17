@@ -29,16 +29,44 @@ inline const Normal& ReferenceFrame::operator[](
 }
 
 inline bool ReferenceFrame::isOrthonormalBasis(void) const {
-  if (std::fabs(axis_m[0] * axis_m[1]) > DBL_EPSILON) {
+  static constexpr double TOLERANCE = 10.0 * DBL_EPSILON;
+  if (std::fabs(axis_m[0] * axis_m[1]) > TOLERANCE) {
     return false;
   }
-  if (std::fabs(axis_m[0] * axis_m[2]) > DBL_EPSILON) {
+  if (std::fabs(axis_m[0] * axis_m[2]) > TOLERANCE) {
     return false;
   }
-  if (std::fabs(axis_m[1] * axis_m[2]) > DBL_EPSILON) {
+  if (std::fabs(axis_m[1] * axis_m[2]) > TOLERANCE) {
     return false;
   }
   return true;
+}
+
+inline ReferenceFrame::iterator ReferenceFrame::begin(void) noexcept {
+  return axis_m.begin();
+}
+
+inline ReferenceFrame::const_iterator ReferenceFrame::begin(
+    void) const noexcept {
+  return this->cbegin();
+}
+
+inline ReferenceFrame::const_iterator ReferenceFrame::cbegin(
+    void) const noexcept {
+  return axis_m.cbegin();
+}
+
+inline ReferenceFrame::iterator ReferenceFrame::end(void) noexcept {
+  return axis_m.end();
+}
+
+inline ReferenceFrame::const_iterator ReferenceFrame::end(void) const noexcept {
+  return this->cend();
+}
+
+inline ReferenceFrame::const_iterator ReferenceFrame::cend(
+    void) const noexcept {
+  return axis_m.cend();
 }
 
 }  // namespace IRL

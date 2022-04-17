@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include <cassert>
+#include <ostream>
 
 #include "irl/geometry/general/plane.h"
 #include "irl/geometry/general/polynomial.h"
@@ -54,6 +55,13 @@ class AlignedParaboloid : public Polynomial<2> {
 
  private:
 };
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const AlignedParaboloid& a_aligned_paraboloid) {
+  out << "0 = " << a_aligned_paraboloid.a() << " * x^2 + "
+      << a_aligned_paraboloid.b() << " * y^2 + z";
+  return out;
+}
 
 }  // namespace IRL
 
