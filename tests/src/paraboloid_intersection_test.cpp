@@ -1289,16 +1289,17 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     std::cout << std::setprecision(20)
               << "translations[2] = " << translations[2] << ";" << std::endl;
 
-    aligned_paraboloid.a() = 2.8218378285037051256;
-    aligned_paraboloid.b() = -4.4625215246677116809;
-    angles[0] = 0;
-    angles[1] = 0;
-    angles[2] = 0;
-    translations[0] = -0.36681315057406371771;
-    translations[1] = -0.43343162293764381232;
-    translations[2] =
-        -0.36585390636640668927;  // -1.0 + 2.0 * static_cast<double>(i) /
-                                  // static_cast<double>(Ntests);
+    // aligned_paraboloid.a() = 2.8218378285037051256;
+    // aligned_paraboloid.b() = -4.4625215246677116809;
+    // angles[0] = 0;
+    // angles[1] = 0;
+    // angles[2] = 0;
+    // translations[0] = -0.36681315057406371771;
+    // translations[1] = -0.43343162293764381232;
+    // translations[2] =
+    //     -0.36585390636640668927;
+    // -1.0 + 2.0 * static_cast<double>(i) /
+    // static_cast<double>(Ntests);
 
     if (first_vertex_on_surface) translations[2] = 0.0;
 

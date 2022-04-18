@@ -50,7 +50,7 @@ inline RationalBezierArc::RationalBezierArc(
       -(n_cross_t0 * edge_vector) / (n_cross_t0 * a_end_tangent);
   control_point_m = Pt(end_point_m + lambda_1 * a_end_tangent);
   const auto mid_to_control = Normal(control_point_m - average_pt);
-  const auto projected_pt = projectPtAlongLineOntoParaboloid(
+  const auto projected_pt = projectPtAlongHalfLineOntoParaboloid(
       a_paraboloid, mid_to_control, average_pt);
   weight_m = 1.0;
   if (squaredMagnitude(projected_pt - control_point_m) <

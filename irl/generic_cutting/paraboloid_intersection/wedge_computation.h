@@ -60,10 +60,18 @@ inline ReturnType computeWedgeCorrection(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_next_edge,
                                          SurfaceOutputType* a_surface = NULL);
 
+template <class ReturnType, class SurfaceOutputType>
+ReturnType computeV3ContributionWithSplit(const AlignedParaboloid& a_paraboloid,
+                                          const Plane& a_plane,
+                                          const Pt& a_pt_ref, const Pt& a_pt_0,
+                                          const Pt& a_pt_1,
+                                          const Normal& a_tangent_0,
+                                          const Normal& a_tangent_1,
+                                          SurfaceOutputType* a_surface);
+
 template <class ReturnType>
 ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
-                                 const Pt& a_pt_0, const Pt& a_pt_1,
-                                 const Pt& a_cp, const double a_weight);
+                                 const RationalBezierArc& a_arc);
 
 static double v3Series[41][3] = {
     {2.09523809523809528832e-01, 3.80952380952380931234e-01,

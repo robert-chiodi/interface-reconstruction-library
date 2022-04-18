@@ -71,6 +71,21 @@ inline bool Paraboloid::isAlwaysBelow(void) const {
   return place_infinite_shortcut_m[1];
 }
 
+inline Pt conicCenter(const Plane& a_plane,
+                      const AlignedParaboloid& a_paraboloid) {
+  const auto& face_normal = a_plane.normal();
+  const auto& face_distance = a_plane.distance();
+  return {face_normal[0] / safelyTiny(2.0 * a_paraboloid.a() * face_normal[2]),
+          face_normal[1] / safelyTiny(2.0 * a_paraboloid.b() * face_normal[2]),
+          -face_normal[0] * face_normal[0] /
+                  safelyTiny(2.0 * a_paraboloid.a() * face_normal[2] *
+                             face_normal[2]) -
+              face_normal[1] * face_normal[1] /
+                  safelyTiny(2.0 * a_paraboloid.b() * face_normal[2] *
+                             face_normal[2]) +
+              face_distance / safelyTiny(face_normal[2])};
+}
+
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_pt) {
   return {2.0 * a_paraboloid.a() * a_pt[0], 2.0 * a_paraboloid.b() * a_pt[1],
@@ -106,6 +121,41 @@ inline StackVector<double, 2> solveQuadratic(const double a, const double b,
 };
 
 inline Pt projectPtAlongLineOntoParaboloid(
+    const AlignedParaboloid& a_paraboloid, const Normal& a_line,
+    const Pt& a_starting_pt) {
+  // a_line should be normalized before passing in to make
+  // these checks make sense
+  const double a = (a_paraboloid.a() * a_line[0] * a_line[0] +
+                    a_paraboloid.b() * a_line[1] * a_line[1]);
+  const double b =
+      (a_line[2] + 2.0 * a_paraboloid.a() * a_starting_pt[0] * a_line[0] +
+       2.0 * a_paraboloid.b() * a_starting_pt[1] * a_line[1]);
+  const double c = (a_starting_pt[2] +
+                    a_paraboloid.a() * a_starting_pt[0] * a_starting_pt[0] +
+                    a_paraboloid.b() * a_starting_pt[1] * a_starting_pt[1]);
+  // check if starting point is on paraboloid (then solution = 0)
+  // if (std::fabs(c) < 5.0 * DBL_EPSILON) {
+  //   return a_starting_pt;
+  // } else {
+  const auto solutions = solveQuadratic(a, b, c);
+  if (solutions.size() == 0) {
+    std::cout << "No solution found for projection on paraboloid" << a_line
+              << a_starting_pt << std::endl;
+  }
+  assert(solutions.size() > 0);
+  if (solutions.size() == 1) {
+    return a_starting_pt + a_line * solutions[0];
+  } else {
+    if (std::abs(solutions[0]) < std::abs(solutions[1])) {
+      return a_starting_pt + a_line * solutions[0];
+    } else {
+      return a_starting_pt + a_line * solutions[1];
+    }
+  }
+  // }
+}
+
+inline Pt projectPtAlongHalfLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt) {
   // a_line should be normalized before passing in to make

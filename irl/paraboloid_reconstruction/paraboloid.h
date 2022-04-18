@@ -91,6 +91,9 @@ using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
 using LocalizedParaboloidLink =
     ReconstructionLink<LocalizedParaboloid, UnDirectedGraphNode>;
 
+inline Pt conicCenter(const Plane& a_plane,
+                      const AlignedParaboloid& a_paraboloid);
+
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_pt);
 
@@ -99,6 +102,10 @@ inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
 inline StackVector<double, 2> solveQuadratic(const double a, const double b,
                                              const double c);
 inline Pt projectPtAlongLineOntoParaboloid(
+    const AlignedParaboloid& a_paraboloid, const Normal& a_line,
+    const Pt& a_starting_pt);
+
+inline Pt projectPtAlongHalfLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
 
