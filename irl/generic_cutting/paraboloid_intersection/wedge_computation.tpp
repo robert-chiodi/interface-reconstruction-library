@@ -84,7 +84,7 @@ inline Normal computeAndCorrectTangentVectorAtPt(
       (tangent * Normal(crossProduct(a_plane.normal(),
                                      a_intersection_pt - a_origin_pt)) >
        0.0)) {
-    tangent *= -1.0;
+    tangent = -tangent;
   }
   return tangent;
 }
@@ -292,44 +292,108 @@ inline std::array<double, 3> coeffsV3Exact(const double a_weight) {
 
 template <class ReturnType>
 ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
-                                 const Pt& a_pt_0, const Pt& a_pt_1,
-                                 const Pt& a_cp, const double a_weight);
+                                 const RationalBezierArc& a_arc);
 
 template <>
 inline Volume computeV3Contribution<Volume>(
-    const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
-    const Pt& a_cp, const double a_weight) {
-  const double area_proj_triangle = 0.5 * (a_pt_0[0] * (a_pt_1[1] - a_cp[1]) +
-                                           a_pt_1[0] * (a_cp[1] - a_pt_0[1]) +
-                                           a_cp[0] * (a_pt_0[1] - a_pt_1[1]));
-  assert(a_weight >= 0.0);
+    const AlignedParaboloid& a_paraboloid, const RationalBezierArc& a_arc) {
+  const auto& pt_0 = a_arc.start_point();
+  const auto& cp = a_arc.control_point();
+  const auto& pt_1 = a_arc.end_point();
+  const auto& weight = a_arc.weight();
+  const double area_proj_triangle =
+      0.5 * (pt_0[0] * (pt_1[1] - cp[1]) + pt_1[0] * (cp[1] - pt_0[1]) +
+             cp[0] * (pt_0[1] - pt_1[1]));
+  assert(weight >= 0.0);
   std::array<double, 3> coeffs;
-  if (a_weight < 0.35)  // We use the exact expressions
-    coeffs = coeffsV3Exact(a_weight);
-  else if (a_weight < 1.7)  // We use the 40th order Taylor series (w -> 1)
-    coeffs = coeffsV3SeriesOne(a_weight);
-  else if (a_weight < 80.0)  // We use the exact expressions
-    coeffs = coeffsV3Exact(a_weight);
-  else if (a_weight < 1.0e9)  // We use the series expansion (w -> infty)
-    coeffs = coeffsV3SeriesInfinity(a_weight);
+  if (weight < 0.35)  // We use the exact expressions
+    coeffs = coeffsV3Exact(weight);
+  else if (weight < 1.7)  // We use the 40th order Taylor series (w -> 1)
+    coeffs = coeffsV3SeriesOne(weight);
+  else if (weight < 80.0)  // We use the exact expressions
+    coeffs = coeffsV3Exact(weight);
+  else if (weight < 1.0e9)  // We use the series expansion (w -> infty)
+    coeffs = coeffsV3SeriesInfinity(weight);
   else  // This is within DBL_EPSILON of the actual value
     coeffs = std::array<double, 3>({1.0 / 6.0, 2.0 / 3.0, 0.0});
   return area_proj_triangle *
-         (coeffs[0] * signedDistance(0.5 * (a_pt_0 + a_pt_1), a_paraboloid) +
-          coeffs[1] * signedDistance(0.25 * (a_pt_0 + a_pt_1) + 0.5 * a_cp,
-                                     a_paraboloid) +
-          coeffs[2] * signedDistance(a_cp, a_paraboloid));
+         (coeffs[0] * signedDistance(0.5 * (pt_0 + pt_1), a_paraboloid) +
+          coeffs[1] *
+              signedDistance(0.25 * (pt_0 + pt_1) + 0.5 * cp, a_paraboloid) +
+          coeffs[2] * signedDistance(cp, a_paraboloid));
 }
 
 template <>
 inline VolumeMoments computeV3Contribution<VolumeMoments>(
-    const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
-    const Pt& a_cp, const double a_weight) {
+    const AlignedParaboloid& a_paraboloid, const RationalBezierArc& a_arc) {
   auto moments = VolumeMoments::fromScalarConstant(0.0);
   std::cout << "Not yet implemented" << std::endl;
   std::exit(-1);
   return moments;
 }
+
+template <class ReturnType, class SurfaceOutputType>
+ReturnType computeV3ContributionWithSplit(const AlignedParaboloid& a_paraboloid,
+                                          const Plane& a_plane,
+                                          const Pt& a_pt_ref, const Pt& a_pt_0,
+                                          const Pt& a_pt_1,
+                                          const Normal& a_tangent_0,
+                                          const Normal& a_tangent_1,
+                                          SurfaceOutputType* a_surface) {
+  if (squaredMagnitude(a_pt_1 - a_pt_0) < 100.0 * DBL_EPSILON * DBL_EPSILON) {
+    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      a_surface->addArc(
+          RationalBezierArc(a_pt_0, 0.5 * (a_pt_0 + a_pt_1), a_pt_1, 0.0));
+    }
+    return ReturnType::fromScalarConstant(0.0);
+  } else {
+    const Normal edge_vector = a_pt_1 - a_pt_0;
+    bool split = ((a_tangent_0 * edge_vector) < 0.0 ||
+                  (a_tangent_1 * edge_vector) > 0.0);
+    if (split) {
+      const Pt average_pt = 0.5 * (a_pt_0 + a_pt_1);
+      auto average_tangent = Normal(0.5 * (a_tangent_0 + a_tangent_1));
+      if (squaredMagnitude(average_tangent) <
+          100.0 * DBL_EPSILON * DBL_EPSILON) {
+        average_tangent = Normal(0.25 * a_tangent_0 + 0.75 * a_tangent_1);
+      }
+      average_tangent.normalize();
+      Pt projected_pt = projectPtAlongHalfLineOntoParaboloid(
+          a_paraboloid, average_tangent, average_pt);
+      const Normal tangent_projected_pt = computeAndCorrectTangentVectorAtPt(
+          a_paraboloid, a_plane, a_pt_0, a_pt_1, a_tangent_1, projected_pt);
+      // We need to store this vertex so that its address remains unique over
+      // time
+      if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+        Pt* new_point = new Pt(projected_pt);
+        a_surface->addPt(new_point);
+        return computeV3ContributionWithSplit<ReturnType>(
+                   a_paraboloid, a_plane, a_pt_ref, a_pt_0, *new_point,
+                   a_tangent_0, tangent_projected_pt, a_surface) +
+               computeV3ContributionWithSplit<ReturnType>(
+                   a_paraboloid, a_plane, a_pt_ref, *new_point, a_pt_1,
+                   -tangent_projected_pt, a_tangent_1, a_surface);
+      } else {
+        return computeV3ContributionWithSplit<ReturnType>(
+                   a_paraboloid, a_plane, a_pt_ref, a_pt_0, projected_pt,
+                   a_tangent_0, tangent_projected_pt, a_surface) +
+               computeV3ContributionWithSplit<ReturnType>(
+                   a_paraboloid, a_plane, a_pt_ref, projected_pt, a_pt_1,
+                   -tangent_projected_pt, a_tangent_1, a_surface);
+      }
+    } else {
+      const auto arc = RationalBezierArc(a_pt_0, a_tangent_0, a_pt_1,
+                                         a_tangent_1, a_plane, a_paraboloid);
+      // Return surface parametrization
+      if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+        a_surface->addArc(arc);
+      }
+      return computeV3Contribution<ReturnType>(a_paraboloid, arc) +
+             calculateTriangleCorrection<ReturnType>(a_paraboloid, a_pt_0,
+                                                     a_pt_1, a_pt_ref);
+    }
+  }
+}  // namespace IRL
 
 template <class ReturnType, class SurfaceOutputType>
 ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
@@ -358,7 +422,7 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
     return ReturnType::fromScalarConstant(0.0);
   } else if (dot_0 <= 0.0 || dot_1 >= 0.0) {
     auto average_tangent = Normal(0.5 * (a_tangent_0 + a_tangent_1));
-    Pt projected_pt = projectPtAlongLineOntoParaboloid(
+    Pt projected_pt = projectPtAlongHalfLineOntoParaboloid(
         a_paraboloid, average_tangent, average_pt);
     const Normal tangent_projected_pt = computeAndCorrectTangentVectorAtPt(
         a_paraboloid, a_plane, a_pt_0, a_pt_1, a_tangent_1, projected_pt);
@@ -390,7 +454,7 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
         -(n_cross_t0 * edge_vector) / (n_cross_t0 * a_tangent_1);
     const auto control_pt = Pt(a_pt_1 + lambda_1 * a_tangent_1);
     const auto mid_to_control = Normal(control_pt - average_pt);
-    const auto projected_pt = projectPtAlongLineOntoParaboloid(
+    const auto projected_pt = projectPtAlongHalfLineOntoParaboloid(
         a_paraboloid, mid_to_control, average_pt);
     double weight = 1.0;
     if (squaredMagnitude(projected_pt - control_pt) <
@@ -411,8 +475,9 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       a_surface->addArc(RationalBezierArc(a_pt_1, control_pt, a_pt_0, weight));
     }
-    return computeV3Contribution<ReturnType>(a_paraboloid, a_pt_0, a_pt_1,
-                                             control_pt, weight) +
+    return computeV3Contribution<ReturnType>(
+               a_paraboloid,
+               RationalBezierArc(a_pt_0, control_pt, a_pt_1, weight)) +
            calculateTriangleCorrection<ReturnType>(a_paraboloid, a_pt_0, a_pt_1,
                                                    a_pt_ref);
   }
