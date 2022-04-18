@@ -176,71 +176,6 @@ bool orientInitialTangents(const HalfEdgeType* a_starting_half_edge,
   }
 }
 
-// // Returns solution to quadratic equation solve.
-// // The smallest solution will always be first.
-// inline StackVector<double, 2> solveQuadratic(const double a, const double b,
-//                                              const double c) {
-//   double discriminant = b * b - 4.0 * a * c;
-//   // By preventing discriminant = 0, we avoid cases with intersections
-//   tangent
-//   // to the paraboloid
-//   if (discriminant > 0.0) {
-//     if (a != 0.0) {
-//       discriminant = std::sqrt(discriminant);
-//       const double q = -0.5 * (b + std::copysign(discriminant, b));
-//       if (b == 0.0 && c == 0.0) {
-//         return StackVector<double, 2>({0.0, 0.0});
-//       } else if (q == 0.0) {
-//         return StackVector<double, 2>({0.0});
-//       }
-//       const double sol1 = q / a;
-//       const double sol2 = c / q;
-//       return sol1 < sol2 ? StackVector<double, 2>({sol1, sol2})
-//                          : StackVector<double, 2>({sol2, sol1});
-
-//     } else {
-//       return StackVector<double, 2>({-c / b});
-//     }
-//   }
-//   return StackVector<double, 2>();
-// }
-
-// inline Pt projectPtAlongLineOntoParaboloid(
-//     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
-//     const Pt& a_starting_pt) {
-//   // a_line should be normalized before passing in to make
-//   // these checks make sense
-//   const double a = (a_paraboloid.a() * a_line[0] * a_line[0] +
-//                     a_paraboloid.b() * a_line[1] * a_line[1]);
-//   const double b =
-//       (a_line[2] + 2.0 * a_paraboloid.a() * a_starting_pt[0] * a_line[0] +
-//        2.0 * a_paraboloid.b() * a_starting_pt[1] * a_line[1]);
-//   const double c = (a_starting_pt[2] +
-//                     a_paraboloid.a() * a_starting_pt[0] * a_starting_pt[0] +
-//                     a_paraboloid.b() * a_starting_pt[1] * a_starting_pt[1]);
-//   // check if starting point is on paraboloid (then solution = 0)
-//   if (std::fabs(c) < 5.0 * DBL_EPSILON) {
-//     return a_starting_pt;
-//   } else {
-//     const auto solutions = solveQuadratic(a, b, c);
-//     if (solutions.size() == 0) {
-//       std::cout << a_line << a_starting_pt << std::endl;
-//     }
-//     assert(solutions.size() > 0);
-//     if (solutions.size() == 1) {
-//       assert(solutions[0] >= 0.0);
-//       return a_starting_pt + a_line * solutions[0];
-//     } else {
-//       assert(std::max(solutions[0], solutions[1]) >= 0.0);
-//       const double distance_along_line =
-//           solutions[0] > 0.0 && solutions[1] > 0.0
-//               ? std::min(solutions[0], solutions[1])
-//               : std::max(solutions[0], solutions[1]);
-//       return a_starting_pt + a_line * distance_along_line;
-//     }
-//   }
-// }
-
 inline std::array<double, 3> coeffsV3SeriesOne(const double a_weight) {
   auto coeffs = std::array<double, 3>({0.0, 0.0, 0.0});
   double x = 1.0;
@@ -393,7 +328,7 @@ ReturnType computeV3ContributionWithSplit(const AlignedParaboloid& a_paraboloid,
                                                      a_pt_1, a_pt_ref);
     }
   }
-}  // namespace IRL
+}
 
 template <class ReturnType, class SurfaceOutputType>
 ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
@@ -426,7 +361,6 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
         a_paraboloid, average_tangent, average_pt);
     const Normal tangent_projected_pt = computeAndCorrectTangentVectorAtPt(
         a_paraboloid, a_plane, a_pt_0, a_pt_1, a_tangent_1, projected_pt);
-    std::cout << "PROJ POINT " << projected_pt << std::endl;
     // We need to store this vertex so that its address remains unique over time
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       Pt* new_point = new Pt(projected_pt);
@@ -445,8 +379,6 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
                  a_paraboloid, a_plane, a_pt_ref, projected_pt, a_pt_1,
                  -tangent_projected_pt, a_tangent_1, a_surface);
     }
-    std::cout << "DONE SPLITTING " << std::endl;
-
   } else {
     const Normal n_cross_t0 = crossProduct(a_plane.normal(), a_tangent_0);
     assert(std::fabs(n_cross_t0 * a_tangent_1) > DBL_EPSILON);
@@ -481,7 +413,7 @@ ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
            calculateTriangleCorrection<ReturnType>(a_paraboloid, a_pt_0, a_pt_1,
                                                    a_pt_ref);
   }
-}  // namespace IRL
+}
 
 template <class ReturnType, class SurfaceOutputType>
 inline ReturnType computeWedgeCorrection(const AlignedParaboloid& a_paraboloid,
@@ -490,17 +422,6 @@ inline ReturnType computeWedgeCorrection(const AlignedParaboloid& a_paraboloid,
                                          const Normal& a_tangent_0,
                                          const Normal& a_tangent_1,
                                          SurfaceOutputType* a_surface) {
-  // if (std::fabs(a_plane.normal()[2]) < DBL_EPSILON) {
-  //   return ReturnType::fromScalarConstant(0.0);
-  // }
-  // FIX NEED BETTER SCALING FOR THIS
-  // Need to catch "face only" case but shifted to just touch edge
-  // if (magnitude(a_pt_1 - a_pt_0) < MINIMUM_EDGE_LENGTH) {
-  //   return ReturnType::fromScalarConstant(0.0);
-  // }
-  // Potentially possible to have length between a_pt_1 and a_pt_0 be zero.
-  // Could be either a no intersection or face only. Might need to consider
-  // in the future.
   return bezierIntegrate<ReturnType>(a_paraboloid, a_plane, a_pt_0, a_pt_0,
                                      a_pt_1, a_tangent_0, a_tangent_1,
                                      a_surface);
