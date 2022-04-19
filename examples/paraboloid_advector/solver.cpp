@@ -21,6 +21,7 @@
 
 #include "examples/paraboloid_advector/diagnostics.h"
 #include "examples/paraboloid_advector/solver.h"
+#include "examples/paraboloid_advector/vtk.h"
 
 namespace details {
 IRL::Paraboloid fromCircle(const IRL::Pt& a_center, const double a_radius,
@@ -43,19 +44,15 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
   // Initialize mesh and interface/cell/traversal reconstructions
   const auto mesh = initializeMesh(a_number_of_cells);
   IRLReconstructionsPack reconstructions;
-  std::cout << "PAR Initialize " << std::endl;
   reconstructions.liquid_gas_interface = initializeInterface(mesh);
-  std::cout << "DONE PAR Initialize " << std::endl;
   reconstructions.cell_localizers = initializeCellLocalizers(mesh);
   reconstructions.traversing_links = setupLinkStructure(
       reconstructions.liquid_gas_interface, reconstructions.cell_localizers);
 
   // Calculate volume field from set planar reconstructions
-  std::cout << "VOL FRAC " << std::endl;
   auto liquid_volume_fraction =
       initializeVolumeFraction(reconstructions.liquid_gas_interface);
   auto initial_liquid_volume_fraction = liquid_volume_fraction;
-  std::cout << "DONE VOL FRAC " << std::endl;
 
   // Calculate constant timestep for CFL = 0.5 and number of steps per
   // revolution at this time. Also make sure it is multiple of
@@ -74,22 +71,26 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
   // Initialize folders/mesh for very simple I/O
   int viz_output = 0;
   writeOutMesh(mesh);
+  VTKOutput vtk_io("viz_out", "viz", mesh);
+  vtk_io.addData("VOF", liquid_volume_fraction);
 
   // Now carry out the forward solution, doing it based on
   // the number of revolutions requested and progress
   // per revolution.
   int iteration = 0;
+  double time = 0.0;
   for (int revolutions = 0; revolutions < a_number_of_rotations;
        ++revolutions) {
     for (int step = 0; step < steps_per_revolution; ++step) {
-      std::cout << "Advance " << step << std::endl;
       advanceState(dt, &liquid_volume_fraction, &reconstructions);
-      std::cout << "DONE Advance " << std::endl;
       writeOutDiagnostics(iteration, revolutions, step + 1,
                           steps_per_revolution);
+      time += dt;
       if (a_viz_out_freq > 0 &&
           step % (steps_per_revolution / a_viz_out_freq) == 0) {
-        writeOutVisualization(viz_output, liquid_volume_fraction);
+        //        writeOutVisualization(viz_output, liquid_volume_fraction);
+        vtk_io.writeVTKFile(time);
+
         ++viz_output;
       }
       ++iteration;
@@ -124,11 +125,19 @@ Data<IRL::Paraboloid> initializeInterface(const BasicMesh& a_mesh) {
         const IRL::Pt upper_cell_pt(a_mesh.x(i + 1), a_mesh.y(j + 1),
                                     a_mesh.z(k + 1));
         const IRL::Pt mid_pt = 0.5 * (lower_cell_pt + upper_cell_pt);
-        auto circle_normal =
-            IRL::Normal::fromPtNormalized(mid_pt - circle_center);
-        circle_normal[2] = 0.0;
-        liquid_gas_interface(i, j, k) =
-            details::fromCircle(circle_center, circle_radius, circle_normal);
+        IRL::Pt disp = mid_pt - circle_center;
+        disp[2] = 0.0;
+        const auto mag = magnitude(disp);
+        if (mag < circle_radius - 2.0 * a_mesh.dx()) {
+          liquid_gas_interface(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
+        } else if (mag > circle_radius + 2.0 * a_mesh.dx()) {
+          liquid_gas_interface(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
+        } else {
+          auto circle_normal = IRL::Normal::fromPt(disp);
+          circle_normal /= IRL::safelyTiny(mag);
+          liquid_gas_interface(i, j, k) =
+              details::fromCircle(circle_center, circle_radius, circle_normal);
+        }
       }
     }
   }
@@ -220,9 +229,6 @@ Data<double> initializeVolumeFraction(
     const Data<IRL::Paraboloid>& a_interface) {
   const BasicMesh& mesh = a_interface.getMesh();
   Data<double> liquid_volume_fraction(mesh);
-  std::cout << mesh.imino() << " " << mesh.imaxo() << std::endl;
-  std::cout << mesh.jmino() << " " << mesh.jmaxo() << std::endl;
-  std::cout << mesh.kmino() << " " << mesh.kmaxo() << std::endl;
 
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -230,14 +236,10 @@ Data<double> initializeVolumeFraction(
         const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
         const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
                                     mesh.z(k + 1));
-        std::cout << lower_cell_pt << " " << upper_cell_pt << std::endl;
         const auto cell = IRL::RectangularCuboid::fromBoundingPts(
             lower_cell_pt, upper_cell_pt);
-        std::cout << i << " " << j << " " << k << std::endl;
-        std::cout << a_interface(i, j, k) << std::endl;
         liquid_volume_fraction(i, j, k) =
             IRL::getVolumeFraction(cell, a_interface(i, j, k));
-        std::cout << "DONE " << liquid_volume_fraction(i, j, k) << std::endl;
       }
     }
   }

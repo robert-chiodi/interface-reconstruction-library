@@ -6,11 +6,13 @@ IRLAddExample_cpp(
     "data.h"
     "diagnostics.h"
     "solver.h"
+    "vtk.h"
   SRCS
     "basic_mesh.cpp"
     "diagnostics.cpp"
     "main.cpp"
     "solver.cpp"
+    "vtk.cpp"
   OUTPUT_DIR
     "${IRL_EXAMPLES_OUTPUT_DIR}/paraboloid_advector"
   COLLECTION
