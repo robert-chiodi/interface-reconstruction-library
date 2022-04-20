@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <string>
 
-#include "examples/paraboloid_advector/diagnostics.h"
+#include "examples/simple_paraboloid_advector/diagnostics.h"
 
 void writeOutDiagnostics(const int a_iteration, const int a_revolution,
                          const int a_step, const int a_steps_per_rev) {

@@ -7,15 +7,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_PARABOLOID_ADVECTOR_DATA_H_
-#define EXAMPLES_PARABOLOID_ADVECTOR_DATA_H_
+#ifndef EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_DATA_H_
+#define EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_DATA_H_
 
 #include <algorithm>
 #include <cstring>
 
 #include "irl/geometry/general/pt.h"
 
-#include "examples/paraboloid_advector/basic_mesh.h"
+#include "examples/simple_paraboloid_advector/basic_mesh.h"
 
 /// \brief A basic multi-dimensional data container.
 template <class ContainedType>
@@ -279,4 +279,4 @@ ContainedType Data<ContainedType>::interpolate(
                 wy2 * (wx1 * (*this)(i + 1, j, k) + wx2 * (*this)(i, j, k)));
 }
 
-#endif  // EXAMPLES_PARABOLOID_ADVECTOR_DATA_H_
+#endif  // EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_DATA_H_

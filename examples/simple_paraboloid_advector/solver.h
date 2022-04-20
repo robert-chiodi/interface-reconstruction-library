@@ -7,16 +7,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_PARABOLOID_ADVECTOR_SOLVER_H_
-#define EXAMPLES_PARABOLOID_ADVECTOR_SOLVER_H_
+#ifndef EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_SOLVER_H_
+#define EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_SOLVER_H_
 
 #include "irl/geometry/general/pt.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/planar_reconstruction/planar_localizer.h"
 
-#include "examples/paraboloid_advector/basic_mesh.h"
-#include "examples/paraboloid_advector/data.h"
-#include "examples/paraboloid_advector/vtk.h"
+#include "examples/simple_paraboloid_advector/basic_mesh.h"
+#include "examples/simple_paraboloid_advector/data.h"
+#include "examples/simple_paraboloid_advector/vtk.h"
 
 struct IRLReconstructionsPack {
   Data<IRL::Paraboloid> liquid_gas_interface;
@@ -59,4 +59,4 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
                           const Data<IRL::Paraboloid>& a_liquid_gas_interface,
                           const double a_time, VTKOutput* a_output);
 
-#endif  // EXAMPLES_PARABOLOID_ADVECTOR_SOLVER_H_
+#endif  // EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_SOLVER_H_

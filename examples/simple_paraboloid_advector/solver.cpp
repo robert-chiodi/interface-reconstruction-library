@@ -21,9 +21,9 @@
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 #include "irl/surface_mesher/triangulated_surface.h"
 
-#include "examples/paraboloid_advector/diagnostics.h"
-#include "examples/paraboloid_advector/solver.h"
-#include "examples/paraboloid_advector/vtk.h"
+#include "examples/simple_paraboloid_advector/diagnostics.h"
+#include "examples/simple_paraboloid_advector/solver.h"
+#include "examples/simple_paraboloid_advector/vtk.h"
 
 namespace details {
 IRL::Paraboloid fromCircle(const IRL::Pt& a_center, const double a_radius,

@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-#include "examples/paraboloid_advector/basic_mesh.h"
+#include "examples/simple_paraboloid_advector/basic_mesh.h"
 
 void BasicMesh::setCellBoundaries(const IRL::Pt& a_bottom_bounding_box,
                                   const IRL::Pt& a_top_bounding_box) {

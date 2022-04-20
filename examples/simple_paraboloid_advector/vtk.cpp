@@ -1,5 +1,5 @@
 
-#include "examples/paraboloid_advector/vtk.h"
+#include "examples/simple_paraboloid_advector/vtk.h"
 
 #include <stdio.h>
 #include <sys/stat.h>
