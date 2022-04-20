@@ -426,9 +426,6 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
   double length_scale = DBL_MAX;
   const auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
 
-  std::cout << "Triangulating parametrized surface with " << nArcs
-            << " arcs:" << std::endl;
-
   std::vector<std::vector<RationalBezierArc>> list_of_closed_curves;
   std::vector<bool> visited(nArcs, false);
 
@@ -537,9 +534,6 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
   if (input_points.size() > 0) {
     // Calling triangulation library
     struct triangulateio in = {0}, out = {0};
-    std::cout << "Passing " << input_points.size()
-              << " points to the mesher, with maxarea = "
-              << 0.5 * length_scale * length_scale << std::endl;
     in.numberofpoints = input_points.size() / 2;
     in.pointlist = input_points.data();
 

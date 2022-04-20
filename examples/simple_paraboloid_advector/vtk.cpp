@@ -37,25 +37,25 @@ void VTKOutput::writeVTKFile(const double a_time) {
 
   fprintf(file, "<Coordinates>\n");
   fprintf(file,
-          "<DataArray type=\"Float32\" NumberOfComponents=\"1\" "
+          "<DataArray type=\"Float64\" NumberOfComponents=\"1\" "
           "format=\"ascii\">\n");
   for (int i = mesh_m->imin(); i <= mesh_m->imax() + 1; ++i) {
-    fprintf(file, "%15.8E ", static_cast<float>(mesh_m->x(i)));
+    fprintf(file, "%15.8E ", static_cast<double>(mesh_m->x(i)));
   }
   fprintf(file, "\n</DataArray>\n");
   fprintf(file,
-          "<DataArray type=\"Float32\" NumberOfComponents=\"1\" "
+          "<DataArray type=\"Float64\" NumberOfComponents=\"1\" "
           "format=\"ascii\">\n");
   for (int i = mesh_m->jmin(); i <= mesh_m->jmax() + 1; ++i) {
-    fprintf(file, "%15.8E ", static_cast<float>(mesh_m->y(i)));
+    fprintf(file, "%15.8E ", static_cast<double>(mesh_m->y(i)));
   }
   fprintf(file, "\n</DataArray>\n");
 
   fprintf(file,
-          "<DataArray type=\"Float32\" NumberOfComponents=\"1\" "
+          "<DataArray type=\"Float64\" NumberOfComponents=\"1\" "
           "format=\"ascii\">\n");
   for (int i = mesh_m->kmin(); i <= mesh_m->kmax() + 1; ++i) {
-    fprintf(file, "%15.8E ", static_cast<float>(mesh_m->z(i)));
+    fprintf(file, "%15.8E ", static_cast<double>(mesh_m->z(i)));
   }
   fprintf(file, "\n</DataArray>\n");
 
@@ -70,14 +70,14 @@ void VTKOutput::writeVTKFile(const double a_time) {
   fprintf(file, "\" >\n");
   for (auto& data : data_to_write_m) {
     fprintf(file,
-            "<DataArray type=\"Float32\" Name=\"%s\" NumberOfComponents=\"1\" "
+            "<DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"1\" "
             "format=\"ascii\">\n",
             data.name.c_str());
     for (int k = mesh_m->kmin(); k <= mesh_m->kmax(); ++k) {
       for (int j = mesh_m->jmin(); j <= mesh_m->jmax(); ++j) {
         for (int i = mesh_m->imin(); i <= mesh_m->imax(); ++i) {
           fprintf(file, "%15.8E ",
-                  static_cast<float>((*data.pointer)(i, j, k)));
+                  static_cast<double>((*data.pointer)(i, j, k)));
         }
       }
     }
@@ -118,13 +118,13 @@ void VTKOutput::writeVTKInterface(
           static_cast<int>(number_of_vertices),
           static_cast<int>(number_of_triangles));
   fprintf(file, "<Points>\n");
-  fprintf(file, "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
+  fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
   std::vector<std::size_t> offset(a_surface.size() + 1, 0);
   for (std::size_t i = 0; i < a_surface.size(); ++i) {
     const auto& vlist = a_surface[i].getVertexList();
     for (const auto& vertex : vlist) {
-      fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<float>(vertex[0]),
-              static_cast<float>(vertex[1]), static_cast<float>(vertex[2]));
+      fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(vertex[0]),
+              static_cast<double>(vertex[1]), static_cast<double>(vertex[2]));
     }
     offset[i + 1] = offset[i] + vlist.size();
   }
@@ -150,11 +150,11 @@ void VTKOutput::writeVTKInterface(
   fprintf(file,
           "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
   for (std::size_t i = 0; i < number_of_triangles; ++i) {
-    fprintf(file, "%d ", static_cast<int>(3 * i));
+    fprintf(file, "%d ", static_cast<int>(3 * (i + 1)));
   }
   fprintf(file, "</DataArray>\n");
 
-  fprintf(file, "<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n");
+  fprintf(file, "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
   for (std::size_t i = 0; i < number_of_triangles; ++i) {
     fprintf(file, "5 ");
   }
