@@ -810,6 +810,46 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   const bool check_from_unclipped = true;
   //      !elliptic || (elliptic && !check_from_clipped);
 
+  auto edge_parallel_to_paraboloid =
+      [&a_aligned_paraboloid, elliptic](
+          const Pt& a_edge_0, const Pt& a_edge_1,
+          const Pt& a_intersection) -> UnsignedIndex_t {
+    if (!elliptic) {
+      return 0;
+    }
+    const Pt line = a_edge_1 - a_edge_0;
+    const auto edge_direction = Normal::fromPtNormalized(line);
+    const auto paraboloid_normal =
+        getParaboloidSurfaceNormal(a_aligned_paraboloid, a_intersection);
+    return std::fabs(edge_direction * paraboloid_normal) < 1000.0 * DBL_EPSILON
+               ? 1
+               : 0;
+  };
+
+  auto edge_parallel_to_paraboloid2 =
+      [&a_aligned_paraboloid, elliptic](
+          const Pt& a_edge_0, const Pt& a_edge_1, const Pt& a_intersection_0,
+          const Pt& a_intersection_1) -> UnsignedIndex_t {
+    if (!elliptic) {
+      return 0;
+    }
+    UnsignedIndex_t parallel = 0;
+
+    const Pt line = a_edge_1 - a_edge_0;
+    const auto edge_direction = Normal::fromPtNormalized(line);
+    auto paraboloid_normal =
+        getParaboloidSurfaceNormal(a_aligned_paraboloid, a_intersection_0);
+    if (std::fabs(edge_direction * paraboloid_normal) < 1000.0 * DBL_EPSILON) {
+      ++parallel;
+    }
+    paraboloid_normal =
+        getParaboloidSurfaceNormal(a_aligned_paraboloid, a_intersection_1);
+    if (std::fabs(edge_direction * paraboloid_normal) < 1000.0 * DBL_EPSILON) {
+      ++parallel;
+    }
+    return parallel;
+  };
+
   StackVector<std::pair<Pt, double>, 2> edge_intercepts;
   for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
     auto& vertex = *(a_polytope->getVertex(v));
@@ -830,11 +870,11 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         // If previous vertex is clipped, need to check for double-intercept
         // Checking for double-intercept and calculating single-intercept
         // is the same routine, so just always do it.
-        checkAndFindIntercepts(
-            a_aligned_paraboloid,
-            current_edge->getPreviousVertex()->getLocation().getPt(),
-            current_edge->getVertex()->getLocation().getPt(), &edge_intercepts,
-            nudge_epsilon);
+        const auto& edge_start =
+            current_edge->getPreviousVertex()->getLocation().getPt();
+        const auto& edge_end = current_edge->getVertex()->getLocation().getPt();
+        checkAndFindIntercepts(a_aligned_paraboloid, edge_start, edge_end,
+                               &edge_intercepts, nudge_epsilon);
 
         // assert(current_edge->getPreviousVertex()->isClipped() ||
         //        edge_intercepts.size() == 1);
@@ -864,6 +904,15 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           opposite_face->markAsVisited();
           opposite_face->setStartingHalfEdge(opposite_half_edge);
           opposite_face->addIntersection();
+
+          auto edge_parallel_intersections = edge_parallel_to_paraboloid(
+              edge_start, edge_end, edge_intercepts[0].first);
+          if (edge_parallel_intersections > 0) {
+            current_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+            opposite_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+          }
 
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
@@ -895,6 +944,16 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           opposite_face->setStartingHalfEdge(
               current_edge->getOppositeHalfEdge());
           opposite_face->addDoubleIntersection();
+
+          auto edge_parallel_intersections = edge_parallel_to_paraboloid2(
+              edge_start, edge_end, edge_intercepts[0].first,
+              edge_intercepts[1].first);
+          if (edge_parallel_intersections > 0) {
+            current_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+            opposite_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+          }
         }
         current_edge =
             current_edge->getOppositeHalfEdge()->getPreviousHalfEdge();
@@ -915,11 +974,11 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         // If previous vertex is not clipped, need to check for
         // double-intercept Checking for double-intercept and calculating
         // single-intercept is the same routine, so just always do it.
-        checkAndFindIntercepts(
-            a_aligned_paraboloid,
-            current_edge->getPreviousVertex()->getLocation().getPt(),
-            current_edge->getVertex()->getLocation().getPt(), &edge_intercepts,
-            nudge_epsilon);
+        const auto& edge_start =
+            current_edge->getPreviousVertex()->getLocation().getPt();
+        const auto& edge_end = current_edge->getVertex()->getLocation().getPt();
+        checkAndFindIntercepts(a_aligned_paraboloid, edge_start, edge_end,
+                               &edge_intercepts, nudge_epsilon);
 
         // assert(current_edge->getPreviousVertex()->isNotClipped() ||
         //        edge_intercepts.size() == 1);
@@ -951,6 +1010,15 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           opposite_face->markAsVisited();
           opposite_face->addIntersection();
 
+          auto edge_parallel_intersections = edge_parallel_to_paraboloid(
+              edge_start, edge_end, edge_intercepts[0].first);
+          if (edge_parallel_intersections > 0) {
+            current_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+            opposite_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+          }
+
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
           if (edge_intercepts[0].second < nudge_epsilon) {
@@ -981,6 +1049,16 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           opposite_face->setStartingHalfEdge(
               opposite_half_edge->getNextHalfEdge());
           opposite_face->addDoubleIntersection();
+
+          auto edge_parallel_intersections = edge_parallel_to_paraboloid2(
+              edge_start, edge_end, edge_intercepts[0].first,
+              edge_intercepts[1].first);
+          if (edge_parallel_intersections > 0) {
+            current_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+            opposite_face->addEdgeParallelIntersections(
+                edge_parallel_intersections);
+          }
         }
         current_edge =
             current_edge->getOppositeHalfEdge()->getPreviousHalfEdge();
@@ -1175,7 +1253,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           face_normal[2] != 0.0;
 
       // -----> If NO surface ouput : DOES NOT NEED SORTING
-      if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      if (face.getNumberOfEdgeParallelIntersections() < 2 &&
+          std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
         const bool reverse = a_aligned_paraboloid.a() < 0.0;
         if (elliptic_face) {
           const auto& ref_pt =

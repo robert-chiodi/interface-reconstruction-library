@@ -41,11 +41,6 @@ inline void addEllipseToSurfaceOutput(
                    y_center + semi_axis_y * sin(theta), 0.0);
     points[i][2] = a * points[i][0] + b * points[i][1] + c;
   }
-  if (invert < 0.0) {
-    std::cout << "INVERTING ELLIPSE" << std::endl;
-  } else {
-    std::cout << "NOT INVERTING ELLIPSE" << std::endl;
-  }
   auto gradF_0 = getParaboloidSurfaceNormal(a_aligned_paraboloid, points[0]);
   Normal tangent_0 = crossProduct(a_face_plane.normal(), gradF_0);
   tangent_0.normalize();

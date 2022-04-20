@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "examples/paraboloid_advector/solver.h"
+#include "examples/simple_paraboloid_advector/solver.h"
 
 int main(int argc, char* argv[]) {
   if (argc != 4) {

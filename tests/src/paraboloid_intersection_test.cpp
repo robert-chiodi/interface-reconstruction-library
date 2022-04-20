@@ -2420,4 +2420,143 @@ TEST(ParaboloidIntersection, InfiniteSplit) {
   auto vol_frac = IRL::getVolumeFraction(cell, paraboloid);
 }
 
+TEST(ParaboloidIntersection, SortTimeComp) {
+  double tau = (std::sqrt(5.0) + 1.0) / 2.0;
+  std::array<Pt, 12> M{
+      {Pt(0, tau, 1), Pt(0.0, -tau, 1.0), Pt(0.0, tau, -1.0),
+       Pt(0.0, -tau, -1.0), Pt(1.0, 0.0, tau), Pt(-1.0, 0.0, tau),
+       Pt(1.0, 0.0, -tau), Pt(-1.0, 0.0, -tau), Pt(tau, 1.0, 0.0),
+       Pt(-tau, 1.0, 0.0), Pt(tau, -1.0, 0.0), Pt(-tau, -1.0, 0.0)}};
+  std::array<Pt, 20> vertex_list{{(1.0 / 3.0) * (M[0] + M[8] + M[2]),
+                                  (1.0 / 3.0) * (M[0] + M[4] + M[8]),
+                                  (1.0 / 3.0) * (M[0] + M[5] + M[4]),
+                                  (1.0 / 3.0) * (M[0] + M[9] + M[5]),
+                                  (1.0 / 3.0) * (M[0] + M[2] + M[9]),
+                                  (1.0 / 3.0) * (M[2] + M[8] + M[6]),
+                                  (1.0 / 3.0) * (M[8] + M[10] + M[6]),
+                                  (1.0 / 3.0) * (M[8] + M[4] + M[10]),
+                                  (1.0 / 3.0) * (M[4] + M[1] + M[10]),
+                                  (1.0 / 3.0) * (M[4] + M[5] + M[1]),
+                                  (1.0 / 3.0) * (M[5] + M[11] + M[1]),
+                                  (1.0 / 3.0) * (M[5] + M[9] + M[11]),
+                                  (1.0 / 3.0) * (M[9] + M[7] + M[11]),
+                                  (1.0 / 3.0) * (M[9] + M[2] + M[7]),
+                                  (1.0 / 3.0) * (M[2] + M[6] + M[7]),
+                                  (1.0 / 3.0) * (M[3] + M[10] + M[1]),
+                                  (1.0 / 3.0) * (M[3] + M[1] + M[11]),
+                                  (1.0 / 3.0) * (M[3] + M[11] + M[7]),
+                                  (1.0 / 3.0) * (M[3] + M[7] + M[6]),
+                                  (1.0 / 3.0) * (M[3] + M[6] + M[10])}};
+
+  std::array<std::array<UnsignedIndex_t, 5>, 12> face_mapping{
+      {{5, 4, 3, 2, 1},
+       {1, 2, 8, 7, 6},
+       {2, 3, 10, 9, 8},
+       {3, 4, 12, 11, 10},
+       {4, 5, 14, 13, 12},
+       {5, 1, 6, 15, 14},
+       {16, 17, 18, 19, 20},
+       {16, 20, 7, 8, 9},
+       {9, 10, 11, 17, 16},
+       {11, 12, 13, 18, 17},
+       {6, 7, 20, 19, 15},
+       {13, 14, 15, 19, 18}}};
+
+  for (int i = 0; i < 12; i++) {
+    for (int j = 0; j < 5; j++) {
+      --face_mapping[i][j];
+    }
+  }
+
+  double scale = 0.5;
+  for (int i = 0; i < 20; i++) {
+    vertex_list[i] *= scale;
+  }
+  PolyhedronConnectivity connectivity(face_mapping);
+  GeneralPolyhedron dodeca(vertex_list, &connectivity);
+
+  int Ntests = 1e6;
+  double max_error = 0.0, rms_error = 0.0;
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+  // Rotate cube
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
+  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
+                                                         0.5 * M_PI);
+  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+
+  std::vector<double> angles_vec(2 * Ntests);
+  std::vector<double> translations_vec(3 * Ntests);
+  std::vector<double> paraboloid_coefs_vec(2 * Ntests);
+
+  for (int i = 0; i < Ntests; ++i) {
+    angles_vec[2 * i] = random_rotation(eng);
+    angles_vec[2 * i + 1] = random_rotation(eng);
+
+    translations_vec[3 * i] = random_translation(eng);
+    translations_vec[3 * i + 1] = random_translation(eng);
+    translations_vec[3 * i + 2] = random_translation(eng);
+
+    paraboloid_coefs_vec[2 * i] = random_coeffs_a(eng);
+    paraboloid_coefs_vec[2 * i + 1] = random_coeffs_b(eng);
+  }
+
+  auto start = std::chrono::system_clock::now();
+  double total_volume = 0.0;
+  for (int i = 0; i < Ntests; i++) {
+    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                         Normal(0.0, 0.0, 1.0));
+    std::array<double, 3> angles{{angles_vec[2 * i], angles_vec[2 * i + 1]}};
+    Pt translations(translations_vec[3 * i], translations_vec[3 * i + 1],
+                    translations_vec[3 * i + 2]);
+
+    UnitQuaternion x_rotation(angles[0], frame[0]);
+    UnitQuaternion y_rotation(angles[1], frame[1]);
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    auto total_rotation = x_rotation * y_rotation * z_rotation;
+    total_rotation.normalize();
+    frame = total_rotation * frame;
+
+    Paraboloid paraboloid(-translations, frame, paraboloid_coefs_vec[2 * i],
+                          paraboloid_coefs_vec[2 * i + 1]);
+
+    auto volume = getVolumeMoments<Volume>(dodeca, paraboloid);
+    total_volume += volume;
+  }
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> runtime = end - start;
+  printf("Total UNSORTED run time: %20f \n\n", runtime.count());
+
+  // start = std::chrono::system_clock::now();
+  // for (int i = 0; i < Ntests; i++) {
+  //   ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+  //                        Normal(0.0, 0.0, 1.0));
+  //   std::array<double, 3> angles{{angles_vec[2 * i], angles_vec[2 * i + 1]}};
+  //   Pt translations(translations_vec[3 * i], translations_vec[3 * i + 1],
+  //                   translations_vec[3 * i + 2]);
+
+  //   UnitQuaternion x_rotation(angles[0], frame[0]);
+  //   UnitQuaternion y_rotation(angles[1], frame[1]);
+  //   UnitQuaternion z_rotation(angles[2], frame[2]);
+  //   auto total_rotation = x_rotation * y_rotation * z_rotation;
+  //   total_rotation.normalize();
+  //   frame = total_rotation * frame;
+
+  //   Paraboloid paraboloid(-translations, frame, paraboloid_coefs_vec[2 * i],
+  //                         paraboloid_coefs_vec[2 * i + 1]);
+
+  //   auto volume =
+  //       getVolumeMoments<AddSurfaceOutput<Volume,
+  //       ParametrizedSurfaceOutput>>(
+  //           dodeca, paraboloid);
+  // }
+  // end = std::chrono::system_clock::now();
+  // runtime = end - start;
+  // printf("Total SORTED run time: %20f \n\n", runtime.count());
+}
+
 }  // namespace

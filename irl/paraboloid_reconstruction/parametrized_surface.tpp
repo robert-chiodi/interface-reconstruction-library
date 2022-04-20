@@ -572,13 +572,14 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const auto& datum = paraboloid_m.getDatum();
     const auto& ref_frame = paraboloid_m.getReferenceFrame();
     for (auto& vertex : vlist) {
-      const Pt base_pt = vertex + datum;
+      const Pt base_pt = vertex;
       vertex = Pt(0.0, 0.0, 0.0);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
           vertex[n] += ref_frame[d][n] * base_pt[d];
         }
       }
+      vertex += datum;
     }
 
     auto& tlist = returned_surface.getTriangleList();

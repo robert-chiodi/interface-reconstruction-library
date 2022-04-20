@@ -266,12 +266,18 @@ bool VertexParaboloid<PtType>::checkValidHalfEdgeCycle(void) const {
 
 template <class HalfEdgeType>
 inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(void)
-    : Face<HalfEdgeType>(), face_plane_m(), intersections_m(0) {}
+    : Face<HalfEdgeType>(),
+      face_plane_m(),
+      intersections_m(0),
+      edge_parallel_intersections_m(0) {}
 
 template <class HalfEdgeType>
 inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(
     HalfEdgeType* a_starting_half_edge)
-    : Face<HalfEdgeType>(a_starting_half_edge), face_plane_m() {}
+    : Face<HalfEdgeType>(a_starting_half_edge),
+      face_plane_m(),
+      intersections_m(0),
+      edge_parallel_intersections_m(0) {}
 
 template <class HalfEdgeType>
 inline void FaceParaboloid<HalfEdgeType>::setPlane(const Plane& a_plane) {
@@ -285,6 +291,7 @@ inline const Plane& FaceParaboloid<HalfEdgeType>::getPlane(void) const {
 template <class HalfEdgeType>
 void FaceParaboloid<HalfEdgeType>::clearIntersections(void) {
   intersections_m = 0;
+  edge_parallel_intersections_m = 0;
 }
 
 template <class HalfEdgeType>
@@ -301,6 +308,23 @@ template <class HalfEdgeType>
 UnsignedIndex_t FaceParaboloid<HalfEdgeType>::getNumberOfIntersections(
     void) const {
   return intersections_m;
+}
+
+template <class HalfEdgeType>
+void FaceParaboloid<HalfEdgeType>::addEdgeParallelIntersection(void) {
+  ++edge_parallel_intersections_m;
+}
+
+template <class HalfEdgeType>
+void FaceParaboloid<HalfEdgeType>::addEdgeParallelIntersections(
+    const UnsignedIndex_t a_intersections) {
+  edge_parallel_intersections_m += a_intersections;
+}
+
+template <class HalfEdgeType>
+UnsignedIndex_t
+FaceParaboloid<HalfEdgeType>::getNumberOfEdgeParallelIntersections(void) const {
+  return edge_parallel_intersections_m;
 }
 
 }  // namespace IRL
