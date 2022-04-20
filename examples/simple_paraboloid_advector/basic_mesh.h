@@ -7,8 +7,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_PARABOLOID_ADVECTOR_BASIC_MESH_H_
-#define EXAMPLES_PARABOLOID_ADVECTOR_BASIC_MESH_H_
+#ifndef EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_BASIC_MESH_H_
+#define EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_BASIC_MESH_H_
 
 #include <cstring>
 #include <iostream>
@@ -349,4 +349,4 @@ class BasicMesh {
   int imaxo_m, jmaxo_m, kmaxo_m;
 };
 
-#endif  // EXAMPLES_PARABOLOID_ADVECTOR_BASIC_MESH_H_
+#endif  // EXAMPLES_SIMPLE_PARABOLOID_ADVECTOR_BASIC_MESH_H_

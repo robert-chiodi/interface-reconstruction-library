@@ -1,20 +1,21 @@
 IRLAddExample_cpp(
   TARGET_NAME
-    paraboloid_advector
+    simple_paraboloid_advector
   HDRS
     "basic_mesh.h"
     "data.h"
     "diagnostics.h"
     "solver.h"
+    "vtk.h"
   SRCS
     "basic_mesh.cpp"
     "diagnostics.cpp"
     "main.cpp"
     "solver.cpp"
+    "vtk.cpp"
   OUTPUT_DIR
-    "${IRL_EXAMPLES_OUTPUT_DIR}/paraboloid_advector"
+    "${IRL_EXAMPLES_OUTPUT_DIR}/simple_paraboloid_advector"
   COLLECTION
-    "examples_paraboloid_advector"
+    "examples_simple_paraboloid_advector"
 )
 
-configure_file("visualize.m" "${IRL_EXAMPLES_OUTPUT_DIR}/paraboloid_advector/visualize.m" COPYONLY)

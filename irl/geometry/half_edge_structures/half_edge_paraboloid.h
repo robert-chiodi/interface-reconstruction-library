@@ -157,9 +157,16 @@ class FaceParaboloid : public Face<HalfEdgeType> {
   void addDoubleIntersection(void);
   UnsignedIndex_t getNumberOfIntersections(void) const;
 
+  /// \brief This is a subset of the intersections whose edge is directly
+  /// parallel to the tangent of the paraboloid at that point.
+  void addEdgeParallelIntersection(void);
+  void addEdgeParallelIntersections(const UnsignedIndex_t a_intersections);
+  UnsignedIndex_t getNumberOfEdgeParallelIntersections(void) const;
+
  private:
   Plane face_plane_m;
   UnsignedIndex_t intersections_m;
+  UnsignedIndex_t edge_parallel_intersections_m;
 };
 
 }  // namespace IRL
