@@ -18,6 +18,8 @@
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 #include "irl/interface_reconstruction_methods/elvira_neighborhood.h"
 #include "irl/interface_reconstruction_methods/reconstruction_interface.h"
+#include "irl/paraboloid_reconstruction/parametrized_surface.h"
+#include "irl/surface_mesher/triangulated_surface.h"
 
 #include "examples/paraboloid_advector/diagnostics.h"
 #include "examples/paraboloid_advector/solver.h"
@@ -70,7 +72,6 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
 
   // Initialize folders/mesh for very simple I/O
   int viz_output = 0;
-  writeOutMesh(mesh);
   VTKOutput vtk_io("viz_out", "viz", mesh);
   vtk_io.addData("VOF", liquid_volume_fraction);
 
@@ -88,9 +89,10 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
       time += dt;
       if (a_viz_out_freq > 0 &&
           step % (steps_per_revolution / a_viz_out_freq) == 0) {
-        //        writeOutVisualization(viz_output, liquid_volume_fraction);
         vtk_io.writeVTKFile(time);
-
+        writeInterfaceToFile(liquid_volume_fraction,
+                             reconstructions.liquid_gas_interface, time,
+                             &vtk_io);
         ++viz_output;
       }
       ++iteration;
@@ -98,7 +100,9 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
     newlineDiagnostic();
   }
   if (a_viz_out_freq > 0) {
-    writeOutVisualization(viz_output, liquid_volume_fraction);
+    vtk_io.writeVTKFile(time);
+    writeInterfaceToFile(liquid_volume_fraction,
+                         reconstructions.liquid_gas_interface, time, &vtk_io);
   }
 }
 
@@ -331,76 +335,102 @@ void correctInterfacePlaneBorders(
   const BasicMesh& mesh = (*a_liquid_gas_interface).getMesh();
   // Fix distances in reconstruction for periodic boundary
 
-  // // x- boundary
-  // for (int i = mesh.imino(); i < mesh.imin(); ++i) {
-  //   for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-  //     for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-  //       Pt curr_datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() - plane.normal()[0] *
-  //         mesh.lx();
-  //       }
-  //     }
-  //   }
-  // }
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[0] -= mesh.lx();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
 
-  // // x+ boundary
-  // for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
-  //   for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-  //     for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() + plane.normal()[0] *
-  //         mesh.lx();
-  //       }
-  //     }
-  //   }
-  // }
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[0] += mesh.lx();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
 
-  // // y- boundary
-  // for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-  //   for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
-  //     for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() - plane.normal()[1] *
-  //         mesh.ly();
-  //       }
-  //     }
-  //   }
-  // }
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[1] -= mesh.ly();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
 
-  // // y+ boundary
-  // for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-  //   for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
-  //     for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() + plane.normal()[1] *
-  //         mesh.ly();
-  //       }
-  //     }
-  //   }
-  // }
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[1] += mesh.ly();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
 
-  // // z- boundary
-  // for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-  //   for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-  //     for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() - plane.normal()[2] *
-  //         mesh.lz();
-  //       }
-  //     }
-  //   }
-  // }
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[2] -= mesh.lz();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
 
-  // // z+ boundary
-  // for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-  //   for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-  //     for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-  //       for (auto& plane : (*a_liquid_gas_interface)(i, j, k)) {
-  //         plane.distance() = plane.distance() - plane.normal()[2] *
-  //         mesh.lz();
-  //       }
-  //     }
-  //   }
-  // }
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        datum[2] += mesh.lz();
+        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+}
+
+void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
+                          const Data<IRL::Paraboloid>& a_liquid_gas_interface,
+                          const double a_time, VTKOutput* a_output) {
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+
+  std::vector<IRL::TriangulatedSurfaceOutput> surfaces;
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) >=
+                IRL::global_constants::VF_LOW &&
+            a_liquid_volume_fraction(i, j, k) <=
+                IRL::global_constants::VF_HIGH) {
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                                      mesh.z(k + 1));
+          const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+              lower_cell_pt, upper_cell_pt);
+          auto volume_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<
+              IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
+              cell, a_liquid_gas_interface(i, j, k));
+
+          double length_scale =
+              std::pow(cell.calculateVolume(), 1.0 / 3.0) / 10.0;
+          surfaces.push_back(
+              volume_and_surface.getSurface().triangulate(length_scale));
+        }
+      }
+    }
+  }
+  a_output->writeVTKInterface(a_time, surfaces);
 }

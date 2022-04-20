@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "irl/surface_mesher/triangulated_surface.h"
+
 #include "examples/paraboloid_advector/basic_mesh.h"
 #include "examples/paraboloid_advector/data.h"
 
@@ -33,10 +35,15 @@ class VTKOutput {
 
   void writeVTKFile(const double a_time);
 
+  void writeVTKInterface(
+      const double a_time,
+      const std::vector<IRL::TriangulatedSurfaceOutput>& a_surface);
+
  private:
   std::string directory_m;
   std::string file_name_base_m;
-  std::size_t files_written_m;
+  std::size_t data_files_written_m;
+  std::size_t interface_files_written_m;
   const BasicMesh* mesh_m;
   std::vector<DataIO> data_to_write_m;
 };

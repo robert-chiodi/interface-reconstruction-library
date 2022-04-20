@@ -16,6 +16,7 @@
 
 #include "examples/paraboloid_advector/basic_mesh.h"
 #include "examples/paraboloid_advector/data.h"
+#include "examples/paraboloid_advector/vtk.h"
 
 struct IRLReconstructionsPack {
   Data<IRL::Paraboloid> liquid_gas_interface;
@@ -53,5 +54,9 @@ void updateReconstruction(const double a_dt,
 
 void correctInterfacePlaneBorders(
     Data<IRL::Paraboloid>* a_liquid_gas_interface);
+
+void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
+                          const Data<IRL::Paraboloid>& a_liquid_gas_interface,
+                          const double a_time, VTKOutput* a_output);
 
 #endif  // EXAMPLES_PARABOLOID_ADVECTOR_SOLVER_H_

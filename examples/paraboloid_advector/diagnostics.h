@@ -18,9 +18,4 @@ void writeOutDiagnostics(const int a_iteration, const int a_revolutions,
 
 void newlineDiagnostic(void);
 
-void writeOutMesh(const BasicMesh& a_mesh);
-
-void writeOutVisualization(const int a_viz_output,
-                           const Data<double>& a_liquid_volume_fraction);
-
 #endif  // EXAMPLES_PARABOLOID_ADVECTOR_DIAGNOSTICS_H_
