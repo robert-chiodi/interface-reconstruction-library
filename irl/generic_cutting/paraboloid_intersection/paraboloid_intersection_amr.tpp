@@ -53,6 +53,71 @@ void kahanSummationMoments(
 }
 
 template <>
+void kahanSummationMoments(
+    std::array<std::pair<VolumeMoments, VolumeMoments>, N_AMR_STRATEGIES>&
+        a_full_moments,
+    std::array<std::pair<VolumeMoments, VolumeMoments>, N_AMR_STRATEGIES>&
+        a_full_moments_ref,
+    std::array<VolumeMoments, N_AMR_STRATEGIES>& a_moments_to_add) {
+  for (UnsignedIndex_t m = 0; m < N_AMR_STRATEGIES; ++m) {
+    const double y_first_m0 =
+        a_moments_to_add[m].volume() - a_full_moments_ref[m].first.volume();
+    const double y_first_m1x = a_moments_to_add[m].centroid()[0] -
+                               a_full_moments_ref[m].first.centroid()[0];
+    const double y_first_m1y = a_moments_to_add[m].centroid()[1] -
+                               a_full_moments_ref[m].first.centroid()[1];
+    const double y_first_m1z = a_moments_to_add[m].centroid()[2] -
+                               a_full_moments_ref[m].first.centroid()[2];
+    const double y_second_m0 = std::fabs(a_moments_to_add[m].volume()) -
+                               a_full_moments_ref[m].second.volume();
+    const double y_second_m1x = std::fabs(a_moments_to_add[m].centroid()[0]) -
+                                a_full_moments_ref[m].second.centroid()[0];
+    const double y_second_m1y = std::fabs(a_moments_to_add[m].centroid()[1]) -
+                                a_full_moments_ref[m].second.centroid()[1];
+    const double y_second_m1z = std::fabs(a_moments_to_add[m].centroid()[2]) -
+                                a_full_moments_ref[m].second.centroid()[2];
+    const double t_first_m0 = a_full_moments[m].first.volume() + y_first_m0;
+    const double t_first_m1x =
+        a_full_moments[m].first.centroid()[0] + y_first_m1x;
+    const double t_first_m1y =
+        a_full_moments[m].first.centroid()[1] + y_first_m1y;
+    const double t_first_m1z =
+        a_full_moments[m].first.centroid()[2] + y_first_m1z;
+    const double t_second_m0 = a_full_moments[m].first.volume() + y_second_m0;
+    const double t_second_m1x =
+        a_full_moments[m].first.centroid()[0] + y_second_m1x;
+    const double t_second_m1y =
+        a_full_moments[m].first.centroid()[1] + y_second_m1y;
+    const double t_second_m1z =
+        a_full_moments[m].first.centroid()[2] + y_second_m1z;
+    a_full_moments_ref[m].first.volume() =
+        (t_first_m0 - a_full_moments[m].first.volume()) - y_first_m0;
+    a_full_moments_ref[m].first.centroid()[0] =
+        (t_first_m1x - a_full_moments[m].first.centroid()[0]) - y_first_m1x;
+    a_full_moments_ref[m].first.centroid()[1] =
+        (t_first_m1y - a_full_moments[m].first.centroid()[1]) - y_first_m1y;
+    a_full_moments_ref[m].first.centroid()[2] =
+        (t_first_m1z - a_full_moments[m].first.centroid()[2]) - y_first_m1z;
+    a_full_moments_ref[m].second.volume() =
+        (t_second_m0 - a_full_moments[m].second.volume()) - y_second_m0;
+    a_full_moments_ref[m].second.centroid()[0] =
+        (t_second_m1x - a_full_moments[m].second.centroid()[0]) - y_second_m1x;
+    a_full_moments_ref[m].second.centroid()[1] =
+        (t_second_m1y - a_full_moments[m].second.centroid()[1]) - y_second_m1y;
+    a_full_moments_ref[m].second.centroid()[2] =
+        (t_second_m1z - a_full_moments[m].second.centroid()[2]) - y_second_m1z;
+    a_full_moments[m].first.volume() = t_first_m0;
+    a_full_moments[m].first.centroid()[0] = t_first_m1x;
+    a_full_moments[m].first.centroid()[1] = t_first_m1y;
+    a_full_moments[m].first.centroid()[2] = t_first_m1z;
+    a_full_moments[m].second.volume() = t_second_m0;
+    a_full_moments[m].second.centroid()[0] = t_second_m1x;
+    a_full_moments[m].second.centroid()[1] = t_second_m1y;
+    a_full_moments[m].second.centroid()[2] = t_second_m1z;
+  }
+}
+
+template <>
 inline Volume computeMomentContributionClippedTriangle<Volume, 0>(
     const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
     const Pt& a_pt_1, const Pt& a_pt_2, const double a_signed_area,
@@ -70,6 +135,150 @@ inline Volume computeMomentContributionClippedTriangle<Volume, 0>(
                (a_pt_0[1] * (a_pt_0[1] + a_pt_1[1] + a_pt_2[1]) +
                 a_pt_1[1] * (a_pt_1[1] + a_pt_2[1]) + a_pt_2[1] * a_pt_2[1])) *
          a_signed_area / 6.0;
+}
+
+template <>
+inline VolumeMoments computeMomentContributionClippedTriangle<VolumeMoments, 0>(
+    const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
+    const Pt& a_pt_1, const Pt& a_pt_2, const double a_signed_area,
+    const bool a_print) {
+  if (a_print) {
+    amr_triangles_clipped.insert(
+        amr_triangles_clipped.end(),
+        {a_pt_0[0], a_pt_0[1], a_pt_0[2], a_pt_1[0], a_pt_1[1], a_pt_1[2],
+         a_pt_2[0], a_pt_2[1], a_pt_2[2]});
+  }
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  moments.volume() =
+      -(a_aligned_paraboloid.a() *
+            (a_pt_0[0] * (a_pt_0[0] + a_pt_1[0] + a_pt_2[0]) +
+             a_pt_1[0] * (a_pt_1[0] + a_pt_2[0]) + a_pt_2[0] * a_pt_2[0]) +
+        a_aligned_paraboloid.b() *
+            (a_pt_0[1] * (a_pt_0[1] + a_pt_1[1] + a_pt_2[1]) +
+             a_pt_1[1] * (a_pt_1[1] + a_pt_2[1]) + a_pt_2[1] * a_pt_2[1])) *
+      a_signed_area / 6.0;
+  moments.centroid()[0] =
+      -(a_aligned_paraboloid.a() * (6. * (a_pt_0[0] * a_pt_0[0] * a_pt_0[0]) +
+                                    6. * (a_pt_0[0] * a_pt_0[0]) * a_pt_1[0] +
+                                    6. * a_pt_0[0] * (a_pt_1[0] * a_pt_1[0]) +
+                                    6. * (a_pt_1[0] * a_pt_1[0] * a_pt_1[0]) +
+                                    6. * (a_pt_0[0] * a_pt_0[0]) * a_pt_2[0] +
+                                    6. * a_pt_0[0] * a_pt_1[0] * a_pt_2[0] +
+                                    6. * (a_pt_1[0] * a_pt_1[0]) * a_pt_2[0] +
+                                    6. * a_pt_0[0] * (a_pt_2[0] * a_pt_2[0]) +
+                                    6. * a_pt_1[0] * (a_pt_2[0] * a_pt_2[0]) +
+                                    6. * (a_pt_2[0] * a_pt_2[0] * a_pt_2[0])) +
+        a_aligned_paraboloid.b() * (6. * a_pt_0[0] * (a_pt_0[1] * a_pt_0[1]) +
+                                    2. * a_pt_1[0] * (a_pt_0[1] * a_pt_0[1]) +
+                                    2. * a_pt_2[0] * (a_pt_0[1] * a_pt_0[1]) +
+                                    4. * a_pt_0[0] * a_pt_0[1] * a_pt_1[1] +
+                                    4. * a_pt_1[0] * a_pt_0[1] * a_pt_1[1] +
+                                    2. * a_pt_2[0] * a_pt_0[1] * a_pt_1[1] +
+                                    2. * a_pt_0[0] * (a_pt_1[1] * a_pt_1[1]) +
+                                    6. * a_pt_1[0] * (a_pt_1[1] * a_pt_1[1]) +
+                                    2. * a_pt_2[0] * (a_pt_1[1] * a_pt_1[1]) +
+                                    4. * a_pt_0[0] * a_pt_0[1] * a_pt_2[1] +
+                                    2. * a_pt_1[0] * a_pt_0[1] * a_pt_2[1] +
+                                    4. * a_pt_2[0] * a_pt_0[1] * a_pt_2[1] +
+                                    2. * a_pt_0[0] * a_pt_1[1] * a_pt_2[1] +
+                                    4. * a_pt_1[0] * a_pt_1[1] * a_pt_2[1] +
+                                    4. * a_pt_2[0] * a_pt_1[1] * a_pt_2[1] +
+                                    2. * a_pt_0[0] * (a_pt_2[1] * a_pt_2[1]) +
+                                    2. * a_pt_1[0] * (a_pt_2[1] * a_pt_2[1]) +
+                                    6. * a_pt_2[0] * (a_pt_2[1] * a_pt_2[1]))) *
+      a_signed_area / 60.0;
+  moments.centroid()[1] =
+      -(a_aligned_paraboloid.b() * (6. * (a_pt_0[1] * a_pt_0[1] * a_pt_0[1]) +
+                                    6. * (a_pt_0[1] * a_pt_0[1]) * a_pt_1[1] +
+                                    6. * a_pt_0[1] * (a_pt_1[1] * a_pt_1[1]) +
+                                    6. * (a_pt_1[1] * a_pt_1[1] * a_pt_1[1]) +
+                                    6. * (a_pt_0[1] * a_pt_0[1]) * a_pt_2[1] +
+                                    6. * a_pt_0[1] * a_pt_1[1] * a_pt_2[1] +
+                                    6. * (a_pt_1[1] * a_pt_1[1]) * a_pt_2[1] +
+                                    6. * a_pt_0[1] * (a_pt_2[1] * a_pt_2[1]) +
+                                    6. * a_pt_1[1] * (a_pt_2[1] * a_pt_2[1]) +
+                                    6. * (a_pt_2[1] * a_pt_2[1] * a_pt_2[1])) +
+        a_aligned_paraboloid.a() * (6. * a_pt_0[1] * (a_pt_0[0] * a_pt_0[0]) +
+                                    2. * a_pt_1[1] * (a_pt_0[0] * a_pt_0[0]) +
+                                    2. * a_pt_2[1] * (a_pt_0[0] * a_pt_0[0]) +
+                                    4. * a_pt_0[1] * a_pt_0[0] * a_pt_1[0] +
+                                    4. * a_pt_1[1] * a_pt_0[0] * a_pt_1[0] +
+                                    2. * a_pt_2[1] * a_pt_0[0] * a_pt_1[0] +
+                                    2. * a_pt_0[1] * (a_pt_1[0] * a_pt_1[0]) +
+                                    6. * a_pt_1[1] * (a_pt_1[0] * a_pt_1[0]) +
+                                    2. * a_pt_2[1] * (a_pt_1[0] * a_pt_1[0]) +
+                                    4. * a_pt_0[1] * a_pt_0[0] * a_pt_2[0] +
+                                    2. * a_pt_1[1] * a_pt_0[0] * a_pt_2[0] +
+                                    4. * a_pt_2[1] * a_pt_0[0] * a_pt_2[0] +
+                                    2. * a_pt_0[1] * a_pt_1[0] * a_pt_2[0] +
+                                    4. * a_pt_1[1] * a_pt_1[0] * a_pt_2[0] +
+                                    4. * a_pt_2[1] * a_pt_1[0] * a_pt_2[0] +
+                                    2. * a_pt_0[1] * (a_pt_2[0] * a_pt_2[0]) +
+                                    2. * a_pt_1[1] * (a_pt_2[0] * a_pt_2[0]) +
+                                    6. * a_pt_2[1] * (a_pt_2[0] * a_pt_2[0]))) *
+      a_signed_area / 60.0;
+  moments.centroid()[2] =
+      (3. * (a_aligned_paraboloid.a() * a_aligned_paraboloid.a()) *
+           (a_pt_0[0] * a_pt_0[0] * a_pt_0[0] * a_pt_0[0] +
+            a_pt_1[0] * a_pt_1[0] * a_pt_1[0] * a_pt_1[0] +
+            a_pt_1[0] * a_pt_1[0] * a_pt_1[0] * a_pt_2[0] +
+            a_pt_1[0] * a_pt_1[0] * (a_pt_2[0] * a_pt_2[0]) +
+            a_pt_1[0] * (a_pt_2[0] * a_pt_2[0] * a_pt_2[0]) +
+            a_pt_2[0] * a_pt_2[0] * a_pt_2[0] * a_pt_2[0] +
+            a_pt_0[0] * a_pt_0[0] * a_pt_0[0] * (a_pt_1[0] + a_pt_2[0]) +
+            a_pt_0[0] * a_pt_0[0] *
+                (a_pt_1[0] * a_pt_1[0] + a_pt_1[0] * a_pt_2[0] +
+                 a_pt_2[0] * a_pt_2[0]) +
+            a_pt_0[0] * (a_pt_1[0] * a_pt_1[0] * a_pt_1[0] +
+                         a_pt_1[0] * a_pt_1[0] * a_pt_2[0] +
+                         a_pt_1[0] * (a_pt_2[0] * a_pt_2[0]) +
+                         a_pt_2[0] * a_pt_2[0] * a_pt_2[0])) +
+       3. * (a_aligned_paraboloid.b() * a_aligned_paraboloid.b()) *
+           (a_pt_0[1] * a_pt_0[1] * a_pt_0[1] * a_pt_0[1] +
+            a_pt_1[1] * a_pt_1[1] * a_pt_1[1] * a_pt_1[1] +
+            a_pt_1[1] * a_pt_1[1] * a_pt_1[1] * a_pt_2[1] +
+            a_pt_1[1] * a_pt_1[1] * (a_pt_2[1] * a_pt_2[1]) +
+            a_pt_1[1] * (a_pt_2[1] * a_pt_2[1] * a_pt_2[1]) +
+            a_pt_2[1] * a_pt_2[1] * a_pt_2[1] * a_pt_2[1] +
+            a_pt_0[1] * a_pt_0[1] * a_pt_0[1] * (a_pt_1[1] + a_pt_2[1]) +
+            a_pt_0[1] * a_pt_0[1] *
+                (a_pt_1[1] * a_pt_1[1] + a_pt_1[1] * a_pt_2[1] +
+                 a_pt_2[1] * a_pt_2[1]) +
+            a_pt_0[1] * (a_pt_1[1] * a_pt_1[1] * a_pt_1[1] +
+                         a_pt_1[1] * a_pt_1[1] * a_pt_2[1] +
+                         a_pt_1[1] * (a_pt_2[1] * a_pt_2[1]) +
+                         a_pt_2[1] * a_pt_2[1] * a_pt_2[1])) +
+       a_aligned_paraboloid.a() * a_aligned_paraboloid.b() *
+           (a_pt_1[0] * a_pt_2[0] *
+                (a_pt_0[1] * a_pt_0[1] + 3. * (a_pt_1[1] * a_pt_1[1]) +
+                 4. * a_pt_1[1] * a_pt_2[1] + 3. * (a_pt_2[1] * a_pt_2[1]) +
+                 2. * a_pt_0[1] * (a_pt_1[1] + a_pt_2[1])) +
+            a_pt_0[0] * a_pt_0[0] *
+                (6. * (a_pt_0[1] * a_pt_0[1]) + a_pt_1[1] * a_pt_1[1] +
+                 a_pt_1[1] * a_pt_2[1] + a_pt_2[1] * a_pt_2[1] +
+                 3. * a_pt_0[1] * (a_pt_1[1] + a_pt_2[1])) +
+            a_pt_1[0] * a_pt_1[0] *
+                (a_pt_0[1] * a_pt_0[1] + 6. * (a_pt_1[1] * a_pt_1[1]) +
+                 3. * a_pt_1[1] * a_pt_2[1] + a_pt_2[1] * a_pt_2[1] +
+                 a_pt_0[1] * (3. * a_pt_1[1] + a_pt_2[1])) +
+            a_pt_2[0] * a_pt_2[0] *
+                (a_pt_0[1] * a_pt_0[1] + a_pt_1[1] * a_pt_1[1] +
+                 3. * a_pt_1[1] * a_pt_2[1] + 6. * (a_pt_2[1] * a_pt_2[1]) +
+                 a_pt_0[1] * (a_pt_1[1] + 3. * a_pt_2[1])) +
+            a_pt_0[0] *
+                (a_pt_1[0] *
+                     (3. * (a_pt_0[1] * a_pt_0[1]) +
+                      4. * a_pt_0[1] * a_pt_1[1] +
+                      3. * (a_pt_1[1] * a_pt_1[1]) +
+                      2. * a_pt_0[1] * a_pt_2[1] + 2. * a_pt_1[1] * a_pt_2[1] +
+                      a_pt_2[1] * a_pt_2[1]) +
+                 a_pt_2[0] *
+                     (3. * (a_pt_0[1] * a_pt_0[1]) +
+                      2. * a_pt_0[1] * a_pt_1[1] + a_pt_1[1] * a_pt_1[1] +
+                      4. * a_pt_0[1] * a_pt_2[1] + 2. * a_pt_1[1] * a_pt_2[1] +
+                      3. * (a_pt_2[1] * a_pt_2[1]))))) *
+      a_signed_area / 90.0;
+  return moments;
 }
 
 template <>
@@ -106,6 +315,39 @@ inline Volume computeMomentContributionUnclippedTriangle<Volume, 0>(
          a_pt_2[0], a_pt_2[1], a_pt_2[2]});
   }
   return (a_pt_0[2] + a_pt_1[2] + a_pt_2[2]) * a_signed_area / 3.0;
+}
+
+template <>
+inline VolumeMoments
+computeMomentContributionUnclippedTriangle<VolumeMoments, 0>(
+    const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
+    const Pt& a_pt_1, const Pt& a_pt_2, const double a_signed_area,
+    const bool a_print) {
+  if (a_print) {
+    amr_triangles_unclipped.insert(
+        amr_triangles_unclipped.end(),
+        {a_pt_0[0], a_pt_0[1], a_pt_0[2], a_pt_1[0], a_pt_1[1], a_pt_1[2],
+         a_pt_2[0], a_pt_2[1], a_pt_2[2]});
+  }
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  moments.volume() = (a_pt_0[2] + a_pt_1[2] + a_pt_2[2]) * a_signed_area / 3.0;
+  moments.centroid()[0] = (2. * a_pt_0[0] * a_pt_0[2] + a_pt_1[0] * a_pt_0[2] +
+                           a_pt_2[0] * a_pt_0[2] + a_pt_0[0] * a_pt_1[2] +
+                           2. * a_pt_1[0] * a_pt_1[2] + a_pt_2[0] * a_pt_1[2] +
+                           a_pt_0[0] * a_pt_2[2] + a_pt_1[0] * a_pt_2[2] +
+                           2. * a_pt_2[0] * a_pt_2[2]) *
+                          a_signed_area / 12.0;
+  moments.centroid()[1] = (2. * a_pt_0[1] * a_pt_0[2] + a_pt_1[1] * a_pt_0[2] +
+                           a_pt_2[1] * a_pt_0[2] + a_pt_0[1] * a_pt_1[2] +
+                           2. * a_pt_1[1] * a_pt_1[2] + a_pt_2[1] * a_pt_1[2] +
+                           a_pt_0[1] * a_pt_2[2] + a_pt_1[1] * a_pt_2[2] +
+                           2. * a_pt_2[1] * a_pt_2[2]) *
+                          a_signed_area / 12.0;
+  moments.centroid()[2] =
+      (a_pt_0[2] * a_pt_0[2] + a_pt_0[2] * a_pt_1[2] + a_pt_1[2] * a_pt_1[2] +
+       a_pt_0[2] * a_pt_2[2] + a_pt_1[2] * a_pt_2[2] + a_pt_2[2] * a_pt_2[2]) *
+      a_signed_area / 12.0;
+  return moments;
 }
 
 template <>

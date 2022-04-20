@@ -1364,10 +1364,10 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     Paraboloid paraboloid(datum, orig_frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
 
-    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 10,
         poly_filename);  // This prints the AMR triangles
-    amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+    auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
     ParametrizedSurfaceOutput surface(paraboloid);
     auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
@@ -1392,20 +1392,25 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     std::cout << std::setprecision(20)
               << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
     std::cout << std::setprecision(20)
-              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
-    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume) / poly_vol
+              << "Vfrac unclipped AMR = " << amr_moments.volume() / poly_vol
+              << std::endl;
+    std::cout << "Diff AMR/IRL = "
+              << fabs(our_volume - amr_moments.volume()) / poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20) << "Centroid unclipped AMR = "
+              << amr_moments.centroid() / safelyTiny(amr_moments.volume())
               << std::endl;
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
 
-    max_error = max_error > fabs(our_volume - amr_volume) / poly_vol
+    max_error = max_error > fabs(our_volume - amr_moments.volume()) / poly_vol
                     ? max_error
-                    : fabs(our_volume - amr_volume) / poly_vol;
-    rms_error += fabs(our_volume - amr_volume) * fabs(our_volume - amr_volume) /
-                 poly_vol / poly_vol;
+                    : fabs(our_volume - amr_moments.volume()) / poly_vol;
+    rms_error += fabs(our_volume - amr_moments.volume()) *
+                 fabs(our_volume - amr_moments.volume()) / poly_vol / poly_vol;
 
-    if (fabs(our_volume - amr_volume) / poly_vol > 1.0e-10) exit(1);
+    if (fabs(our_volume - amr_moments.volume()) / poly_vol > 1.0e-10) exit(1);
   }
   rms_error = sqrt(rms_error / static_cast<double>(Ntests));
 
@@ -1700,13 +1705,13 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     std::string poly_filename = "cell_" + std::to_string(i);
     std::string surf_filename = "surface_" + std::to_string(i);
     auto poly_vol = seg_half_edge.calculateVolume();
-    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 10,
         poly_filename);  // This prints the AMR triangles
-    amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+    auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
     ParametrizedSurfaceOutput surface(paraboloid);
-    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     auto our_surface_area = surface.getSurfaceArea();
     auto our_avg_normal = surface.getAverageNormal();
@@ -1722,6 +1727,8 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
 
     double exact_volume = (std::pow(k, 2.) * M_PI) / 8.;
+    double exact_m1x = (2. * std::pow(k, 2.5)) / 15.;
+    double exact_m1z = -0.08333333333333333 * (std::pow(k, 3.) * M_PI);
     double exact_surface_area =
         ((-1. + std::sqrt(1. + 4. * k) + 4. * k * std::sqrt(1. + 4. * k)) *
          M_PI) /
@@ -1734,6 +1741,8 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                               4. * k * std::sqrt(1. - 4. * h + 4. * k)) *
                              M_PI) /
                             24.;
+      exact_m1x -= (2. * std::pow(-h + k, 2.5)) / 15.;
+      exact_m1z -= (std::pow(h - k, 3.) * M_PI) / 12.;
     }
     if (k > h * h) {
       // std::cout << "Substract 2 low wedges" << std::endl;
@@ -1773,6 +1782,20 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
                         std::sqrt(1. + 4. * k))) /
           24.;
+      exact_m1x -= (-3. * std::pow(h, 5.) + 10. * std::pow(h, 3.) * k -
+                    15. * h * std::pow(k, 2.) + 8. * std::pow(k, 2.5) +
+                    8. * std::pow(-std::pow(h, 2.) + k, 2.5)) /
+                   60.;
+      exact_m1z -=
+          (-16. * std::pow(h, 5.) * std::sqrt(-std::pow(h, 2.) + k) -
+           8. * std::pow(h, 3.) * k * std::sqrt(-std::pow(h, 2.) + k) +
+           84. * h * std::pow(k, 2.) * std::sqrt(-std::pow(h, 2.) + k) -
+           15. * std::pow(k, 3.) * M_PI +
+           30. * std::pow(k, 3.) *
+               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) -
+           30. * std::pow(k, 3.) *
+               std::atan(std::sqrt(-1. + k / std::pow(h, 2.)))) /
+          180.;
     }
     if (k > 2.0 * h * h) {
       // std::cout << "Adding 1 low triangle" << std::endl;
@@ -1819,6 +1842,20 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
                         std::sqrt(1. + 4. * k))) /
           12.;
+      exact_m1x += (-28. * std::pow(h, 5.) + 40. * std::pow(h, 3.) * k -
+                    15. * h * std::pow(k, 2.) +
+                    8. * std::pow(-std::pow(h, 2.) + k, 2.5)) /
+                   60.;
+      exact_m1z +=
+          (28. * std::pow(h, 6.) - 45. * std::pow(h, 2.) * std::pow(k, 2.) -
+           8. * std::pow(h, 5.) * std::sqrt(-std::pow(h, 2.) + k) -
+           4. * std::pow(h, 3.) * k * std::sqrt(-std::pow(h, 2.) + k) +
+           42. * h * std::pow(k, 2.) * std::sqrt(-std::pow(h, 2.) + k) +
+           15. * std::pow(k, 3.) *
+               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) -
+           15. * std::pow(k, 3.) *
+               std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
+          90.;
     }
     if ((k - h) > h * h) {
       // std::cout << "Adding 2 high wedges" << std::endl;
@@ -1875,7 +1912,32 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                std::log(2. * std::sqrt(-h - std::pow(h, 2.) + k) +
                         std::sqrt(1. - 4. * h + 4. * k))) /
           24.;
+      exact_m1x += (8. * std::pow(-h - std::pow(h, 2.) + k, 2.5) +
+                    5. * h * (h + std::pow(h, 2.) - k) *
+                        (-3. * h + std::pow(h, 2.) + 3. * k) +
+                    8. * (-std::pow(h, 5.) + std::pow(-h + k, 2.5))) /
+                   60.;
+      exact_m1z +=
+          (84. * std::pow(h, 3.) * std::sqrt(-h - std::pow(h, 2.) + k) +
+           8. * std::pow(h, 4.) * std::sqrt(-h - std::pow(h, 2.) + k) -
+           16. * std::pow(h, 5.) * std::sqrt(-h - std::pow(h, 2.) + k) -
+           168. * std::pow(h, 2.) * k * std::sqrt(-h - std::pow(h, 2.) + k) -
+           8. * std::pow(h, 3.) * k * std::sqrt(-h - std::pow(h, 2.) + k) +
+           84. * h * std::pow(k, 2.) * std::sqrt(-h - std::pow(h, 2.) + k) +
+           15. * std::pow(h, 3.) * M_PI - 45. * std::pow(h, 2.) * k * M_PI +
+           45. * h * std::pow(k, 2.) * M_PI - 15. * std::pow(k, 3.) * M_PI -
+           30. * std::pow(h - k, 3.) *
+               std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) +
+           30. * std::pow(h - k, 3.) *
+               std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h)) /
+          180.;
     }
+    auto exact_centroid =
+        Pt(exact_m1x, exact_m1x, exact_m1z) / safelyEpsilon(exact_volume);
+    auto amr_centroid =
+        amr_moments.centroid() / safelyEpsilon(amr_moments.volume());
+    auto our_centroid =
+        our_moments.centroid() / safelyEpsilon(our_moments.volume());
     std::cout << std::setprecision(20)
               << "Surface EXACT  = " << exact_surface_area << std::endl;
     std::cout << std::setprecision(20)
@@ -1891,38 +1953,58 @@ TEST(ParaboloidIntersection, TranslatingCube) {
               << "Vfrac unclipped EX  = " << exact_volume / poly_vol
               << std::endl;
     std::cout << std::setprecision(20)
-              << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
+              << "Vfrac unclipped IRL = " << our_moments.volume() / poly_vol
+              << std::endl;
     std::cout << std::setprecision(20)
-              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
+              << "Vfrac unclipped AMR = " << amr_moments.volume() / poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "Centroid unclipped EX  = " << exact_centroid << std::endl;
+    std::cout << std::setprecision(20)
+              << "Centroid unclipped IRL = " << our_centroid << std::endl;
+    std::cout << std::setprecision(20)
+              << "Centroid unclipped AMR = " << amr_centroid << std::endl;
     std::cout << "Diff Surface EX/IRL = "
               << fabs(our_surface_area - exact_surface_area) /
                      std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
     std::cout << "Diff Vfrac EX/IRL   = "
-              << fabs(our_volume - exact_volume) / poly_vol << std::endl;
+              << fabs(our_moments.volume() - exact_volume) / poly_vol
+              << std::endl;
     std::cout << "Diff Vfrac AMR/IRL   = "
-              << fabs(our_volume - amr_volume) / poly_vol << std::endl;
+              << fabs(our_moments.volume() - amr_moments.volume()) / poly_vol
+              << std::endl;
+    std::cout << "Diff centroid EX/AMR   = "
+              << Pt(exact_centroid - amr_centroid) /
+                     std::pow(poly_vol, 1.0 / 3.0)
+              << std::endl;
+    std::cout << "Diff centroid EX/IRL   = "
+              << Pt(exact_centroid - our_centroid) /
+                     std::pow(poly_vol, 1.0 / 3.0)
+              << std::endl;
+
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
 
     max_volume_error =
-        max_volume_error > fabs(our_volume - exact_volume) / poly_vol
+        max_volume_error > fabs(our_moments.volume() - exact_volume) / poly_vol
             ? max_volume_error
-            : fabs(our_volume - exact_volume) / poly_vol;
+            : fabs(our_moments.volume() - exact_volume) / poly_vol;
     max_surface_error =
         max_surface_error > fabs(our_surface_area - exact_surface_area) /
                                 std::pow(poly_vol, 2.0 / 3.0)
             ? max_surface_error
             : fabs(our_surface_area - exact_surface_area) /
                   std::pow(poly_vol, 2.0 / 3.0);
-    rms_volume_error += fabs(our_volume - exact_volume) *
-                        fabs(our_volume - exact_volume) / poly_vol / poly_vol;
+    rms_volume_error += fabs(our_moments.volume() - exact_volume) *
+                        fabs(our_moments.volume() - exact_volume) / poly_vol /
+                        poly_vol;
     rms_surface_error += fabs(our_surface_area - exact_surface_area) *
                          fabs(our_surface_area - exact_surface_area) /
                          std::pow(poly_vol, 4.0 / 3.0);
 
-    if (fabs(our_volume - exact_volume) / poly_vol > 1.0e-10) exit(1);
+    if (fabs(our_moments.volume() - exact_volume) / poly_vol > 1.0e-10) exit(1);
   }
   rms_volume_error = sqrt(rms_volume_error / static_cast<double>(Ntests));
   rms_surface_error = sqrt(rms_surface_error / static_cast<double>(Ntests));
@@ -2371,6 +2453,70 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
             << std::endl;
 
   EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, CentroidZ) {
+  ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                       Normal(0.0, 0.0, 1.0));
+  Paraboloid paraboloid_pos(Pt(0.0, 0.0, 0.0), frame, 1.0e-1, 1.0e-1);
+  Paraboloid paraboloid_neg(Pt(0.0, 0.0, 0.0), frame, -1.0e-1, -1.0e-1);
+  auto cell = RectangularCuboid::fromBoundingPts(Pt(-0.4, -0.4, -0.4),
+                                                 Pt(0.6, 0.7, 0.8));
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+  cell.setHalfEdgeVersion(&half_edge);
+  auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+
+  // for (UnsignedIndex_t v = 0; v < seg_half_edge.getNumberOfVertices(); ++v) {
+  //   const Pt tmp_pt = seg_half_edge.getVertex(v)->getLocation().getPt() -
+  //                     paraboloid_pos.getDatum();
+  //   auto new_pt = tmp_pt;
+  //   for (UnsignedIndex_t d = 0; d < 3; ++d) {
+  //     new_pt[d] = frame[d] * tmp_pt;
+  //   }
+  //   seg_half_edge.getVertex(v)->setLocation(new_pt);
+  // }
+
+  for (auto& face : seg_half_edge) {
+    auto normal = Normal(0.0, 0.0, 0.0);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    const auto& start_location =
+        starting_half_edge->getPreviousVertex()->getLocation();
+    do {
+      normal += crossProduct(
+          current_half_edge->getVertex()->getLocation() - start_location,
+          next_half_edge->getVertex()->getLocation() - start_location);
+      current_half_edge = next_half_edge;
+      next_half_edge = next_half_edge->getNextHalfEdge();
+    } while (next_half_edge != starting_half_edge);
+    normal.normalize();
+    face->setPlane(Plane(normal, normal * start_location));
+  }
+
+  auto amr_moments_pos = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+      &seg_half_edge, &half_edge, paraboloid_pos.getAlignedParaboloid(), 17);
+  auto our_moments_pos =
+      getVolumeMoments<VolumeMoments, HalfEdgeCutting>(cell, paraboloid_pos);
+  auto amr_centroid_pos =
+      amr_moments_pos.centroid() / safelyTiny(amr_moments_pos.volume());
+  auto our_centroid_pos =
+      our_moments_pos.centroid() / safelyTiny(our_moments_pos.volume());
+  std::cout << "Volume POS" << amr_moments_pos.volume() << std::endl;
+  std::cout << "Centoid POS" << amr_centroid_pos << std::endl;
+  std::cout << "Centoid IRL POS" << our_centroid_pos << std::endl;
+  auto amr_moments_neg = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+      &seg_half_edge, &half_edge, paraboloid_neg.getAlignedParaboloid(), 17);
+  auto our_moments_neg =
+      getVolumeMoments<VolumeMoments, HalfEdgeCutting>(cell, paraboloid_neg);
+  auto amr_centroid_neg =
+      amr_moments_neg.centroid() / safelyTiny(amr_moments_neg.volume());
+  auto our_centroid_neg =
+      our_moments_neg.centroid() / safelyTiny(our_moments_neg.volume());
+  std::cout << "Volume NEG" << amr_moments_neg.volume() << std::endl;
+  std::cout << "Centoid NEG" << amr_centroid_neg << std::endl;
+  std::cout << "Centoid IRL NEG" << our_centroid_neg << std::endl;
 }
 
 TEST(ParaboloidIntersection, InfiniteSplit) {

@@ -43,8 +43,31 @@ inline Volume computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
 template <>
 inline VolumeMoments computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
                                            const Pt& a_pt_1) {
-  std::cout << "Not yet implemented" << std::endl;
-  std::exit(-1);
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  const double triangle_area =
+      ((a_pt_0[0] - a_ref_pt[0]) * (a_pt_1[1] - a_ref_pt[1]) -
+       (a_pt_1[0] - a_ref_pt[0]) * (a_pt_0[1] - a_ref_pt[1])) /
+      2.0;
+  moments.volume() =
+      triangle_area * (a_ref_pt[2] + a_pt_0[2] + a_pt_1[2]) / 3.0;
+  moments.centroid()[0] =
+      triangle_area *
+      (a_pt_0[0] * (2.0 * a_pt_0[2] + a_pt_1[2] + a_ref_pt[2]) +
+       a_pt_1[0] * (a_pt_0[2] + 2.0 * a_pt_1[2] + a_ref_pt[2]) +
+       a_ref_pt[0] * (a_pt_0[2] + a_pt_1[2] + 2.0 * a_ref_pt[2])) /
+      12.0;
+  moments.centroid()[1] =
+      triangle_area *
+      (a_pt_0[1] * (2.0 * a_pt_0[2] + a_pt_1[2] + a_ref_pt[2]) +
+       a_pt_1[1] * (a_pt_0[2] + 2.0 * a_pt_1[2] + a_ref_pt[2]) +
+       a_ref_pt[1] * (a_pt_0[2] + a_pt_1[2] + 2.0 * a_ref_pt[2])) /
+      12.0;
+  moments.centroid()[2] = triangle_area *
+                          (a_pt_0[2] * a_pt_0[2] + a_pt_1[2] * a_pt_1[2] +
+                           a_ref_pt[2] * a_ref_pt[2] + a_pt_1[2] * a_ref_pt[2] +
+                           a_pt_0[2] * a_pt_1[2] + a_pt_0[2] * a_ref_pt[2]) /
+                          12.0;
+  return moments;
 }
 
 template <class ReturnType>
@@ -65,8 +88,36 @@ template <>
 inline VolumeMoments computeV2Contribution(
     const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
     const Pt& a_pt_1) {
-  std::cout << "Not yet implemented" << std::endl;
-  std::exit(-1);
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  moments.volume() = (a_pt_0[0] * a_pt_1[1] - a_pt_1[0] * a_pt_0[1]) / 12.0 *
+                     (-a_pt_0[2] - a_pt_1[2] +
+                      a_aligned_paraboloid.a() * a_pt_0[0] * a_pt_1[0] +
+                      a_aligned_paraboloid.b() * a_pt_0[1] * a_pt_1[1]);
+  moments.centroid()[0] =
+      (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+      (2.0 * a_aligned_paraboloid.b() * (a_pt_0[1] - a_pt_1[1]) *
+           (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) +
+       3.0 * (a_pt_0[0] + a_pt_1[0]) * (a_pt_0[2] + a_pt_1[2])) /
+      60.0;
+  moments.centroid()[1] =
+      (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+      (2.0 * a_aligned_paraboloid.a() * (a_pt_0[0] - a_pt_1[0]) *
+           (a_pt_1[1] * a_pt_0[0] - a_pt_0[1] * a_pt_1[0]) +
+       3.0 * (a_pt_0[1] + a_pt_1[1]) * (a_pt_0[2] + a_pt_1[2])) /
+      60.0;
+  moments.centroid()[2] =
+      ((a_pt_0[0] * a_pt_1[1] - a_pt_1[0] * a_pt_0[1]) *
+       (2.0 * a_aligned_paraboloid.a() * a_aligned_paraboloid.b() *
+            ((a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+             (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1])) +
+        3.0 * a_aligned_paraboloid.a() * a_pt_0[0] * a_pt_1[0] *
+            (a_pt_0[2] + a_pt_1[2]) +
+        3.0 * a_aligned_paraboloid.b() * a_pt_0[1] * a_pt_1[1] *
+            (a_pt_0[2] + a_pt_1[2]) -
+        3.0 * (a_pt_0[2] * a_pt_0[2] + a_pt_0[2] * a_pt_1[2] +
+               a_pt_1[2] * a_pt_1[2]))) /
+      180.0;
+  return moments;
 }
 
 // Starts from an entry, returns the exit that is reached.
@@ -298,6 +349,32 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
+  // Move first moment back to original frame of reference
+  if constexpr (has_paraboloid_surface<ReturnType>::value) {
+    if constexpr (std::is_same<typename ReturnType::moment_type,
+                               VolumeMoments>::value) {
+      auto pt = Pt(0.0, 0.0, 0.0);
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          pt[n] += ref_frame[d][n] * moments.centroid()[d];
+        }
+      }
+      pt += datum;
+      moments.centroid() = pt;
+    }
+  }
+  if constexpr (!has_paraboloid_surface<ReturnType>::value &&
+                std::is_same<ReturnType, VolumeMoments>::value) {
+    auto pt = Pt(0.0, 0.0, 0.0);
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      for (UnsignedIndex_t n = 0; n < 3; ++n) {
+        pt[n] += ref_frame[d][n] * moments.centroid()[d];
+      }
+    }
+    pt += datum;
+    moments.centroid() = pt;
+  }
+
   return moments;
 }
 
@@ -509,8 +586,9 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
 
   if (!elliptic_face)  // The arc is from a hyperbola or parabola
   {
-    if (std::abs(1.0 - std::abs(tgt_0 * tgt_1)) <
-        10.0 * DBL_EPSILON)  // The tangents are (close to being) parallel
+    const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
+    if (std::fabs(n_cross_t0 * tgt_1) <
+        100.0 * DBL_EPSILON)  // The tangents are (close to being) parallel
     {
       // We consider an arc with zero contribution
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
@@ -521,11 +599,8 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
     } else {  // The tangents are NOT parallel
       // Compute control point
       const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
-      assert(std::fabs(n_cross_t0 * tgt_1) >
-             DBL_EPSILON);  // This should be satisfied, as the tangents are not
-                            // parallel
       const double lambda_1 =
-          -(n_cross_t0 * edge_vector) / safelyTiny(n_cross_t0 * tgt_1);
+          -(n_cross_t0 * edge_vector) / (n_cross_t0 * tgt_1);
       const auto control_pt = Pt(pt_1 + lambda_1 * tgt_1);
       // Orient tangents to point towards control point
       tgt_0 = (tgt_0 * Normal(control_pt - pt_0)) < 0.0 ? -tgt_0 : tgt_0;
@@ -560,9 +635,9 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
                         : edge_11;
     edge_1.normalize();
     bool tgt_0_parallel_edge_0 =
-        std::abs(1.0 - std::abs(tgt_0 * edge_0)) < 100.0 * DBL_EPSILON;
+        std::abs(1.0 - std::fabs(tgt_0 * edge_0)) < 100.0 * DBL_EPSILON;
     bool tgt_1_parallel_edge_1 =
-        std::abs(1.0 - std::abs(tgt_1 * edge_1)) < 100.0 * DBL_EPSILON;
+        std::abs(1.0 - std::fabs(tgt_1 * edge_1)) < 100.0 * DBL_EPSILON;
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge normal
     {
@@ -583,8 +658,8 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
       assert(std::abs(tgt_1 * dummy_tgt_1) > 10.0 * DBL_EPSILON);
       tgt_0 = (tgt_0 * dummy_tgt_0) < 0.0 ? -tgt_0 : tgt_0;
       tgt_1 = (tgt_1 * dummy_tgt_1) > 0.0 ? -tgt_1 : tgt_1;
-      // At this point, the tangents form a valid arc (but they may be oriented
-      // in the wrong direction)
+      // At this point, the tangents form a valid arc (but they may be
+      // oriented in the wrong direction)
       if (!tgt_0_parallel_edge_0) {
         const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
         if (edge_normal_0 * tgt_0 < 0.0) {
@@ -598,75 +673,42 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
           tgt_1 = -tgt_1;
         }
       } else {
-        if (squaredMagnitude(pt_1 - pt_0) <
-            100.0 * DBL_EPSILON * DBL_EPSILON)  // The arc is small
-        {
-          // The tangents are parallel
-          if (std::abs(1.0 - std::abs(tgt_0 * tgt_1)) < 10.0 * DBL_EPSILON) {
-            const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
-            const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
-            const double dot_0 = center_to_pt_0 * edge_normal_0;
-            const double dot_1 = center_to_pt_1 * edge_normal_1;
-            const double dot =
-                (std::abs(dot_0) > std::abs(dot_1)) ? dot_0 : dot_1;
-            if (dot > 0.0)  // The tangents point towards each other
-            {
-              tgt_0 = (tgt_0 * edge_vector) < 0.0 ? -tgt_0 : tgt_0;
-              tgt_1 = (tgt_1 * edge_vector) > 0.0 ? -tgt_1 : tgt_1;
-            } else {  // The tangents point away from each other
-              tgt_0 = (tgt_0 * edge_vector) > 0.0 ? -tgt_0 : tgt_0;
-              tgt_1 = (tgt_1 * edge_vector) < 0.0 ? -tgt_1 : tgt_1;
-            }
+        // The arcs should have been sorted in this case!! This allows to
+        // project the mid-point onto the arc, and check that it belongs to
+        // the face
+        const Pt avg_pt = 0.5 * (pt_0 + pt_1);
+        auto avg_tgt = Normal(0.5 * (tgt_0 + tgt_1));
+        if (squaredMagnitude(avg_tgt) < 1.0e6 * DBL_EPSILON * DBL_EPSILON) {
+          avg_tgt = Normal(0.25 * tgt_0 + 0.75 * tgt_1);
+        }
+        avg_tgt.normalize();
+        Pt proj_test =
+            projectPtAlongHalfLineOntoParaboloid(a_paraboloid, avg_tgt, avg_pt);
+        // Check if test projected point is inside the face
+        UnsignedIndex_t best_proj_dir = 0;
+        if (std::fabs(face_normal[best_proj_dir]) < std::fabs(face_normal[1]))
+          best_proj_dir = 1;
+        if (std::fabs(face_normal[best_proj_dir]) < std::fabs(face_normal[2]))
+          best_proj_dir = 2;
+        const UnsignedIndex_t start_id_for_search = (best_proj_dir + 1) % 3;
+        auto current_half_edge = a_start;
+        bool pt_internal_to_polygon = false;
+        do {
+          const Pt& location_0 =
+              current_half_edge->getPreviousVertex()->getLocation().getPt();
+          const Pt& location_1 =
+              current_half_edge->getVertex()->getLocation().getPt();
+          if (isPtBeforeIntersectionWithEdgeWithComponent(
+                  proj_test, location_0, location_1, start_id_for_search)) {
+            pt_internal_to_polygon = !pt_internal_to_polygon;
           }
-          // The tangents are NOT parallel
-          else {
-            // We consider an arc with zero contribution
-            if constexpr (!std::is_same<SurfaceOutputType,
-                                        NoSurfaceOutput>::value) {
-              a_surface->addArc(
-                  RationalBezierArc(pt_1, 0.5 * (pt_0 + pt_1), pt_0, 0.0));
-            }
-            return ReturnType::fromScalarConstant(0.0);
-          }
-        } else {
-          // This is an ambiguous case: it is impossible to choose the correct
-          // orientation without some approximation
-          // Project point on ellipse just after pt_0 and test if it belongs to
-          // the face
-          const double shift =
-              std::max(1.0e-2 * magnitude(pt_1 - pt_0), 10.0 * DBL_EPSILON);
-          Pt pt_test = pt_0 + shift * tgt_0;
-          Normal tgt_test =
-              computeTangentVectorAtPoint(a_paraboloid, face_plane, pt_test);
-          Normal norm_test = crossProduct(face_normal, tgt_test);
-          Pt proj_test = projectPtAlongLineOntoParaboloid(a_paraboloid,
-                                                          norm_test, pt_test);
-          // Check if test projected point is inside the face
-          UnsignedIndex_t best_proj_dir = 0;
-          if (std::abs(face_normal[best_proj_dir]) < std::abs(face_normal[1]))
-            best_proj_dir = 1;
-          if (std::abs(face_normal[best_proj_dir]) < std::abs(face_normal[2]))
-            best_proj_dir = 2;
-          const UnsignedIndex_t start_id_for_search = (best_proj_dir + 1) % 3;
-          auto current_half_edge = a_start;
-          bool pt_internal_to_polygon = false;
-          do {
-            const Pt& location_0 =
-                current_half_edge->getPreviousVertex()->getLocation().getPt();
-            const Pt& location_1 =
-                current_half_edge->getVertex()->getLocation().getPt();
-            if (isPtBeforeIntersectionWithEdgeWithComponent(
-                    proj_test, location_0, location_1, start_id_for_search)) {
-              pt_internal_to_polygon = !pt_internal_to_polygon;
-            }
-            current_half_edge = current_half_edge->getNextHalfEdge();
-          } while (current_half_edge != a_start);
+          current_half_edge = current_half_edge->getNextHalfEdge();
+        } while (current_half_edge != a_start);
 
-          // If test point is not inside face, invert tangents
-          if (!pt_internal_to_polygon) {
-            tgt_0 = -tgt_0;
-            tgt_1 = -tgt_1;
-          }
+        // If test point is not inside face, invert tangents
+        if (!pt_internal_to_polygon) {
+          tgt_0 = -tgt_0;
+          tgt_1 = -tgt_1;
         }
       }
     }
