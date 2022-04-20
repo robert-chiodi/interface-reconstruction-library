@@ -43,8 +43,31 @@ inline Volume computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
 template <>
 inline VolumeMoments computeV1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
                                            const Pt& a_pt_1) {
-  std::cout << "Not yet implemented" << std::endl;
-  std::exit(-1);
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  const double triangle_area =
+      ((a_pt_0[0] - a_ref_pt[0]) * (a_pt_1[1] - a_ref_pt[1]) -
+       (a_pt_1[0] - a_ref_pt[0]) * (a_pt_0[1] - a_ref_pt[1])) /
+      2.0;
+  moments.volume() =
+      triangle_area * (a_ref_pt[2] + a_pt_0[2] + a_pt_1[2]) / 3.0;
+  moments.centroid()[0] =
+      triangle_area *
+      (a_pt_0[0] * (2.0 * a_pt_0[2] + a_pt_1[2] + a_ref_pt[2]) +
+       a_pt_1[0] * (a_pt_0[2] + 2.0 * a_pt_1[2] + a_ref_pt[2]) +
+       a_ref_pt[0] * (a_pt_0[2] + a_pt_1[2] + 2.0 * a_ref_pt[2])) /
+      12.0;
+  moments.centroid()[1] =
+      triangle_area *
+      (a_pt_0[1] * (2.0 * a_pt_0[2] + a_pt_1[2] + a_ref_pt[2]) +
+       a_pt_1[1] * (a_pt_0[2] + 2.0 * a_pt_1[2] + a_ref_pt[2]) +
+       a_ref_pt[1] * (a_pt_0[2] + a_pt_1[2] + 2.0 * a_ref_pt[2])) /
+      12.0;
+  moments.centroid()[2] = triangle_area *
+                          (a_pt_0[2] * a_pt_0[2] + a_pt_1[2] * a_pt_1[2] +
+                           a_ref_pt[2] * a_ref_pt[2] + a_pt_1[2] * a_ref_pt[2] +
+                           a_pt_0[2] * a_pt_1[2] + a_pt_0[2] * a_ref_pt[2]) /
+                          12.0;
+  return moments;
 }
 
 template <class ReturnType>
@@ -65,8 +88,36 @@ template <>
 inline VolumeMoments computeV2Contribution(
     const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_pt_0,
     const Pt& a_pt_1) {
-  std::cout << "Not yet implemented" << std::endl;
-  std::exit(-1);
+  auto moments = VolumeMoments::fromScalarConstant(0.0);
+  moments.volume() = (a_pt_0[0] * a_pt_1[1] - a_pt_1[0] * a_pt_0[1]) / 12.0 *
+                     (-a_pt_0[2] - a_pt_1[2] +
+                      a_aligned_paraboloid.a() * a_pt_0[0] * a_pt_1[0] +
+                      a_aligned_paraboloid.b() * a_pt_0[1] * a_pt_1[1]);
+  moments.centroid()[0] =
+      (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+      (2.0 * a_aligned_paraboloid.b() * (a_pt_0[1] - a_pt_1[1]) *
+           (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) +
+       3.0 * (a_pt_0[0] + a_pt_1[0]) * (a_pt_0[2] + a_pt_1[2])) /
+      60.0;
+  moments.centroid()[1] =
+      (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+      (2.0 * a_aligned_paraboloid.a() * (a_pt_0[0] - a_pt_1[0]) *
+           (a_pt_1[1] * a_pt_0[0] - a_pt_0[1] * a_pt_1[0]) +
+       3.0 * (a_pt_0[1] + a_pt_1[1]) * (a_pt_0[2] + a_pt_1[2])) /
+      60.0;
+  moments.centroid()[2] =
+      ((a_pt_0[0] * a_pt_1[1] - a_pt_1[0] * a_pt_0[1]) *
+       (2.0 * a_aligned_paraboloid.a() * a_aligned_paraboloid.b() *
+            ((a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1]) *
+             (a_pt_1[0] * a_pt_0[1] - a_pt_0[0] * a_pt_1[1])) +
+        3.0 * a_aligned_paraboloid.a() * a_pt_0[0] * a_pt_1[0] *
+            (a_pt_0[2] + a_pt_1[2]) +
+        3.0 * a_aligned_paraboloid.b() * a_pt_0[1] * a_pt_1[1] *
+            (a_pt_0[2] + a_pt_1[2]) -
+        3.0 * (a_pt_0[2] * a_pt_0[2] + a_pt_0[2] * a_pt_1[2] +
+               a_pt_1[2] * a_pt_1[2]))) /
+      180.0;
+  return moments;
 }
 
 // Starts from an entry, returns the exit that is reached.
@@ -298,6 +349,32 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
+  // Move first moment back to original frame of reference
+  if constexpr (has_paraboloid_surface<ReturnType>::value) {
+    if constexpr (std::is_same<typename ReturnType::moment_type,
+                               VolumeMoments>::value) {
+      auto pt = Pt(0.0, 0.0, 0.0);
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          pt[n] += ref_frame[d][n] * moments.centroid()[d];
+        }
+      }
+      pt += datum;
+      moments.centroid() = pt;
+    }
+  }
+  if constexpr (!has_paraboloid_surface<ReturnType>::value &&
+                std::is_same<ReturnType, VolumeMoments>::value) {
+    auto pt = Pt(0.0, 0.0, 0.0);
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      for (UnsignedIndex_t n = 0; n < 3; ++n) {
+        pt[n] += ref_frame[d][n] * moments.centroid()[d];
+      }
+    }
+    pt += datum;
+    moments.centroid() = pt;
+  }
+
   return moments;
 }
 
@@ -522,8 +599,8 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
       // Compute control point
       const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
       assert(std::fabs(n_cross_t0 * tgt_1) >
-             DBL_EPSILON);  // This should be satisfied, as the tangents are not
-                            // parallel
+             DBL_EPSILON);  // This should be satisfied, as the tangents are
+                            // not parallel
       const double lambda_1 =
           -(n_cross_t0 * edge_vector) / safelyTiny(n_cross_t0 * tgt_1);
       const auto control_pt = Pt(pt_1 + lambda_1 * tgt_1);
@@ -583,8 +660,8 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
       assert(std::abs(tgt_1 * dummy_tgt_1) > 10.0 * DBL_EPSILON);
       tgt_0 = (tgt_0 * dummy_tgt_0) < 0.0 ? -tgt_0 : tgt_0;
       tgt_1 = (tgt_1 * dummy_tgt_1) > 0.0 ? -tgt_1 : tgt_1;
-      // At this point, the tangents form a valid arc (but they may be oriented
-      // in the wrong direction)
+      // At this point, the tangents form a valid arc (but they may be
+      // oriented in the wrong direction)
       if (!tgt_0_parallel_edge_0) {
         const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
         if (edge_normal_0 * tgt_0 < 0.0) {
@@ -631,8 +708,8 @@ ReturnType orientAndApplyWedgeCorrection(const AlignedParaboloid& a_paraboloid,
         } else {
           // This is an ambiguous case: it is impossible to choose the correct
           // orientation without some approximation
-          // Project point on ellipse just after pt_0 and test if it belongs to
-          // the face
+          // Project point on ellipse just after pt_0 and test if it belongs
+          // to the face
           const double shift =
               std::max(1.0e-2 * magnitude(pt_1 - pt_0), 10.0 * DBL_EPSILON);
           Pt pt_test = pt_0 + shift * tgt_0;
