@@ -25,8 +25,7 @@ class TriangulatedSurfaceOutput {
    public:
     using pt_type = Pt;
   };
-  class EdgeStorage
-      : public std::vector<std::pair<UnsignedIndex_t, UnsignedIndex_t>> {};
+  using EdgeStorage = std::vector<std::pair<UnsignedIndex_t, UnsignedIndex_t>>;
   using TriangleStorage = std::vector<ProxyTri<PointStorage>>;
 
   /// \brief Default constructor.
