@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "irl/paraboloid_reconstruction/parametrized_surface.h"
 #include "irl/surface_mesher/triangulated_surface.h"
 
 #include "examples/simple_paraboloid_advector/basic_mesh.h"
@@ -35,9 +36,9 @@ class VTKOutput {
 
   void writeVTKFile(const double a_time);
 
-  void writeVTKInterface(
-      const double a_time,
-      const std::vector<IRL::TriangulatedSurfaceOutput>& a_surface);
+  void writeVTKInterface(const double a_time,
+                         std::vector<IRL::ParametrizedSurfaceOutput>& a_surface,
+                         const bool a_print_info = false);
 
  private:
   std::string directory_m;

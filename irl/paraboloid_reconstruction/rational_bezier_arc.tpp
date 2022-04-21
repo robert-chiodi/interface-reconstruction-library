@@ -84,23 +84,42 @@ inline const Pt& RationalBezierArc::end_point(void) const {
 }
 
 inline Pt RationalBezierArc::point(const double t) const {
-  const double denominator =
-      (1.0 - t) * (1.0 - t) + 2.0 * weight_m * t * (1.0 - t) + t * t;
-  return Pt(((1.0 - t) * (1.0 - t) * start_point_m +
-             2.0 * weight_m * t * (1.0 - t) * control_point_m +
-             t * t * end_point_m) /
-            denominator);
+  assert(t >= 0.0 && t <= 1.0);
+  if (weight_m > 1.0e15) {
+    if (t < 0.5) {
+      return Pt((1.0 - 2.0 * t) * start_point_m + 2.0 * t * control_point_m);
+    } else {
+      return Pt((2.0 - 2.0 * t) * control_point_m +
+                (2.0 * t - 1.0) * end_point_m);
+    }
+  } else {
+    const double denominator =
+        (1.0 - t) * (1.0 - t) + 2.0 * weight_m * t * (1.0 - t) + t * t;
+    return Pt(((1.0 - t) * (1.0 - t) * start_point_m +
+               2.0 * weight_m * t * (1.0 - t) * control_point_m +
+               t * t * end_point_m) /
+              denominator);
+  }
 }
 
 inline Pt RationalBezierArc::derivative(const double t) const {
-  double denominator =
-      (1.0 - t) * (1.0 - t) + 2.0 * weight_m * t * (1.0 - t) + t * t;
-  denominator *= denominator;
-  return Pt((2.0 * (start_point_m - end_point_m) * (1.0 - weight_m) * t * t +
-             4.0 * (start_point_m - control_point_m) * weight_m * t -
-             2.0 * (start_point_m - end_point_m) * t -
-             2.0 * weight_m * (start_point_m - control_point_m)) /
-            denominator);
+  assert(t >= 0.0 && t <= 1.0);
+  if (weight_m > 1.0e15) {
+    if (t < 0.5) {
+      return Pt(2.0 * (control_point_m - start_point_m));
+    } else {
+      return Pt(2.0 * (end_point_m - control_point_m));
+    }
+  } else {
+    double denominator =
+        (1.0 - t) * (1.0 - t) + 2.0 * weight_m * t * (1.0 - t) + t * t;
+    denominator *= denominator;
+    return Pt((2.0 * (start_point_m - end_point_m) * (1.0 - weight_m) * t * t +
+               4.0 * (start_point_m - control_point_m) * weight_m * t -
+               2.0 * (start_point_m - end_point_m) * t -
+               2.0 * weight_m * (start_point_m - control_point_m)) /
+              denominator);
+  }
 }
 
 inline double RationalBezierArc::arc_length(void) const {

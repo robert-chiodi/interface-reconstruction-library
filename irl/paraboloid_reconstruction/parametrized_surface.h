@@ -66,17 +66,17 @@ class NoSurfaceOutput {
 class ParametrizedSurfaceOutput {
  public:
   /// \brief Default constructor.
-  ParametrizedSurfaceOutput(void) = default;
+  ParametrizedSurfaceOutput(void);
   ParametrizedSurfaceOutput(const Paraboloid& a_paraboloid);
 
-  ParametrizedSurfaceOutput(const ParametrizedSurfaceOutput& a_rhs) = delete;
+  ParametrizedSurfaceOutput(const ParametrizedSurfaceOutput& a_rhs);
   ParametrizedSurfaceOutput(ParametrizedSurfaceOutput&& a_rhs);
 
-  ParametrizedSurfaceOutput& operator=(const ParametrizedSurfaceOutput& a_rhs) =
-      delete;
+  ParametrizedSurfaceOutput& operator=(const ParametrizedSurfaceOutput& a_rhs);
   ParametrizedSurfaceOutput& operator=(ParametrizedSurfaceOutput&& a_rhs);
 
   void setParaboloid(const Paraboloid& a_paraboloid);
+  void setLengthScale(const double a_length_scale);
 
   RationalBezierArc& operator[](const UnsignedIndex_t a_index);
   const RationalBezierArc& operator[](const UnsignedIndex_t a_index) const;
@@ -90,6 +90,12 @@ class ParametrizedSurfaceOutput {
   void clearArcs(void);
   void clearPts(void);
   void clear(void);
+  inline Normal getNormalAligned(const Pt a_pt);
+  inline Normal getNormalNonAligned(const Pt a_pt);
+  inline double getMeanCurvatureAligned(const Pt a_pt);
+  inline double getMeanCurvatureNonAligned(const Pt a_pt);
+  inline double getGaussianCurvatureAligned(const Pt a_pt);
+  inline double getGaussianCurvatureNonAligned(const Pt a_pt);
   inline double getSurfaceArea(void);
   inline double getMeanCurvatureIntegral(void);
   inline double getGaussianCurvatureIntegral(void);
@@ -104,6 +110,7 @@ class ParametrizedSurfaceOutput {
   ~ParametrizedSurfaceOutput(void);
 
  private:
+  double length_scale_m;
   bool knows_surface_area_m;
   double surface_area_m;
   bool knows_avg_normal_m;
