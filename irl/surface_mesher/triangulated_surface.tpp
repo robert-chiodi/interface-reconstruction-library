@@ -16,6 +16,11 @@ inline void TriangulatedSurfaceOutput::addVertex(const Pt& a_vertex) {
   vertices_m.push_back(a_vertex);
 }
 
+inline void TriangulatedSurfaceOutput::addBoundaryEdge(
+    const UnsignedIndex_t a, const UnsignedIndex_t b) {
+  bdy_edges_m.push_back(std::pair<UnsignedIndex_t, UnsignedIndex_t>({a, b}));
+}
+
 inline void TriangulatedSurfaceOutput::addTriangle(const UnsignedIndex_t a,
                                                    const UnsignedIndex_t b,
                                                    const UnsignedIndex_t c) {
@@ -33,6 +38,16 @@ TriangulatedSurfaceOutput::getVertexList(void) const {
   return vertices_m;
 }
 
+inline TriangulatedSurfaceOutput::EdgeStorage&
+TriangulatedSurfaceOutput::getBoundaryEdgeList(void) {
+  return bdy_edges_m;
+}
+
+inline const TriangulatedSurfaceOutput::EdgeStorage&
+TriangulatedSurfaceOutput::getBoundaryEdgeList(void) const {
+  return bdy_edges_m;
+}
+
 inline TriangulatedSurfaceOutput::TriangleStorage&
 TriangulatedSurfaceOutput::getTriangleList(void) {
   return triangles_m;
@@ -48,6 +63,11 @@ TriangulatedSurfaceOutput::nVertices(void) const {
   return vertices_m.size();
 }
 
+inline TriangulatedSurfaceOutput::EdgeStorage::size_type
+TriangulatedSurfaceOutput::nBoundaryEdges(void) const {
+  return bdy_edges_m.size();
+}
+
 inline TriangulatedSurfaceOutput::TriangleStorage::size_type
 TriangulatedSurfaceOutput::nTriangles(void) const {
   return triangles_m.size();
@@ -56,11 +76,15 @@ TriangulatedSurfaceOutput::nTriangles(void) const {
 inline void TriangulatedSurfaceOutput::clearVertices(void) {
   vertices_m.clear();
 }
+inline void TriangulatedSurfaceOutput::clearBoundaryEdges(void) {
+  bdy_edges_m.clear();
+}
 inline void TriangulatedSurfaceOutput::clearTriangles(void) {
   triangles_m.clear();
 }
 inline void TriangulatedSurfaceOutput::clearAll(void) {
   vertices_m.clear();
+  bdy_edges_m.clear();
   triangles_m.clear();
 }
 
@@ -71,9 +95,10 @@ inline void TriangulatedSurfaceOutput::refineSize(
   UnsignedIndex_t new_pos = static_cast<UnsignedIndex_t>(this->nVertices());
 
   std::array<UnsignedIndex_t, 2> dims =
-      a_compute_dim == 0   ? std::array<UnsignedIndex_t, 2>{{1, 2}}
-      : a_compute_dim == 1 ? std::array<UnsignedIndex_t, 2>{{0, 2}}
-                           : std::array<UnsignedIndex_t, 2>{{0, 1}};
+      a_compute_dim == 0
+          ? std::array<UnsignedIndex_t, 2>{{1, 2}}
+          : a_compute_dim == 1 ? std::array<UnsignedIndex_t, 2>{{0, 2}}
+                               : std::array<UnsignedIndex_t, 2>{{0, 1}};
 
   for (std::size_t i = 0; i < this->nTriangles(); ++i) {
     while (triangles_m[i].calculateAbsoluteVolume() > a_max_size) {
