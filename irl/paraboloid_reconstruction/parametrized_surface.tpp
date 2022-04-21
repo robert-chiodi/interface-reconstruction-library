@@ -39,18 +39,25 @@ const SurfaceType& AddSurfaceOutput<MomentType, SurfaceType>::getSurface(
   return surface_m;
 }
 
+inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput()
+    : knows_surface_area_m{false},
+      knows_avg_normal_m{false},
+      knows_int_mean_curv_m{false},
+      knows_int_gaussian_curv_m{false},
+      length_scale_m{-1.0} {}
+
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     const Paraboloid& a_paraboloid)
     : paraboloid_m{a_paraboloid},
       knows_surface_area_m{false},
       knows_avg_normal_m{false},
       knows_int_mean_curv_m{false},
-      knows_int_gaussian_curv_m{false} {}
+      knows_int_gaussian_curv_m{false},
+      length_scale_m{-1.0} {}
 
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     ParametrizedSurfaceOutput&& a_rhs)
     : paraboloid_m(a_rhs.paraboloid_m),
-      pt_from_bezier_split_m(std::move(a_rhs.pt_from_bezier_split_m)),
       arc_list_m(std::move(a_rhs.arc_list_m)),
       knows_surface_area_m(a_rhs.knows_surface_area_m),
       surface_area_m(a_rhs.surface_area_m),
@@ -59,13 +66,27 @@ inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
       knows_int_mean_curv_m(a_rhs.knows_int_mean_curv_m),
       int_mean_curv_m(a_rhs.int_mean_curv_m),
       knows_int_gaussian_curv_m(a_rhs.knows_int_gaussian_curv_m),
-      int_gaussian_curv_m(a_rhs.int_gaussian_curv_m) {}
+      int_gaussian_curv_m(a_rhs.int_gaussian_curv_m),
+      length_scale_m{a_rhs.length_scale_m} {}
+
+inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
+    const ParametrizedSurfaceOutput& a_rhs)
+    : paraboloid_m(a_rhs.paraboloid_m),
+      arc_list_m(a_rhs.arc_list_m),
+      knows_surface_area_m(a_rhs.knows_surface_area_m),
+      surface_area_m(a_rhs.surface_area_m),
+      knows_avg_normal_m(a_rhs.knows_avg_normal_m),
+      avg_normal_m(a_rhs.avg_normal_m),
+      knows_int_mean_curv_m(a_rhs.knows_int_mean_curv_m),
+      int_mean_curv_m(a_rhs.int_mean_curv_m),
+      knows_int_gaussian_curv_m(a_rhs.knows_int_gaussian_curv_m),
+      int_gaussian_curv_m(a_rhs.int_gaussian_curv_m),
+      length_scale_m{a_rhs.length_scale_m} {}
 
 inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
     ParametrizedSurfaceOutput&& a_rhs) {
   if (this != &a_rhs) {
     paraboloid_m = a_rhs.paraboloid_m;
-    pt_from_bezier_split_m = std::move(a_rhs.pt_from_bezier_split_m);
     arc_list_m = std::move(a_rhs.arc_list_m);
     knows_surface_area_m = a_rhs.knows_surface_area_m;
     surface_area_m = a_rhs.surface_area_m;
@@ -75,8 +96,32 @@ inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
     int_mean_curv_m = a_rhs.int_mean_curv_m;
     knows_int_gaussian_curv_m = a_rhs.knows_int_gaussian_curv_m;
     int_gaussian_curv_m = a_rhs.int_gaussian_curv_m;
+    length_scale_m = a_rhs.length_scale_m;
   }
   return *this;
+}
+
+inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
+    const ParametrizedSurfaceOutput& a_rhs) {
+  if (this != &a_rhs) {
+    paraboloid_m = a_rhs.paraboloid_m;
+    arc_list_m = a_rhs.arc_list_m;
+    knows_surface_area_m = a_rhs.knows_surface_area_m;
+    surface_area_m = a_rhs.surface_area_m;
+    knows_avg_normal_m = a_rhs.knows_avg_normal_m;
+    avg_normal_m = a_rhs.avg_normal_m;
+    knows_int_mean_curv_m = a_rhs.knows_int_mean_curv_m;
+    int_mean_curv_m = a_rhs.int_mean_curv_m;
+    knows_int_gaussian_curv_m = a_rhs.knows_int_gaussian_curv_m;
+    int_gaussian_curv_m = a_rhs.int_gaussian_curv_m;
+    length_scale_m = a_rhs.length_scale_m;
+  }
+  return *this;
+}
+
+inline void ParametrizedSurfaceOutput::setLengthScale(
+    const double a_length_scale) {
+  length_scale_m = a_length_scale;
 }
 
 inline void ParametrizedSurfaceOutput::setParaboloid(
@@ -148,20 +193,92 @@ class ArcContributionToSurfaceArea_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive =
-        0.5 * pt[0] *
-            std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
-                      4.0 * b * b * pt[1] * pt[1]) +
-        (1.0 + 4.0 * b * b * pt[1] * pt[1]) *
-            std::log(2.0 * a * a * pt[0] +
-                     a * std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
-                                   4.0 * b * b * pt[1] * pt[1])) /
-            (4.0 * a);
-    return primitive * der[1];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return 0.0;
+      } else if (std::fabs(a) > std::fabs(b)) {
+        const double primitive0 =
+            (2. * a * pt0[0] *
+                 std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                           4. * (b * b) * (pt0[1] * pt0[1])) +
+             (1. + 4. * (b * b) * (pt0[1] * pt0[1])) *
+                 std::log(a * (2. * a * pt0[0] +
+                               std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                                         4. * (b * b) * (pt0[1] * pt0[1]))))) /
+            (4. * a);
+        const double primitive1 =
+            (2. * a * pt1[0] *
+                 std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                           4. * (b * b) * (pt1[1] * pt1[1])) +
+             (1. + 4. * (b * b) * (pt1[1] * pt1[1])) *
+                 std::log(a * (2. * a * pt1[0] +
+                               std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                                         4. * (b * b) * (pt1[1] * pt1[1]))))) /
+            (4. * a);
+        return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
+      } else {
+        const double primitive0 =
+            -(2. * b * pt0[1] *
+                  std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                            4. * (b * b) * (pt0[1] * pt0[1])) +
+              (1. + 4. * (a * a) * (pt0[0] * pt0[0])) *
+                  std::log(b *
+                           (2. * b * pt0[1] +
+                            std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                                      4. * (b * b) * (pt0[1] * pt0[1]))))) /
+            (4. * b);
+        const double primitive1 =
+            -(2. * b * pt1[1] *
+                  std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                            4. * (b * b) * (pt1[1] * pt1[1])) +
+              (1. + 4. * (a * a) * (pt1[0] * pt1[0])) *
+                  std::log(b *
+                           (2. * b * pt1[1] +
+                            std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                                      4. * (b * b) * (pt1[1] * pt1[1]))))) /
+            (4. * b);
+        return 0.5 * (primitive0 * der0[0] + primitive1 * der1[0]);
+      }
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return pt[0] * der[1];
+      } else if (std::fabs(a) > std::fabs(b)) {
+        const double primitive =
+            (2. * a * pt[0] *
+                 std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                           4. * (b * b) * (pt[1] * pt[1])) +
+             (1. + 4. * (b * b) * (pt[1] * pt[1])) *
+                 std::log(a * (2. * a * pt[0] +
+                               std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                                         4. * (b * b) * (pt[1] * pt[1]))))) /
+            (4. * a);
+        return primitive * der[1];
+      } else {
+        const double primitive =
+            -(2. * b * pt[1] *
+                  std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                            4. * (b * b) * (pt[1] * pt[1])) +
+              (1. + 4. * (a * a) * (pt[0] * pt[0])) *
+                  std::log(b * (2. * b * pt[1] +
+                                std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                                          4. * (b * b) * (pt[1] * pt[1]))))) /
+            (4. * b);
+        return primitive * der[0];
+      }
+    }
   }
 
  private:
@@ -176,12 +293,25 @@ class ArcContributionToNormalX_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive = a * pt[0] * pt[0];
-    return primitive * der[1];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      const double primitive0 = a * pt0[0] * pt0[0];
+      const double primitive1 = a * pt1[0] * pt1[0];
+      return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      const double primitive = a * pt[0] * pt[0];
+      return primitive * der[1];
+    }
   }
 
  private:
@@ -196,12 +326,25 @@ class ArcContributionToNormalY_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive = -b * pt[1] * pt[1];
-    return primitive * der[0];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      const double primitive0 = -b * pt0[1] * pt0[1];
+      const double primitive1 = -b * pt1[1] * pt1[1];
+      return 0.5 * (primitive0 * der0[0] + primitive1 * der1[0]);
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      const double primitive = -b * pt[1] * pt[1];
+      return primitive * der[0];
+    }
   }
 
  private:
@@ -216,12 +359,21 @@ class ArcContributionToNormalZ_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive = pt[0];
-    return primitive * der[1];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double primitive0 = pt0[0];
+      const double primitive1 = pt1[0];
+      return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double primitive = pt[0];
+      return primitive * der[1];
+    }
   }
 
  private:
@@ -236,22 +388,84 @@ class ArcContributionToMeanCurvature_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive =
-        2.0 * b * pt[0] +
-        (a + 4.0 * b * b * (a - b) * pt[1] * pt[1]) *
-            atan(2.0 * a * pt[0] / sqrt(1.0 + 4.0 * b * b * pt[1] * pt[1])) /
-            (a * sqrt(1.0 + 4.0 * b * b * pt[1] * pt[1]));
-    return primitive * der[1];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return 0.0;
+      } else if (std::fabs(a) > std::fabs(b)) {
+        const double primitive0 =
+            2. * b * pt0[0] +
+            ((a + 4. * a * (b * b) * (pt0[1] * pt0[1]) -
+              4. * (b * b * b) * (pt0[1] * pt0[1])) *
+             std::atan((2. * a * pt0[0]) /
+                       std::sqrt(1. + 4. * (b * b) * (pt0[1] * pt0[1])))) /
+                (a * std::sqrt(1. + 4. * (b * b) * (pt0[1] * pt0[1])));
+        const double primitive1 =
+            2. * b * pt1[0] +
+            ((a + 4. * a * (b * b) * (pt1[1] * pt1[1]) -
+              4. * (b * b * b) * (pt1[1] * pt1[1])) *
+             std::atan((2. * a * pt1[0]) /
+                       std::sqrt(1. + 4. * (b * b) * (pt1[1] * pt1[1])))) /
+                (a * std::sqrt(1. + 4. * (b * b) * (pt1[1] * pt1[1])));
+        return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
+      } else {
+        const double primitive0 =
+            -2. * a * pt0[1] -
+            ((b - 4. * (a * a * a) * (pt0[0] * pt0[0]) +
+              4. * (a * a) * b * (pt0[0] * pt0[0])) *
+             std::atan((2. * b * pt0[1]) /
+                       std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0])))) /
+                (b * std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0])));
+        const double primitive1 =
+            -2. * a * pt1[1] -
+            ((b - 4. * (a * a * a) * (pt1[0] * pt1[0]) +
+              4. * (a * a) * b * (pt1[0] * pt1[0])) *
+             std::atan((2. * b * pt1[1]) /
+                       std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0])))) /
+                (b * std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0])));
+        return 0.5 * (primitive0 * der0[0] + primitive1 * der1[0]);
+      }
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return 0.0;
+      } else if (std::fabs(a) > std::fabs(b)) {
+        const double primitive =
+            2. * b * pt[0] +
+            ((a + 4. * a * (b * b) * (pt[1] * pt[1]) -
+              4. * (b * b * b) * (pt[1] * pt[1])) *
+             std::atan((2. * a * pt[0]) /
+                       std::sqrt(1. + 4. * (b * b) * (pt[1] * pt[1])))) /
+                (a * std::sqrt(1. + 4. * (b * b) * (pt[1] * pt[1])));
+        return primitive * der[1];
+      } else {
+        const double primitive =
+            -2. * a * pt[1] -
+            ((b - 4. * (a * a * a) * (pt[0] * pt[0]) +
+              4. * (a * a) * b * (pt[0] * pt[0])) *
+             std::atan((2. * b * pt[1]) /
+                       std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0])))) /
+                (b * std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0])));
+        return primitive * der[0];
+      }
+    }
   }
 
  private:
   const RationalBezierArc& arc_m;
   const AlignedParaboloid& paraboloid_m;
-};
+};  // namespace IRL
 
 class ArcContributionToGaussianCurvature_Functor {
  public:
@@ -260,21 +474,52 @@ class ArcContributionToGaussianCurvature_Functor {
       : arc_m(a_arc), paraboloid_m(a_paraboloid) {}
 
   double operator()(double a_t) const {
-    const auto pt = arc_m.point(a_t);
-    const auto der = arc_m.derivative(a_t);
-    const double a = paraboloid_m.a();
-    const double b = paraboloid_m.b();
-    const double primitive =
-        4.0 * a * b * pt[0] /
-        ((1.0 + 4.0 * b * b * pt[1] * pt[1]) *
-         sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] + 4.0 * b * b * pt[1] * pt[1]));
-    return primitive * der[1];
+    const auto weight = arc_m.weight();
+    if (weight > 1.0e15) {
+      const auto pt0 = arc_m.point(0.5 * a_t);
+      const auto pt1 = arc_m.point(0.5 + 0.5 * a_t);
+      const auto der0 = arc_m.derivative(0.5 * a_t);
+      const auto der1 = arc_m.derivative(0.5 + 0.5 * a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return 0.0;
+      } else {
+        const double primitive0 =
+            4.0 * a * b * pt0[0] /
+            ((1.0 + 4.0 * b * b * pt0[1] * pt0[1]) *
+             std::sqrt(1.0 + 4.0 * a * a * pt0[0] * pt0[0] +
+                       4.0 * b * b * pt0[1] * pt0[1]));
+        const double primitive1 =
+            4.0 * a * b * pt1[0] /
+            ((1.0 + 4.0 * b * b * pt1[1] * pt1[1]) *
+             std::sqrt(1.0 + 4.0 * a * a * pt1[0] * pt1[0] +
+                       4.0 * b * b * pt1[1] * pt1[1]));
+        return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
+      }
+    } else {
+      const auto pt = arc_m.point(a_t);
+      const auto der = arc_m.derivative(a_t);
+      const double a = paraboloid_m.a();
+      const double b = paraboloid_m.b();
+      if (std::fabs(a) < 10.0 * DBL_EPSILON &&
+          std::fabs(b) < 10.0 * DBL_EPSILON) {
+        return 0.0;
+      } else {
+        const double primitive = 4.0 * a * b * pt[0] /
+                                 ((1.0 + 4.0 * b * b * pt[1] * pt[1]) *
+                                  std::sqrt(1.0 + 4.0 * a * a * pt[0] * pt[0] +
+                                            4.0 * b * b * pt[1] * pt[1]));
+        return primitive * der[1];
+      }
+    }
   }
 
  private:
   const RationalBezierArc& arc_m;
   const AlignedParaboloid& paraboloid_m;
-};
+};  // namespace IRL
 
 inline double ParametrizedSurfaceOutput::getSurfaceArea(void) {
   if (!knows_surface_area_m) {
@@ -414,6 +659,91 @@ inline double ParametrizedSurfaceOutput::getAverageGaussianCurvature(void) {
          safelyTiny(this->getSurfaceArea());
 }
 
+inline Normal ParametrizedSurfaceOutput::getNormalAligned(const Pt a_pt) {
+  auto& aligned_paraboloid = this->getParaboloid().getAlignedParaboloid();
+  auto aligned_normal = getParaboloidSurfaceNormal(aligned_paraboloid, a_pt);
+  aligned_normal.normalize();
+  return aligned_normal;
+}
+
+inline Normal ParametrizedSurfaceOutput::getNormalNonAligned(const Pt a_pt) {
+  const auto& datum = this->getParaboloid().getDatum();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+  assert(ref_frame.isOrthonormalBasis());
+  const Pt original_pt = a_pt - datum;
+  auto aligned_pt = a_pt;
+  for (std::size_t n = 0; n < 3; ++n) {
+    aligned_pt[n] = ref_frame[n] * original_pt;
+  }
+  auto aligned_normal = this->getNormalAligned(aligned_pt);
+  auto normal = Normal();
+  for (std::size_t d = 0; d < 3; ++d) {
+    for (std::size_t n = 0; n < 3; ++n) {
+      normal[n] += ref_frame[d][n] * aligned_normal[d];
+    }
+  }
+  return normal;
+}
+
+inline double ParametrizedSurfaceOutput::getMeanCurvatureAligned(
+    const Pt a_pt) {
+  auto& aligned_paraboloid = this->getParaboloid().getAlignedParaboloid();
+  return (2. * (aligned_paraboloid.a() + aligned_paraboloid.b() +
+                4. * (aligned_paraboloid.a() * aligned_paraboloid.a()) *
+                    aligned_paraboloid.b() * (a_pt[0] * a_pt[0]) +
+                4. * aligned_paraboloid.a() *
+                    (aligned_paraboloid.b() * aligned_paraboloid.b()) *
+                    (a_pt[1] * a_pt[1]))) /
+         std::pow(1. +
+                      4. * (aligned_paraboloid.a() * aligned_paraboloid.a()) *
+                          (a_pt[0] * a_pt[0]) +
+                      4. * (aligned_paraboloid.b() * aligned_paraboloid.b()) *
+                          (a_pt[1] * a_pt[1]),
+                  1.5);
+}
+
+inline double ParametrizedSurfaceOutput::getMeanCurvatureNonAligned(
+    const Pt a_pt) {
+  const auto& datum = this->getParaboloid().getDatum();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+  assert(ref_frame.isOrthonormalBasis());
+  const Pt original_pt = a_pt - datum;
+  auto aligned_pt = a_pt;
+  for (std::size_t n = 0; n < 3; ++n) {
+    aligned_pt[n] = ref_frame[n] * original_pt;
+  }
+  return this->getMeanCurvatureAligned(aligned_pt);
+}
+
+inline double ParametrizedSurfaceOutput::getGaussianCurvatureAligned(
+    const Pt a_pt) {
+  auto& aligned_paraboloid = this->getParaboloid().getAlignedParaboloid();
+  return 4. * aligned_paraboloid.a() * aligned_paraboloid.b() /
+         ((1. +
+           4. * (aligned_paraboloid.a() * aligned_paraboloid.a()) *
+               (a_pt[0] * a_pt[0]) +
+           4. * (aligned_paraboloid.b() * aligned_paraboloid.b()) *
+               (a_pt[1] * a_pt[1])) *
+          (1. +
+           4. * (aligned_paraboloid.a() * aligned_paraboloid.a()) *
+               (a_pt[0] * a_pt[0]) +
+           4. * (aligned_paraboloid.b() * aligned_paraboloid.b()) *
+               (a_pt[1] * a_pt[1])));
+}
+
+inline double ParametrizedSurfaceOutput::getGaussianCurvatureNonAligned(
+    const Pt a_pt) {
+  const auto& datum = this->getParaboloid().getDatum();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+  assert(ref_frame.isOrthonormalBasis());
+  const Pt original_pt = a_pt - datum;
+  auto aligned_pt = a_pt;
+  for (std::size_t n = 0; n < 3; ++n) {
+    aligned_pt[n] = ref_frame[n] * original_pt;
+  }
+  return this->getGaussianCurvatureAligned(aligned_pt);
+}
+
 inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const double a_length_scale, const UnsignedIndex_t a_nsplit) const {
 #ifndef IRL_USE_TRIANGLE
@@ -423,7 +753,10 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 #endif
 
   const UnsignedIndex_t nArcs = this->size();
-  double length_scale = DBL_MAX;
+  double length_scale, length_scale_ref = length_scale_m;
+  if (a_length_scale > 0.0) {
+    length_scale_ref = a_length_scale;
+  }
   const auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
 
   std::vector<std::vector<RationalBezierArc>> list_of_closed_curves;
@@ -477,13 +810,13 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
       // Split arc
       UnsignedIndex_t nSplit = a_nsplit <= 0 ? 1 : a_nsplit;
-      if (a_length_scale >= 0.0) {
-        nSplit = static_cast<UnsignedIndex_t>(arc_length / a_length_scale);
+      if (length_scale_ref > 0.0) {
+        nSplit = static_cast<UnsignedIndex_t>(arc_length / length_scale_ref);
         nSplit = nSplit < a_nsplit ? a_nsplit : nSplit;
       }
       const double step = 1.0 / static_cast<double>(nSplit);
       length_scale = std::min(length_scale, step * arc_length);
-      if (a_length_scale >= 0.0) length_scale = a_length_scale;
+      if (length_scale_ref > 0.0) length_scale = length_scale_ref;
       added_points += nSplit;
       const auto start_ind = input_points.size();
       input_points.resize(start_ind + 2 * nSplit);

@@ -84,31 +84,35 @@ void VTKOutput::writeVTKFile(const double a_time) {
     fprintf(file, "\n</DataArray>\n");
   }
   fprintf(file, "</CellData>\n");
-
   fprintf(file, "</Piece>\n</RectilinearGrid>\n</VTKFile>\n");
-
   fclose(file);
   ++data_files_written_m;
 }
 
 void VTKOutput::writeVTKInterface(
-    const double a_time,
-    const std::vector<IRL::TriangulatedSurfaceOutput>& a_surface) {
+    const double a_time, std::vector<IRL::ParametrizedSurfaceOutput>& a_surface,
+    const bool a_print_info) {
   const auto file_name = directory_m + "/" + file_name_base_m + "_interface_" +
                          std::to_string(interface_files_written_m) + ".vtu";
 
   FILE* file;
   file = fopen(file_name.c_str(), "w");
 
-  std::size_t number_of_vertices = 0;
+  std::vector<IRL::TriangulatedSurfaceOutput> triangulated_surface;
+  triangulated_surface.resize(a_surface.size());
   for (std::size_t i = 0; i < a_surface.size(); ++i) {
-    const auto& vlist = a_surface[i].getVertexList();
+    triangulated_surface[i] = a_surface[i].triangulate();
+  }
+
+  std::size_t number_of_vertices = 0;
+  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+    const auto& vlist = triangulated_surface[i].getVertexList();
     number_of_vertices += vlist.size();
   }
 
   std::size_t number_of_triangles = 0;
-  for (std::size_t i = 0; i < a_surface.size(); ++i) {
-    const auto& tlist = a_surface[i].getTriangleList();
+  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+    const auto& tlist = triangulated_surface[i].getTriangleList();
     number_of_triangles += tlist.size();
   }
 
@@ -119,9 +123,9 @@ void VTKOutput::writeVTKInterface(
           static_cast<int>(number_of_triangles));
   fprintf(file, "<Points>\n");
   fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
-  std::vector<std::size_t> offset(a_surface.size() + 1, 0);
-  for (std::size_t i = 0; i < a_surface.size(); ++i) {
-    const auto& vlist = a_surface[i].getVertexList();
+  std::vector<std::size_t> offset(triangulated_surface.size() + 1, 0);
+  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+    const auto& vlist = triangulated_surface[i].getVertexList();
     for (const auto& vertex : vlist) {
       fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(vertex[0]),
               static_cast<double>(vertex[1]), static_cast<double>(vertex[2]));
@@ -135,8 +139,8 @@ void VTKOutput::writeVTKInterface(
       file,
       "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
 
-  for (std::size_t i = 0; i < a_surface.size(); ++i) {
-    const auto& tlist = a_surface[i].getTriangleList();
+  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+    const auto& tlist = triangulated_surface[i].getTriangleList();
     const auto off = offset[i];
     for (const auto& triangle : tlist) {
       const auto& index_mapping = triangle.getIndexMapping();
@@ -160,7 +164,110 @@ void VTKOutput::writeVTKInterface(
   }
   fprintf(file, "</DataArray>\n");
 
-  fprintf(file, "</Cells>\n</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
+  fprintf(file, "</Cells>\n");
+
+  if (a_print_info) {
+    fprintf(file, "<PointData>\n");
+    fprintf(
+        file,
+        "<DataArray type=\"Float64\" Name=\"Normal\" NumberOfComponents=\"3\" "
+        "format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      const auto& vlist = triangulated_surface[i].getVertexList();
+      for (const auto& vertex : vlist) {
+        auto normal = a_surface[i].getNormalNonAligned(vertex);
+        fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(normal[0]),
+                static_cast<double>(normal[1]), static_cast<double>(normal[2]));
+      }
+    }
+    fprintf(file, "\n</DataArray>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"MeanCurvature\" "
+            "format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      const auto& vlist = triangulated_surface[i].getVertexList();
+      for (const auto& vertex : vlist) {
+        auto mean_curv = a_surface[i].getMeanCurvatureNonAligned(vertex);
+        fprintf(file, "%15.8E ", static_cast<double>(mean_curv));
+      }
+    }
+    fprintf(file, "\n</DataArray>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"GaussianCurvature\" "
+            "format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      const auto& vlist = triangulated_surface[i].getVertexList();
+      for (const auto& vertex : vlist) {
+        auto gaussian_curv =
+            a_surface[i].getGaussianCurvatureNonAligned(vertex);
+        fprintf(file, "%15.8E ", static_cast<double>(gaussian_curv));
+      }
+    }
+    fprintf(file, "\n</DataArray>\n");
+    fprintf(file, "</PointData>\n");
+
+    fprintf(file, "<CellData>\n");
+    fprintf(
+        file,
+        "<DataArray type=\"Float64\" Name=\"SurfaceArea\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      auto surface_area = a_surface[i].getSurfaceArea();
+      const auto& tlist = triangulated_surface[i].getTriangleList();
+      for (std::size_t j = 0; j < tlist.size(); ++j) {
+        fprintf(file, "%15.8E ", static_cast<double>(surface_area));
+      }
+    }
+    fprintf(file, "</DataArray>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"AvgNormal\" "
+            "NumberOfComponents=\"3\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      auto avg_normal = a_surface[i].getAverageNormal();
+      const auto& datum = a_surface[i].getParaboloid().getDatum();
+      const auto& ref_frame = a_surface[i].getParaboloid().getReferenceFrame();
+      const auto base_normal = avg_normal;
+      avg_normal = IRL::Normal(0.0, 0.0, 0.0);
+      for (std::size_t d = 0; d < 3; ++d) {
+        for (std::size_t n = 0; n < 3; ++n) {
+          avg_normal[n] += ref_frame[d][n] * base_normal[d];
+        }
+      }
+      const auto& tlist = triangulated_surface[i].getTriangleList();
+      for (std::size_t j = 0; j < tlist.size(); ++j) {
+        fprintf(file, "%15.8E %15.8E %15.8E ",
+                static_cast<double>(avg_normal[0]),
+                static_cast<double>(avg_normal[1]),
+                static_cast<double>(avg_normal[2]));
+      }
+    }
+    fprintf(file, "</DataArray>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"AvgMeanCurvature\" "
+            "format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      auto avg_mean_curv = a_surface[i].getAverageMeanCurvature();
+      const auto& tlist = triangulated_surface[i].getTriangleList();
+      for (std::size_t j = 0; j < tlist.size(); ++j) {
+        fprintf(file, "%15.8E ", static_cast<double>(avg_mean_curv));
+      }
+    }
+    fprintf(file, "</DataArray>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"AvgGaussianCurvature\" "
+            "format=\"ascii\">\n");
+    for (std::size_t i = 0; i < a_surface.size(); ++i) {
+      auto avg_gaussian_curv = a_surface[i].getAverageGaussianCurvature();
+      const auto& tlist = triangulated_surface[i].getTriangleList();
+      for (std::size_t j = 0; j < tlist.size(); ++j) {
+        fprintf(file, "%15.8E ", static_cast<double>(avg_gaussian_curv));
+      }
+    }
+    fprintf(file, "</DataArray>\n");
+
+    fprintf(file, "</CellData>\n");
+  }
+  fprintf(file, "</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
+  fclose(file);
 
   ++interface_files_written_m;
 }
