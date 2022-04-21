@@ -39,23 +39,21 @@ void KnownCircle::getReconstruction(
     const Data<double>& a_liquid_volume_fraction, const double a_dt,
     const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
     Data<IRL::Paraboloid>* a_interface) {
-  const BasicMesh& mesh = a_U->getMesh();
+  const BasicMesh& mesh = a_U.getMesh();
   static constexpr double circle_radius = 0.15;
   static IRL::Pt circle_center(0.0, 0.25, mesh.zm(mesh.kmin()));
   // First order Forward Euler advection of circle center
-  circle_center += a_dt * getVelocity(circle_center, a_U, a_V, a_W);
+  circle_center = back_project_vertex(circle_center, a_dt, a_U, a_V, a_W);
 
   // Loop over cells in domain. Skip if cell is not mixed phase.
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
         if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) {
-          (*a_liquid_gas_interface)(i, j, k) =
-              IRL::Paraboloid::createAlwaysBelow();
+          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
         } else if (a_liquid_volume_fraction(i, j, k) >
                    IRL::global_constants::VF_HIGH) {
-          (*a_liquid_gas_interface)(i, j, k) =
-              IRL::Paraboloid::createAlwaysAbove();
+          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
           continue;
         } else {
           // Add known reconstruction here for now
@@ -74,22 +72,21 @@ void KnownCircle::getReconstruction(
   }
   // Update border with simple ghost-cell fill and correct datum for
   // assumed periodic boundary
-  a_liquid_gas_interface->updateBorder();
-  correctInterfacePlaneBorders(a_liquid_gas_interface);
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
 }
 
-void correctInterfacePlaneBorders(
-    Data<IRL::Paraboloid>* a_liquid_gas_interface) {
-  const BasicMesh& mesh = (*a_liquid_gas_interface).getMesh();
+void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface) {
+  const BasicMesh& mesh = (*a_interface).getMesh();
   // Fix distances in reconstruction for periodic boundary
 
   // x- boundary
   for (int i = mesh.imino(); i < mesh.imin(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[0] -= mesh.lx();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }
@@ -98,9 +95,9 @@ void correctInterfacePlaneBorders(
   for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[0] += mesh.lx();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }
@@ -109,9 +106,9 @@ void correctInterfacePlaneBorders(
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[1] -= mesh.ly();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }
@@ -120,9 +117,9 @@ void correctInterfacePlaneBorders(
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[1] += mesh.ly();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }
@@ -131,9 +128,9 @@ void correctInterfacePlaneBorders(
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[2] -= mesh.lz();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }
@@ -142,9 +139,9 @@ void correctInterfacePlaneBorders(
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_liquid_gas_interface)(i, j, k).getDatum();
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
         datum[2] += mesh.lz();
-        (*a_liquid_gas_interface)(i, j, k).setDatum(datum);
+        (*a_interface)(i, j, k).setDatum(datum);
       }
     }
   }

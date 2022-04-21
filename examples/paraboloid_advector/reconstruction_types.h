@@ -26,10 +26,11 @@ void getReconstruction(
     const Data<double>& a_W, Data<IRL::Paraboloid>* a_interface);
 
 struct KnownCircle {
-  void getReconstruction(const Data<double>& a_liquid_volume_fraction,
-                         const double a_dt, const Data<double>& a_U,
-                         const Data<double>& a_V, const Data<double>& a_W,
-                         Data<IRL::Paraboloid>* a_interface);
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::Paraboloid>* a_interface);
 };
 
 void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface);

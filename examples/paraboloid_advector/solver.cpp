@@ -88,25 +88,6 @@ void writeDiagnosticsHeader(void) {
          "InterfaceCells");
 }
 
-void writeOutMesh(const BasicMesh& a_mesh) {
-  FILE* mesh_file;
-  std::string file_name = "viz/mesh";
-  mesh_file = fopen(file_name.c_str(), "w");
-  fprintf(mesh_file, "%10i \n", a_mesh.getNx());
-  for (int i = a_mesh.imin(); i <= a_mesh.imax() + 1; ++i) {
-    fprintf(mesh_file, "%15.8E \n", a_mesh.x(i));
-  }
-  fprintf(mesh_file, "%10i \n", a_mesh.getNy());
-  for (int j = a_mesh.jmin(); j <= a_mesh.jmax() + 1; ++j) {
-    fprintf(mesh_file, "%15.8E \n", a_mesh.y(j));
-  }
-  fprintf(mesh_file, "%10i \n", a_mesh.getNz());
-  for (int k = a_mesh.kmin(); k <= a_mesh.kmax() + 1; ++k) {
-    fprintf(mesh_file, "%15.8E \n", a_mesh.z(k));
-  }
-  fclose(mesh_file);
-}
-
 void writeOutDiagnostics(const int a_iteration, const double a_dt,
                          const double a_simulation_time,
                          const Data<double>& a_U, const Data<double>& a_V,
@@ -162,25 +143,6 @@ void writeOutDiagnostics(const int a_iteration, const double a_dt,
       liquid_volume_fraction_sum - initial_liquid_volume_fraction_sum,
       liquid_volume_sum - initial_liquid_volume_sum, a_VOF_duration.count(),
       a_recon_duration.count(), number_of_interface_cells);
-}
-
-void writeOutVisualization(const int a_iteration,
-                           const int a_visualization_frequency,
-                           const double a_simulation_time,
-                           const Data<double>& a_liquid_volume_fraction) {
-  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
-  FILE* viz_file;
-  std::string file_name =
-      "viz/vizfile_" + std::to_string(a_iteration / a_visualization_frequency);
-  viz_file = fopen(file_name.c_str(), "w");
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        fprintf(viz_file, "%15.8E \n", a_liquid_volume_fraction(i, j, k));
-      }
-    }
-  }
-  fclose(viz_file);
 }
 
 void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,

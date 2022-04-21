@@ -175,7 +175,9 @@ template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType>
 inline ReturnType getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid, enable_if_t<IsParaboloidReconstruction<Paraboloid>::value>>::
+    Paraboloid,
+    enable_if_t<IsParaboloidReconstruction<Paraboloid>::value &&
+                !is_separated_moments<ReturnType>::value>>::
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
                                    HalfEdgePolytopeType* a_complete_polytope,
                                    const Paraboloid& a_reconstruction) {
@@ -219,6 +221,8 @@ ReturnType getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(const EncompassingType& a_polytope,
                                    const ReconstructionType& a_reconstruction) {
@@ -233,6 +237,8 @@ ReturnType getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(const EncompassingType& a_polytope,
                                    const ReconstructionType& a_reconstruction) {
@@ -247,6 +253,8 @@ ReturnType getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(const EncompassingType& a_polytope,
                                    const ReconstructionType& a_reconstruction) {
@@ -263,6 +271,8 @@ inline ReturnType getVolumeMomentsProvidedStorage<
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 IsNotAParaboloidReconstruction<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
                                    HalfEdgePolytopeType* a_complete_polytope,
@@ -283,6 +293,8 @@ inline ReturnType getVolumeMomentsProvidedStorage<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>>::
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
                                    HalfEdgePolytopeType* a_complete_polytope,
@@ -343,6 +355,63 @@ inline ReturnType getVolumeMomentsProvidedStorage<
     getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
                                    HalfEdgePolytopeType* a_complete_polytope,
                                    const PlanarSeparator& a_reconstruction) {
+  typename ReturnType::moments_type encompassing_moments =
+      ReturnType::moments_type::calculateMoments(a_polytope);
+
+  auto volume_moments =
+      IRL::getVolumeMoments<typename ReturnType::moments_type, SimplexCutting>(
+          a_polytope, a_complete_polytope, a_reconstruction);
+  auto separated_volume_moments = ReturnType::fillWithComplementMoments(
+      volume_moments, encompassing_moments, a_reconstruction.isFlipped());
+  return separated_volume_moments;
+}
+
+template <class ReturnType, class CuttingMethod, class EncompassingType>
+inline ReturnType
+getVolumeMoments<ReturnType, CuttingMethod, EncompassingType, Paraboloid,
+                 enable_if_t<is_separated_moments<ReturnType>::value>>::
+    getVolumeMomentsImplementation(
+        const EncompassingType& a_encompassing_polyhedron,
+        const Paraboloid& a_separating_reconstruction) {
+  typename ReturnType::moments_type volume_moments =
+      IRL::getVolumeMoments<typename ReturnType::moments_type, CuttingMethod>(
+          a_encompassing_polyhedron, a_separating_reconstruction);
+  auto separated_volume_moments = ReturnType::fillWithComplementMoments(
+      volume_moments, a_encompassing_polyhedron,
+      a_separating_reconstruction.isFlipped());
+  return separated_volume_moments;
+}
+
+template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
+          class HalfEdgePolytopeType>
+inline ReturnType getVolumeMomentsProvidedStorage<
+    ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
+    Paraboloid,
+    enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
+                is_separated_moments<ReturnType>::value>>::
+    getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
+                                   HalfEdgePolytopeType* a_complete_polytope,
+                                   const Paraboloid& a_reconstruction) {
+  typename ReturnType::moments_type encompassing_moments =
+      ReturnType::moments_type::calculateMoments(a_polytope);
+  auto volume_moments =
+      IRL::getVolumeMoments<typename ReturnType::moments_type, HalfEdgeCutting>(
+          a_polytope, a_complete_polytope, a_reconstruction);
+  auto separated_volume_moments = ReturnType::fillWithComplementMoments(
+      volume_moments, encompassing_moments, a_reconstruction.isFlipped());
+  return separated_volume_moments;
+}
+
+template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
+          class HalfEdgePolytopeType>
+inline ReturnType getVolumeMomentsProvidedStorage<
+    ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
+    Paraboloid,
+    enable_if_t<isSimplexCutting<CuttingMethod>::value &&
+                is_separated_moments<ReturnType>::value>>::
+    getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
+                                   HalfEdgePolytopeType* a_complete_polytope,
+                                   const Paraboloid& a_reconstruction) {
   typename ReturnType::moments_type encompassing_moments =
       ReturnType::moments_type::calculateMoments(a_polytope);
 

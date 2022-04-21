@@ -23,8 +23,7 @@ int main(int argc, char* argv[]) {
         << "Simulation to run. Options: Deformation2D, CircleRotation2D\n";
     std::cout << "Advection method. Options: SemiLagrangian, "
                  "SemiLagrangianCorrected, FullLagrangian\n";
-    std::cout << "Reconstruction method. Options: ELVIRA2D, LVIRA2D, MOF2D, "
-                 "AdvectedNormals, R2P2D\n";
+    std::cout << "Reconstruction method. Options: KnownCircle\n";
     std::cout << "Time step size, dt (double)\n";
     std::cout << "Simulation duration(double)\n";
     std::cout
