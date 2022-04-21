@@ -61,6 +61,8 @@ struct getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
   getVolumeMomentsImplementation(
@@ -76,6 +78,8 @@ struct getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
   getVolumeMomentsImplementation(
@@ -91,6 +95,8 @@ struct getVolumeMoments<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
   getVolumeMomentsImplementation(
@@ -107,6 +113,15 @@ struct getVolumeMoments<ReturnType, CuttingMethod, EncompassingType,
   getVolumeMomentsImplementation(
       const EncompassingType& a_encompassing_polyhedron,
       const PlanarSeparator& a_separating_reconstruction);
+};
+
+template <class ReturnType, class CuttingMethod, class EncompassingType>
+struct getVolumeMoments<ReturnType, CuttingMethod, EncompassingType, Paraboloid,
+                        enable_if_t<is_separated_moments<ReturnType>::value>> {
+  __attribute__((pure)) __attribute__((hot)) inline static ReturnType
+  getVolumeMomentsImplementation(
+      const EncompassingType& a_encompassing_polyhedron,
+      const Paraboloid& a_separating_reconstruction);
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
@@ -130,7 +145,9 @@ template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid, enable_if_t<IsParaboloidReconstruction<Paraboloid>::value>> {
+    Paraboloid,
+    enable_if_t<IsParaboloidReconstruction<Paraboloid>::value &&
+                !is_separated_moments<ReturnType>::value>> {
   inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
@@ -159,6 +176,8 @@ struct getVolumeMomentsProvidedStorage<
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 IsNotAParaboloidReconstruction<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
@@ -181,6 +200,19 @@ struct getVolumeMomentsProvidedStorage<
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
+          class HalfEdgePolytopeType>
+struct getVolumeMomentsProvidedStorage<
+    ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
+    Paraboloid,
+    enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
+                is_separated_moments<ReturnType>::value>> {
+  __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const Paraboloid& a_reconstruction);
+};
+
+template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType, class ReconstructionType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
@@ -189,6 +221,8 @@ struct getVolumeMomentsProvidedStorage<
                 IsNotANullReconstruction<ReconstructionType>::value &&
                 IsNotAPlanarSeparatorPathGroup<ReconstructionType>::value &&
                 !(IsPlanarSeparator<ReconstructionType>::value &&
+                  is_separated_moments<ReturnType>::value) &&
+                !(IsParaboloidReconstruction<ReconstructionType>::value &&
                   is_separated_moments<ReturnType>::value)>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
@@ -208,6 +242,20 @@ struct getVolumeMomentsProvidedStorage<
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
       const PlanarSeparator& a_reconstruction);
+};
+
+// Cut polyhedron for SeparatedMoments<VolumeMoments>
+template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
+          class HalfEdgePolytopeType>
+struct getVolumeMomentsProvidedStorage<
+    ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
+    Paraboloid,
+    enable_if_t<isSimplexCutting<CuttingMethod>::value &&
+                is_separated_moments<ReturnType>::value>> {
+  __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const Paraboloid& a_reconstruction);
 };
 
 }  // namespace generic_cutting_details
