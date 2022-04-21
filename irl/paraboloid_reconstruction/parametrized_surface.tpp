@@ -875,6 +875,8 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
     in.numberofsegments = input_segments.size() / 2;
     in.segmentlist = input_segments.data();
+    std::vector<int> segmentmarkerlist(in.numberofsegments, 1);
+    in.segmentmarkerlist = segmentmarkerlist.data();
 
     in.numberofholes = input_holes.size() / 2;
     if (in.numberofholes > 0) {
@@ -882,7 +884,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     }
 
     char flags[50];
-    sprintf(flags, "pzqYYia%.15fQ", 0.5 * length_scale * length_scale);
+    sprintf(flags, "pzqYYia%.15feQ", 0.5 * length_scale * length_scale);
     triangulate_from_lib(flags, &in, &out, (struct triangulateio*)NULL);
 
     auto& vlist = returned_surface.getVertexList();
@@ -909,6 +911,13 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
       vertex += datum;
     }
 
+    for (UnsignedIndex_t i = 0; i < out.numberofedges; ++i) {
+      if (out.edgemarkerlist[i] == 1) {
+        returned_surface.addBoundaryEdge(out.edgelist[2 * i],
+                                         out.edgelist[2 * i + 1]);
+      }
+    }
+
     auto& tlist = returned_surface.getTriangleList();
     tlist.resize(out.numberoftriangles,
                  TriangulatedSurfaceOutput::TriangleStorage::value_type::
@@ -932,7 +941,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     free(in.trianglearealist);
     free(in.neighborlist);
     // free(in.segmentlist);
-    free(in.segmentmarkerlist);
+    // free(in.segmentmarkerlist);
     // free(in.holelist);
     free(in.regionlist);
     free(in.edgelist);

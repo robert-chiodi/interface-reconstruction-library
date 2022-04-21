@@ -25,6 +25,8 @@ class TriangulatedSurfaceOutput {
    public:
     using pt_type = Pt;
   };
+  class EdgeStorage
+      : public std::vector<std::pair<UnsignedIndex_t, UnsignedIndex_t>> {};
   using TriangleStorage = std::vector<ProxyTri<PointStorage>>;
 
   /// \brief Default constructor.
@@ -32,19 +34,25 @@ class TriangulatedSurfaceOutput {
   ~TriangulatedSurfaceOutput(void) = default;
 
   void addVertex(const Pt& a_vertex);
+  void addBoundaryEdge(const UnsignedIndex_t a, const UnsignedIndex_t b);
   void addTriangle(const UnsignedIndex_t a, const UnsignedIndex_t b,
                    const UnsignedIndex_t c);
 
   PointStorage& getVertexList(void);
   const PointStorage& getVertexList(void) const;
 
+  EdgeStorage& getBoundaryEdgeList(void);
+  const EdgeStorage& getBoundaryEdgeList(void) const;
+
   TriangleStorage& getTriangleList(void);
   const TriangleStorage& getTriangleList(void) const;
 
   PointStorage::size_type nVertices(void) const;
+  EdgeStorage::size_type nBoundaryEdges(void) const;
   TriangleStorage::size_type nTriangles(void) const;
 
   void clearVertices(void);
+  void clearBoundaryEdges(void);
   void clearTriangles(void);
   void clearAll(void);
   void write(const std::string& filename);
@@ -59,6 +67,7 @@ class TriangulatedSurfaceOutput {
  private:
   // Includes both edge and hole vertices
   PointStorage vertices_m;
+  EdgeStorage bdy_edges_m;
   TriangleStorage triangles_m;
 };
 
