@@ -1,17 +1,18 @@
 // This file is part of the Interface Reconstruction Library (IRL),
 // a library for interface reconstruction and computational geometry operations.
 //
-// Copyright (C) 2019 Robert Chiodi <robert.chiodi@gmail.com>
+// Copyright (C) 2022 Fabien Evrard <fa.evrard@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef IRL_MOMENTS_VOLUME_H_
-#define IRL_MOMENTS_VOLUME_H_
+#ifndef IRL_MOMENTS_VOLUME_WITH_GRADIENT_H_
+#define IRL_MOMENTS_VOLUME_WITH_GRADIENT_H_
 
 #include <ostream>
 
+#include "irl/moments/volume.h"
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
@@ -19,22 +20,19 @@ namespace IRL {
 /// \brief A volume class which is just a double
 /// with special properties. Allows more general
 /// writing of functions.
-class Volume {
+template <class GradientType>
+class VolumeWithGradient {
  public:
-  using gradient_type = Volume;
+  using gradient_type = GradientType;
 
   /// \brief Default constructor.
-  Volume(void);
+  VolumeWithGradient(void);
 
   /// \brief Constructor that initializes volume to value,
   /// want to allow implicit casting of double to Volume here.
-  constexpr Volume(const double a_value);
+  constexpr VolumeWithGradient(const double a_value);
 
-  static Volume fromScalarConstant(const double a_value);
-
-  /// \brief Obtain Volume from the supplied geometry.
-  template <class GeometryType>
-  static Volume calculateMoments(GeometryType* a_geometry);
+  static VolumeWithGradient fromScalarConstant(const double a_value);
 
   /// \brief Dummy function to allow general use along
   /// with VolumeMoments.
@@ -44,32 +42,43 @@ class Volume {
   /// with VolumeMoments.
   void normalizeByVolume(void);
 
+  /// \brief Obtain un-normalized VolumeMoments from the supplied geometry.
+  template <class GeometryType>
+  static VolumeWithGradient calculateMoments(GeometryType* a_geometry);
+
+  /// \brief Return value of stored volume.
+  Volume& volume(void);
+
+  /// \brief Return const reference to stored volume.
+  const Volume& volume(void) const;
+
   /// \brief Overload += operator to update volume.
-  Volume& operator+=(const Volume& a_rhs);
+  VolumeWithGradient& operator+=(const VolumeWithGradient& a_rhs);
 
   /// \brief Overload *= operator to multiply by constant double
-  Volume& operator*=(const double a_rhs);
+  VolumeWithGradient& operator*=(const double a_rhs);
 
   /// \brief Overload /= operator to divide by constant double
-  Volume& operator/=(const double a_rhs);
+  VolumeWithGradient& operator/=(const double a_rhs);
 
   /// \brief Allow implicit conversion to double.
   operator double() const;
 
+  void isVolumeWithGradient(void);
+
   /// \brief Overload assignment to assign constant value to moments.
-  Volume& operator=(const double a_value);
+  VolumeWithGradient& operator=(const double a_value);
 
   /// \brief Default destructor.
-  ~Volume(void) = default;
+  ~VolumeWithGradient(void) = default;
 
  private:
-  double volume_m;  ///< \brief Volume of something
+  Volume volume_m;          ///< \brief Volume of something
+  GradientType gradient_m;  ///< \brief Gradient of the volume, with respect to
+                            ///< some parameters
 };
-
-std::ostream& operator<<(std::ostream& out, const Volume& a_volume);
-
 }  // namespace IRL
 
-#include "irl/moments/volume.tpp"
+#include "irl/moments/volume_with_gradient.tpp"
 
-#endif  // IRL_MOMENTS_VOLUME_H_ */
+#endif  // IRL_MOMENTS_VOLUME_WITH_GRADIENT_H_ */

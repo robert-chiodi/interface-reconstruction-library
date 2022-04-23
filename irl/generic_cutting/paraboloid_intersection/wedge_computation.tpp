@@ -27,15 +27,17 @@
 
 namespace IRL {
 
-template <class ReturnType>
+template <class ReturnType, class PtType>
 ReturnType calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                       const Pt& a_pt_0, const Pt& a_pt_1,
-                                       const Pt& a_pt_2);
+                                       const PtType& a_pt_0,
+                                       const PtType& a_pt_1,
+                                       const PtType& a_pt_2);
 
 template <>
-inline Volume calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                          const Pt& a_pt_0, const Pt& a_pt_1,
-                                          const Pt& a_pt_2) {
+inline enable_if_t<!has_embedded_gradient<Volume>::value, Volume>
+calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
+                            const Pt& a_pt_0, const Pt& a_pt_1,
+                            const Pt& a_pt_2) {
   return (-a_paraboloid.a() * (a_pt_0[0] + a_pt_1[0]) *
               (a_pt_1[0] + a_pt_2[0]) +
           -a_paraboloid.b() * (a_pt_0[1] + a_pt_1[1]) *
@@ -47,10 +49,22 @@ inline Volume calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
           (a_pt_0[1] - a_pt_1[1]) * a_pt_2[0]);
 }
 
+template <class ReturnType>
+inline enable_if_t<has_embedded_gradient<ReturnType>::value, ReturnType>
+calculateTriangleCorrection(
+    const AlignedParaboloid& a_paraboloid,
+    const PtWithGradient<typename ReturnType::gradient_type>& a_pt_0,
+    const PtWithGradient<typename ReturnType::gradient_type>& a_pt_1,
+    const PtWithGradient<typename ReturnType::gradient_type>& a_pt_2) {
+  return ReturnType::fromScalarConstant(0.0);
+}
+
 template <>
-inline VolumeMoments calculateTriangleCorrection(
-    const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0, const Pt& a_pt_1,
-    const Pt& a_pt_2) {
+inline enable_if_t<!has_embedded_gradient<VolumeMoments>::value,
+                          VolumeMoments>
+calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
+                            const Pt& a_pt_0, const Pt& a_pt_1,
+                            const Pt& a_pt_2) {
   auto moments = VolumeMoments::fromScalarConstant(0.0);
   const double triangle_area = 0.5 * ((a_pt_1[1] - a_pt_2[1]) * a_pt_0[0] +
                                       (a_pt_2[1] - a_pt_0[1]) * a_pt_1[0] +
@@ -383,8 +397,9 @@ ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
                                  const RationalBezierArc& a_arc);
 
 template <>
-inline Volume computeV3Contribution<Volume>(
-    const AlignedParaboloid& a_paraboloid, const RationalBezierArc& a_arc) {
+inline enable_if_t<!has_embedded_gradient<Volume>::value, Volume>
+computeV3Contribution<Volume>(const AlignedParaboloid& a_paraboloid,
+                              const RationalBezierArc& a_arc) {
   const auto& pt_0 = a_arc.start_point();
   const auto& cp = a_arc.control_point();
   const auto& pt_1 = a_arc.end_point();
@@ -411,9 +426,43 @@ inline Volume computeV3Contribution<Volume>(
           coeffs[2] * signedDistance(cp, a_paraboloid));
 }
 
+template <class ReturnType>
+inline enable_if_t<has_embedded_gradient<ReturnType>::value, ReturnType>
+computeV3Contribution(const AlignedParaboloid& a_paraboloid,
+                      const RationalBezierArc& a_arc) {
+  auto volume_with_gradient = ReturnType::fromScalarConstant(0.0);
+  const auto& pt_0 = a_arc.start_point();
+  const auto& cp = a_arc.control_point();
+  const auto& pt_1 = a_arc.end_point();
+  const auto& weight = a_arc.weight();
+  const double area_proj_triangle =
+      0.5 * (pt_0[0] * (pt_1[1] - cp[1]) + pt_1[0] * (cp[1] - pt_0[1]) +
+             cp[0] * (pt_0[1] - pt_1[1]));
+  assert(weight >= 0.0);
+  std::array<double, 3> coeffs;
+  if (weight < 0.35)  // We use the exact expressions
+    coeffs = coeffsV3Exact(weight);
+  else if (weight < 1.7)  // We use the 40th order Taylor series (w -> 1)
+    coeffs = coeffsV3SeriesOne(weight);
+  else if (weight < 80.0)  // We use the exact expressions
+    coeffs = coeffsV3Exact(weight);
+  else if (weight < 1.0e9)  // We use the series expansion (w -> infty)
+    coeffs = coeffsV3SeriesInfinity(weight);
+  else  // This is within DBL_EPSILON of the actual value
+    coeffs = std::array<double, 3>({1.0 / 6.0, 2.0 / 3.0, 0.0});
+  volume_with_gradient.volume() =
+      area_proj_triangle *
+      (coeffs[0] * signedDistance(0.5 * (pt_0 + pt_1), a_paraboloid) +
+       coeffs[1] *
+           signedDistance(0.25 * (pt_0 + pt_1) + 0.5 * cp, a_paraboloid) +
+       coeffs[2] * signedDistance(cp, a_paraboloid));
+  return volume_with_gradient;
+}
+
 template <>
-inline VolumeMoments computeV3Contribution<VolumeMoments>(
-    const AlignedParaboloid& a_paraboloid, const RationalBezierArc& a_arc) {
+inline enable_if_t<!has_embedded_gradient<VolumeMoments>::value, VolumeMoments>
+computeV3Contribution<VolumeMoments>(const AlignedParaboloid& a_paraboloid,
+                                     const RationalBezierArc& a_arc) {
   auto moments = VolumeMoments::fromScalarConstant(0.0);
   const auto& pt_0 = a_arc.start_point();
   const auto& cp = a_arc.control_point();

@@ -7,7 +7,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+#include "irl/geometry/general/new_pt_calculation_functors.h"
+#include "irl/geometry/general/pt_with_data.h"
 #include "irl/geometry/general/rotations.h"
+#include "irl/moments/volume_with_gradient.h"
+#include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
 
 #include <cmath>
 #include <random>
@@ -2703,6 +2707,93 @@ TEST(ParaboloidIntersection, SortTimeComp) {
   // end = std::chrono::system_clock::now();
   // runtime = end - start;
   // printf("Total SORTED run time: %20f \n\n", runtime.count());
+}
+
+TEST(ParaboloidIntersection, Gradient) {
+  using MyGradientType = ParaboloidGradientLocalZ;
+  using MyPtType = PtWithGradient<MyGradientType>;
+  auto data_unit_cell =
+      StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cell);
+
+  int Ntests = 1;
+  double max_error = 0.0, rms_error = 0.0;
+  // Rotate cube
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
+  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
+                                                         0.5 * M_PI);
+  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+
+  std::vector<double> angles_vec(2 * Ntests);
+  std::vector<double> translations_vec(3 * Ntests);
+  std::vector<double> paraboloid_coefs_vec(2 * Ntests);
+
+  for (int i = 0; i < Ntests; ++i) {
+    angles_vec[2 * i] = random_rotation(eng);
+    angles_vec[2 * i + 1] = random_rotation(eng);
+
+    translations_vec[3 * i] = random_translation(eng);
+    translations_vec[3 * i + 1] = random_translation(eng);
+    translations_vec[3 * i + 2] = random_translation(eng);
+
+    paraboloid_coefs_vec[2 * i] = random_coeffs_a(eng);
+    paraboloid_coefs_vec[2 * i + 1] = random_coeffs_b(eng);
+  }
+
+  auto start = std::chrono::system_clock::now();
+  double total_volume = 0.0;
+  for (int i = 0; i < Ntests; i++) {
+    ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                         Normal(0.0, 0.0, 1.0));
+    std::array<double, 3> angles{{angles_vec[2 * i], angles_vec[2 * i + 1]}};
+    Pt translations(translations_vec[3 * i], translations_vec[3 * i + 1],
+                    translations_vec[3 * i + 2]);
+
+    UnitQuaternion x_rotation(angles[0], frame[0]);
+    UnitQuaternion y_rotation(angles[1], frame[1]);
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    auto total_rotation = x_rotation * y_rotation * z_rotation;
+    total_rotation.normalize();
+    frame = total_rotation * frame;
+
+    Paraboloid paraboloid(-translations, frame, paraboloid_coefs_vec[2 * i],
+                          paraboloid_coefs_vec[2 * i + 1]);
+
+    HalfEdgePolyhedronParaboloid<MyPtType> half_edge;
+    data_unit_cell.setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    for (auto& face : seg_half_edge) {
+      auto normal = Normal(0.0, 0.0, 0.0);
+      const auto starting_half_edge = face->getStartingHalfEdge();
+      auto current_half_edge = starting_half_edge;
+      auto next_half_edge = starting_half_edge->getNextHalfEdge();
+      const auto& start_location =
+          starting_half_edge->getPreviousVertex()->getLocation().getPt();
+      do {
+        normal +=
+            crossProduct(current_half_edge->getVertex()->getLocation().getPt() -
+                             start_location,
+                         next_half_edge->getVertex()->getLocation().getPt() -
+                             start_location);
+        current_half_edge = next_half_edge;
+        next_half_edge = next_half_edge->getNextHalfEdge();
+      } while (next_half_edge != starting_half_edge);
+      normal.normalize();
+      face->setPlane(Plane(normal, normal * start_location));
+    }
+
+    // auto volume_with_gradients =
+    //     intersectPolyhedronWithParaboloid<VolumeWithGradient<MyGradientType>>(
+    //         &seg_half_edge, &half_edge, paraboloid.getAlignedParaboloid());
+    // total_volume += volume_with_gradients.volume();
+  }
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> runtime = end - start;
+  printf("Total run time: %20f \n\n", runtime.count());
 }
 
 }  // namespace

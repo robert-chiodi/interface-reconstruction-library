@@ -12,6 +12,8 @@
 
 #include "irl/data_structures/small_vector.h"
 #include "irl/geometry/general/geometry_type_traits.h"
+#include "irl/helpers/SFINAE_boiler_plate.h"
+#include "irl/moments/volume_with_gradient.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/paraboloid_reconstruction/ellipse.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
@@ -68,10 +70,6 @@ ReturnType computeV3ContributionWithSplit(const AlignedParaboloid& a_paraboloid,
                                           const Normal& a_tangent_0,
                                           const Normal& a_tangent_1,
                                           SurfaceOutputType* a_surface);
-
-template <class ReturnType>
-ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
-                                 const RationalBezierArc& a_arc);
 
 static double v3Series[41][3] = {
     {2.09523809523809528832e-01, 3.80952380952380931234e-01,

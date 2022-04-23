@@ -112,6 +112,50 @@ PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>::operator/=(
   return (*this);
 }
 
+template <class GradientDataType>
+PtWithGradient<GradientDataType>::PtWithGradient(const Pt& a_pt)
+    : PtWithDataCommon<PtWithGradient<GradientDataType>, GradientDataType>(
+          a_pt) {
+  this->getData() = 0.0;
+}
+
+template <class GradientDataType>
+PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
+    const Pt& a_pt) {
+  this->getPt() = a_pt;
+  this->getData() = 0.0;
+  return (*this);
+}
+
+template <class GradientDataType>
+PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
+    const PtWithGradient<GradientDataType>& a_pt) {
+  this->getPt() = a_pt.getPt();
+  this->getData() = a_pt.getData();
+  return (*this);
+}
+
+template <class GradientDataType>
+PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator+=(
+    const PtWithGradient<GradientDataType>& a_other_pt) {
+  this->getPt() += a_other_pt.getPt();
+  const auto& other_data = a_other_pt.getData();
+  for (UnsignedIndex_t n = 0; n < other_data.size(); ++n) {
+    this->getData()[n] += other_data[n];
+  }
+  return (*this);
+}
+
+template <class GradientDataType>
+PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator/=(
+    const double a_double) {
+  this->getPt() /= a_double;
+  for (auto& element : this->getData()) {
+    element /= a_double;
+  }
+  return (*this);
+}
+
 template <class FunctorType, UnsignedIndex_t kArrayLength>
 std::ostream& operator<<(
     std::ostream& out,
@@ -129,4 +173,4 @@ std::ostream& operator<<(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_TPP_

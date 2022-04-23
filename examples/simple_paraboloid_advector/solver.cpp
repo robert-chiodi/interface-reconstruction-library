@@ -31,12 +31,23 @@ IRL::Paraboloid fromCircle(const IRL::Pt& a_center, const double a_radius,
   const double curvature = 1.0 / a_radius;
   IRL::ReferenceFrame frame;
   IRL::UnitQuaternion quat(M_PI * 0.5, IRL::Normal(0.0, 0.0, 1.0));
-  frame[0] = quat * a_normal;
-  frame[1] = IRL::Normal(0.0, 0.0, 1.0);
+  int largest_dir = 0;
+  if (std::fabs(a_normal[largest_dir]) < std::fabs(a_normal[1]))
+    largest_dir = 1;
+  if (std::fabs(a_normal[largest_dir]) < std::fabs(a_normal[2]))
+    largest_dir = 2;
+  if (largest_dir == 0)
+    frame[0] = crossProduct(a_normal, IRL::Normal(0.0, 1.0, 0.0));
+  else if (largest_dir == 0)
+    frame[0] = crossProduct(a_normal, IRL::Normal(0.0, 0.0, 1.0));
+  else
+    frame[0] = crossProduct(a_normal, IRL::Normal(1.0, 0.0, 0.0));
+  frame[0].normalize();
+  frame[1] = crossProduct(a_normal, frame[0]);
   frame[2] = a_normal;
 
   return IRL::Paraboloid(a_center + a_radius * a_normal, frame, 0.5 * curvature,
-                         0.0);
+                         0.5 * curvature);
 }
 
 }  // namespace details
@@ -109,9 +120,9 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
 BasicMesh initializeMesh(const int a_number_of_cells) {
   constexpr const int a_number_of_ghost_cells = 2;
   const double dx = 1.0 / static_cast<double>(a_number_of_cells);
-  IRL::Pt lower_domain(-0.5, -0.5, -0.5 * dx);
-  IRL::Pt upper_domain(0.5, 0.5, 0.5 * dx);
-  BasicMesh mesh(a_number_of_cells, a_number_of_cells, 1,
+  IRL::Pt lower_domain(-0.5, -0.5, -0.5);
+  IRL::Pt upper_domain(0.5, 0.5, 0.5);
+  BasicMesh mesh(a_number_of_cells, a_number_of_cells, a_number_of_cells,
                  a_number_of_ghost_cells);
   mesh.setCellBoundaries(lower_domain, upper_domain);
   return mesh;
@@ -119,7 +130,8 @@ BasicMesh initializeMesh(const int a_number_of_cells) {
 
 Data<IRL::Paraboloid> initializeInterface(const BasicMesh& a_mesh) {
   constexpr double circle_radius = 0.1;
-  constexpr IRL::Pt circle_center(0.0, 0.25, 0.0);
+  constexpr IRL::Pt circle_center(0.0, 0.0, 0.0);
+  // constexpr IRL::Pt circle_center(0.023, 0.07453, 0.0845325);
 
   Data<IRL::Paraboloid> liquid_gas_interface(a_mesh);
   for (int i = a_mesh.imino(); i <= a_mesh.imaxo(); ++i) {
@@ -130,11 +142,11 @@ Data<IRL::Paraboloid> initializeInterface(const BasicMesh& a_mesh) {
                                     a_mesh.z(k + 1));
         const IRL::Pt mid_pt = 0.5 * (lower_cell_pt + upper_cell_pt);
         IRL::Pt disp = mid_pt - circle_center;
-        disp[2] = 0.0;
+        // disp[2] = 0.0;
         const auto mag = magnitude(disp);
-        if (mag < circle_radius - 2.0 * a_mesh.dx()) {
+        if (mag < circle_radius - 4.0 * a_mesh.dx()) {
           liquid_gas_interface(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
-        } else if (mag > circle_radius + 2.0 * a_mesh.dx()) {
+        } else if (mag > circle_radius + 4.0 * a_mesh.dx()) {
           liquid_gas_interface(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
         } else {
           auto circle_normal = IRL::Normal::fromPt(disp);

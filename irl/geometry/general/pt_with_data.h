@@ -49,6 +49,22 @@ class PtWithDataCommon {
   AttachedDataType data_m;
 };
 
+template <class GradientDataType>
+class PtWithGradient : public PtWithDataCommon<PtWithGradient<GradientDataType>,
+                                               GradientDataType> {
+ public:
+  PtWithGradient(void) = default;
+  using PtWithDataCommon<PtWithGradient<GradientDataType>,
+                         GradientDataType>::PtWithDataCommon;
+  explicit PtWithGradient(const Pt& a_pt);
+  PtWithGradient& operator=(const Pt& a_pt);
+  PtWithGradient& operator=(const PtWithGradient& a_pt);
+  PtWithGradient& operator+=(const PtWithGradient& a_other_pt);
+  PtWithGradient& operator/=(const double a_double);
+
+  ~PtWithGradient(void) = default;
+};
+
 template <class FunctorType, UnsignedIndex_t kArrayLength>
 class PtWithDoublesStatelessFunctor
     : public PtWithDataCommon<
@@ -90,4 +106,4 @@ std::ostream& operator<<(
 
 #include "irl/geometry/general/pt_with_data.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_H_
+#endif  // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_H_

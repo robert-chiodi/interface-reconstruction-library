@@ -14,8 +14,11 @@
 #include "irl/data_structures/stack_vector.h"
 #include "irl/generic_cutting/paraboloid_intersection/surface_output.h"
 #include "irl/geometry/general/geometry_type_traits.h"
+#include "irl/helpers/SFINAE_boiler_plate.h"
+#include "irl/moments/volume_with_gradient.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/paraboloid_reconstruction/ellipse.h"
+#include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 
@@ -78,16 +81,16 @@ bool needsWedgeCorrection(const AlignedParaboloid& a_paraboloid,
                           HalfEdgeType* a_start, HalfEdgeType* a_end);
 
 template <class ReturnType, class HalfEdgeType,
-          class SurfaceOutputType = NoSurfaceOutput>
+          class SurfaceOutputType = NoSurfaceOutput, class PtType>
 ReturnType computeNewEdgeSegmentContribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const Pt& a_ref_pt,
+    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_ref_pt,
     const HalfEdgeType a_entry_half_edge, const HalfEdgeType a_exit_half_edge,
     const bool skip_first = false, SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class HalfEdgeType,
-          class SurfaceOutputType = NoSurfaceOutput>
+          class SurfaceOutputType = NoSurfaceOutput, class PtType>
 ReturnType computeContribution(const AlignedParaboloid& a_aligned_paraboloid,
-                               const Pt& a_ref_pt,
+                               const PtType& a_ref_pt,
                                const HalfEdgeType a_entry_half_edge,
                                const HalfEdgeType a_exit_half_edge,
                                const bool skip_first = false,
@@ -153,6 +156,16 @@ formParaboloidIntersectionBasesHyperbolic(
     SegmentedHalfEdgePolyhedronType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope,
     const AlignedParaboloid& a_aligned_paraboloid);
+
+template <class C>
+struct has_embedded_gradient : std::false_type {};
+
+template <class C>
+struct has_embedded_gradient<const C> : has_embedded_gradient<C> {};
+
+template <class GradientType>
+struct has_embedded_gradient<VolumeWithGradient<GradientType>>
+    : std::true_type {};
 
 }  // namespace IRL
 
