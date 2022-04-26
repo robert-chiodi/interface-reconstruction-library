@@ -57,16 +57,16 @@ inline void addEllipseToSurfaceOutput(
       end_tangent *= -1.0;
     }
     a_surface->addArc(RationalBezierArc(points[i], start_tangent, points[i + 1],
-                                        end_tangent, a_face_plane,
+                                        end_tangent, a_face_plane.normal(),
                                         a_aligned_paraboloid));
     start_tangent = -end_tangent;
   }
   if (dotProduct(tangent_0, points[0] - points[nSplit - 1]) > 0.0) {
     tangent_0 *= -1.0;
   }
-  a_surface->addArc(RationalBezierArc(points[nSplit - 1], start_tangent,
-                                      points[0], tangent_0, a_face_plane,
-                                      a_aligned_paraboloid));
+  a_surface->addArc(
+      RationalBezierArc(points[nSplit - 1], start_tangent, points[0], tangent_0,
+                        a_face_plane.normal(), a_aligned_paraboloid));
 }
 }  // namespace IRL
 

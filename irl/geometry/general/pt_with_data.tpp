@@ -113,17 +113,38 @@ PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>::operator/=(
 }
 
 template <class GradientDataType>
+PtWithGradient<GradientDataType>::PtWithGradient(void) {
+  this->getPt() = Pt::fromScalarConstant(0.0);
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] = GradientDataType(0.0);
+  }
+}
+template <class GradientDataType>
 PtWithGradient<GradientDataType>::PtWithGradient(const Pt& a_pt)
-    : PtWithDataCommon<PtWithGradient<GradientDataType>, GradientDataType>(
-          a_pt) {
-  this->getData() = 0.0;
+    : PtWithDataCommon<PtWithGradient<GradientDataType>,
+                       std::array<GradientDataType, 3>>(a_pt) {
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] = GradientDataType(0.0);
+  }
+}
+
+template <class GradientDataType>
+PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator-(
+    void) {
+  this->getPt() = -this->getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] = -this->getData()[d];
+  }
+  return (*this);
 }
 
 template <class GradientDataType>
 PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
     const Pt& a_pt) {
   this->getPt() = a_pt;
-  this->getData() = 0.0;
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] = GradientDataType(0.0);
+  }
   return (*this);
 }
 
@@ -131,7 +152,9 @@ template <class GradientDataType>
 PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
     const PtWithGradient<GradientDataType>& a_pt) {
   this->getPt() = a_pt.getPt();
-  this->getData() = a_pt.getData();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] = a_pt.getData()[d];
+  }
   return (*this);
 }
 
@@ -140,20 +163,78 @@ PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator+=(
     const PtWithGradient<GradientDataType>& a_other_pt) {
   this->getPt() += a_other_pt.getPt();
   const auto& other_data = a_other_pt.getData();
-  for (UnsignedIndex_t n = 0; n < other_data.size(); ++n) {
-    this->getData()[n] += other_data[n];
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    this->getData()[d] += other_data[d];
   }
   return (*this);
 }
 
 template <class GradientDataType>
-PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator/=(
-    const double a_double) {
-  this->getPt() /= a_double;
-  for (auto& element : this->getData()) {
-    element /= a_double;
+const PtWithGradient<GradientDataType> operator*(
+    const double a_rhs, const PtWithGradient<GradientDataType>& a_pt) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = a_rhs * a_pt.getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = a_rhs * a_pt.getData()[d];
   }
-  return (*this);
+  return pt_with_grad;
+}
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator*(
+    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = a_rhs * a_pt.getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = a_rhs * a_pt.getData()[d];
+  }
+  return pt_with_grad;
+}
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator/(
+    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = a_pt.getPt() / a_rhs;
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = a_pt.getData()[d] / a_rhs;
+  }
+  return pt_with_grad;
+}
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator+(
+    const PtWithGradient<GradientDataType>& a_pt1,
+    const PtWithGradient<GradientDataType>& a_pt2) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = a_pt1.getPt() + a_pt2.getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = a_pt1.getData()[d] + a_pt2.getData()[d];
+  }
+  return pt_with_grad;
+}
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator-(
+    const PtWithGradient<GradientDataType>& a_pt1,
+    const PtWithGradient<GradientDataType>& a_pt2) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = a_pt1.getPt() - a_pt2.getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = a_pt1.getData()[d] - a_pt2.getData()[d];
+  }
+  return pt_with_grad;
+}
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator-(
+    const PtWithGradient<GradientDataType>& a_pt) {
+  auto pt_with_grad = PtWithGradient<GradientDataType>();
+  pt_with_grad.getPt() = -a_pt.getPt();
+  for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    pt_with_grad.getData()[d] = -a_pt.getData()[d];
+  }
+  return pt_with_grad;
 }
 
 template <class FunctorType, UnsignedIndex_t kArrayLength>

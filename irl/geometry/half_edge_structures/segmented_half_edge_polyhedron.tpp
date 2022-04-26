@@ -16,23 +16,24 @@ namespace IRL {
 
 namespace segmented_half_edge_polyhedron_detail {
 template <class GeometryType, class CalculationFunctor>
-auto calculateMoments(GeometryType *a_geometry,
+auto calculateMoments(GeometryType* a_geometry,
                       CalculationFunctor a_moment_accumulator) ->
     typename CalculationFunctor::ReturnType;
 
-template <class VertexType> class TetPtReferenceWrapper {
-public:
+template <class VertexType>
+class TetPtReferenceWrapper {
+ public:
   using pt_type = VertexType;
 
   TetPtReferenceWrapper(void) = default;
 
-  const VertexType &operator[](const UnsignedIndex_t a_index) const {
+  const VertexType& operator[](const UnsignedIndex_t a_index) const {
     assert(a_index < 4);
     assert(tet_m[a_index] != nullptr);
     return *tet_m[a_index];
   }
 
-  void setPt(const UnsignedIndex_t a_index, const VertexType *a_pt) {
+  void setPt(const UnsignedIndex_t a_index, const VertexType* a_pt) {
     assert(a_index < 4);
     assert(a_pt != nullptr);
     tet_m[a_index] = a_pt;
@@ -40,12 +41,12 @@ public:
 
   ~TetPtReferenceWrapper(void) = default;
 
-private:
-  std::array<const VertexType *, 4> tet_m;
+ private:
+  std::array<const VertexType*, 4> tet_m;
 };
 
 template <class GeometryType, class CalculationFunctor>
-auto calculateMoments(GeometryType *a_geometry,
+auto calculateMoments(GeometryType* a_geometry,
                       CalculationFunctor a_moment_accumulator) ->
     typename CalculationFunctor::ReturnType {
   if (a_geometry->getNumberOfFaces() == 0) {
@@ -54,13 +55,13 @@ auto calculateMoments(GeometryType *a_geometry,
 
   TetPtReferenceWrapper<typename GeometryType::pt_type> facet_and_pt;
   // Mark all faces as unvisited
-  for (auto &face : (*a_geometry)) {
+  for (auto& face : (*a_geometry)) {
     face->markAsNotVisited();
   }
 
   // Now use common point (arbitrarily) as the first vertex. Cycle around and
   // mark all faces visited.
-  auto &datum_vertex = *(a_geometry->getVertex(0));
+  auto& datum_vertex = *(a_geometry->getVertex(0));
   facet_and_pt.setPt(3, &datum_vertex.getLocation());
   auto current_half_edge = datum_vertex.getHalfEdge();
   do {
@@ -71,7 +72,7 @@ auto calculateMoments(GeometryType *a_geometry,
 
   // Now loop over faces that haven't been visited, triangulate, form tets,
   // and sum up moments.
-  for (const auto &face : (*a_geometry)) {
+  for (const auto& face : (*a_geometry)) {
     if (face->hasNotBeenVisited()) {
       facet_and_pt.setPt(
           0, &face->getStartingHalfEdge()->getVertex()->getLocation());
@@ -90,7 +91,7 @@ auto calculateMoments(GeometryType *a_geometry,
   return a_moment_accumulator.getMoments();
 }
 
-} // namespace segmented_half_edge_polyhedron_detail
+}  // namespace segmented_half_edge_polyhedron_detail
 
 template <class FaceType, class VertexType, UnsignedIndex_t kMaxFaces,
           UnsignedIndex_t kMaxVertices>
@@ -118,9 +119,8 @@ Pt SegmentedHalfEdgePolyhedronCommon<FaceType, VertexType, kMaxFaces,
 
 template <class FaceType, class VertexType, UnsignedIndex_t kMaxFaces,
           UnsignedIndex_t kMaxVertices>
-VolumeMoments
-SegmentedHalfEdgePolyhedronCommon<FaceType, VertexType, kMaxFaces,
-                                  kMaxVertices>::calculateMoments(void) {
+VolumeMoments SegmentedHalfEdgePolyhedronCommon<
+    FaceType, VertexType, kMaxFaces, kMaxVertices>::calculateMoments(void) {
   return segmented_half_edge_polyhedron_detail::calculateMoments(
       this, VolumeMoments3D_Functor());
 }
@@ -130,11 +130,11 @@ template <class FaceType, class VertexType, UnsignedIndex_t kMaxFaces,
 bool SegmentedHalfEdgePolyhedronCommon<
     FaceType, VertexType, kMaxFaces,
     kMaxVertices>::checkValidHalfEdgeStructure(void) {
-  std::unordered_map<FaceType *, bool> face_found_through_opposite;
-  for (auto &face : (*this)) {
+  std::unordered_map<FaceType*, bool> face_found_through_opposite;
+  for (auto& face : (*this)) {
     face_found_through_opposite[face] = false;
   }
-  for (auto &face : (*this)) {
+  for (auto& face : (*this)) {
     bool valid_face = face->checkValidFace();
     if (!valid_face) {
       return false;
@@ -156,7 +156,7 @@ bool SegmentedHalfEdgePolyhedronCommon<
     return false;
   }
 
-  for (const auto &element : face_found_through_opposite) {
+  for (const auto& element : face_found_through_opposite) {
     if (!element.second) {
       std::cout << "Face exists in polyhedron that was not accessed through "
                    "an opposite of a half-edge"
@@ -172,8 +172,8 @@ template <class FaceType, class VertexType, UnsignedIndex_t kMaxFaces,
 void SegmentedHalfEdgePolyhedronCommon<FaceType, VertexType, kMaxFaces,
                                        kMaxVertices>::
     markFacesTouchedByOpposite(
-        FaceType *a_face_to_touch_from,
-        std::unordered_map<FaceType *, bool> *a_map_to_fill) {
+        FaceType* a_face_to_touch_from,
+        std::unordered_map<FaceType*, bool>* a_map_to_fill) {
   auto current_half_edge = a_face_to_touch_from->getStartingHalfEdge();
   do {
     (*a_map_to_fill)[current_half_edge->getOppositeHalfEdge()->getFace()] =
@@ -202,7 +202,7 @@ bool SegmentedHalfEdgePolyhedronCommon<
     kMaxVertices>::checkVerticesOnlyHaveHalfEdgesWithCorrectFaces(void) const {
   using HalfEdgeType = typename FaceType::half_edge_type;
   for (UnsignedIndex_t v = 0; v < this->getNumberOfVertices(); ++v) {
-    const HalfEdgeType *current_half_edge = this->getVertex(v)->getHalfEdge();
+    const HalfEdgeType* current_half_edge = this->getVertex(v)->getHalfEdge();
     do {
       const auto current_half_edge_face = current_half_edge->getFace();
       auto iterator_of_face_in_polyhedron =
@@ -211,17 +211,18 @@ bool SegmentedHalfEdgePolyhedronCommon<
         std::cout << "Face not belonging: " << current_half_edge_face
                   << std::endl;
         std::cout << "Faces in polyhedron: " << std::endl;
-        for (const auto &face : (*this)) {
+        for (const auto& face : (*this)) {
           std::cout << face << std::endl;
         }
-        std::cout << "Vertex being cycle " << this->getVertex(v)->getLocation()
-                  << std::endl;
+        std::cout << "Vertex being cycle "
+                  << this->getVertex(v)->getLocation().getPt() << std::endl;
         std::cout << "Half edges on this vertex come from: " << std::endl;
-        const HalfEdgeType *error_half_edge_cycling = current_half_edge;
+        const HalfEdgeType* error_half_edge_cycling = current_half_edge;
         do {
-          std::cout
-              << error_half_edge_cycling->getPreviousVertex()->getLocation()
-              << std::endl;
+          std::cout << error_half_edge_cycling->getPreviousVertex()
+                           ->getLocation()
+                           .getPt()
+                    << std::endl;
           error_half_edge_cycling =
               error_half_edge_cycling->getOppositeHalfEdge()
                   ->getPreviousHalfEdge();
@@ -247,6 +248,6 @@ SegmentedHalfEdgePolyhedronSpecificPt<
       this, VolumeMomentsAndDoubles3D_Functor<kArrayLength>());
 }
 
-} // namespace IRL
+}  // namespace IRL
 
-#endif // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_SEGMENTED_HALF_EDGE_POLYHEDRON_TPP_
+#endif  // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_SEGMENTED_HALF_EDGE_POLYHEDRON_TPP_

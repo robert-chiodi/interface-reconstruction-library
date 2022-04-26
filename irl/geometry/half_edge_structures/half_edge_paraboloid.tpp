@@ -169,6 +169,11 @@ VertexParaboloid<PtType>::getHalfEdge(void) const {
 }
 
 template <class PtType>
+inline PtType& VertexParaboloid<PtType>::getLocation(void) {
+  return vertex_location_m;
+}
+
+template <class PtType>
 inline const PtType& VertexParaboloid<PtType>::getLocation(void) const {
   return vertex_location_m;
 }

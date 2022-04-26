@@ -105,6 +105,7 @@ class VertexParaboloid {
   HalfEdgeParaboloid<VertexParaboloid>* getHalfEdge(void);
   const HalfEdgeParaboloid<VertexParaboloid>* getHalfEdge(void) const;
 
+  pt_type& getLocation(void);
   const pt_type& getLocation(void) const;
   void setLocation(const PtType& a_location);
 

@@ -33,7 +33,7 @@ class RationalBezierArc {
   /// the rational weight
   RationalBezierArc(const Pt& a_start_pt, const Normal& a_start_tangent,
                     const Pt& a_end_pt, const Normal& a_end_tangent,
-                    const Plane& a_plane,
+                    const Normal& a_plane_normal,
                     const AlignedParaboloid& a_paraboloid);
 
   /// \brief Return const weight.
@@ -83,6 +83,60 @@ class RationalBezierArc {
   std::uintptr_t start_point_id_m;  // Start point address.
   std::uintptr_t end_point_id_m;    // End point address.
   double weight_m;                  // Weight
+};
+
+template <class PtTypeWithGradient>
+/// \brief Rational Bézier arc defined by end points + control point +
+/// weight
+class RationalBezierArcWithGradient {
+ public:
+  using gradient_type = typename PtTypeWithGradient::gradient_type;
+
+  /// \brief Default constructor.
+  RationalBezierArcWithGradient(void);
+
+  /// \brief Constructor that initializes the rational Bèzier arc by computing
+  /// the rational weight
+  RationalBezierArcWithGradient(const PtTypeWithGradient& a_start_pt,
+                                const PtTypeWithGradient& a_start_tangent,
+                                const PtTypeWithGradient& a_end_pt,
+                                const PtTypeWithGradient& a_end_tangent,
+                                const PtTypeWithGradient& a_plane_normal,
+                                const AlignedParaboloid& a_paraboloid);
+
+  /// \brief Return const arc.
+  const RationalBezierArc& arc(void) const;
+  /// \brief Return const weight.
+  const double& weight(void) const;
+  /// \brief Return const weight.
+  const gradient_type& weight_gradient(void) const;
+  /// \brief Return const reference to stored start point.
+  const PtTypeWithGradient& start_point(void) const;
+  /// \brief Return const reference to stored control point.
+  const PtTypeWithGradient& control_point(void) const;
+  /// \brief Return const reference to stored end point.
+  const PtTypeWithGradient& end_point(void) const;
+
+  /// \brief Default destructor.
+  ~RationalBezierArcWithGradient(void) = default;
+
+ private:
+  /// \brief Return const weight.
+  double& weight(void);
+  /// \brief Return const weight.
+  gradient_type& weight_gradient(void);
+  /// \brief Return const reference to stored start point.
+  PtTypeWithGradient& start_point(void);
+  /// \brief Return const reference to stored control point.
+  PtTypeWithGradient& control_point(void);
+  /// \brief Return const reference to stored end point.
+  PtTypeWithGradient& end_point(void);
+
+  PtTypeWithGradient start_point_m;    // Start point.
+  PtTypeWithGradient control_point_m;  // Control point.
+  PtTypeWithGradient end_point_m;      // End point.
+  double weight_m;                     // Weight
+  gradient_type weight_gradient_m;     // Weight
 };
 
 inline std::ostream& operator<<(std::ostream& out,

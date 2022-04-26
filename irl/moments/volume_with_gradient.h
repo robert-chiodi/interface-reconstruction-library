@@ -32,6 +32,9 @@ class VolumeWithGradient {
   /// want to allow implicit casting of double to Volume here.
   constexpr VolumeWithGradient(const double a_value);
 
+  constexpr VolumeWithGradient(const double a_volume,
+                               const GradientType& a_gradient);
+
   static VolumeWithGradient fromScalarConstant(const double a_value);
 
   /// \brief Dummy function to allow general use along
@@ -52,6 +55,12 @@ class VolumeWithGradient {
   /// \brief Return const reference to stored volume.
   const Volume& volume(void) const;
 
+  /// \brief Return value of stored gradient.
+  GradientType& gradient(void);
+
+  /// \brief Return const reference to stored gradient.
+  const GradientType& gradient(void) const;
+
   /// \brief Overload += operator to update volume.
   VolumeWithGradient& operator+=(const VolumeWithGradient& a_rhs);
 
@@ -64,8 +73,6 @@ class VolumeWithGradient {
   /// \brief Allow implicit conversion to double.
   operator double() const;
 
-  void isVolumeWithGradient(void);
-
   /// \brief Overload assignment to assign constant value to moments.
   VolumeWithGradient& operator=(const double a_value);
 
@@ -77,6 +84,27 @@ class VolumeWithGradient {
   GradientType gradient_m;  ///< \brief Gradient of the volume, with respect to
                             ///< some parameters
 };
+
+/// \brief Overload + operator to add two geometric moments together
+template <class GradientType>
+inline VolumeWithGradient<GradientType> operator+(
+    const VolumeWithGradient<GradientType>& a_vm1,
+    const VolumeWithGradient<GradientType>& a_vm2);
+/// \brief Overload - operator to subtract one
+/// geometric moment object from another.
+template <class GradientType>
+inline VolumeWithGradient<GradientType> operator-(
+    const VolumeWithGradient<GradientType>& a_vm1,
+    const VolumeWithGradient<GradientType>& a_vm2);
+/// \brief Overload * operator to multiply volume/centroid
+template <class GradientType>
+inline VolumeWithGradient<GradientType> operator*(
+    const double a_multiplier, const VolumeWithGradient<GradientType>& a_vm);
+/// \brief Overload * operator to multiply volume/centroid
+template <class GradientType>
+inline VolumeWithGradient<GradientType> operator*(
+    const VolumeWithGradient<GradientType>& a_vm, const double a_multiplier);
+
 }  // namespace IRL
 
 #include "irl/moments/volume_with_gradient.tpp"
