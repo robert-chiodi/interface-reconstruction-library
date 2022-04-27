@@ -21,6 +21,8 @@ namespace IRL {
 /// \brief Zeroeth (volume) and first order (centroid) geometric moments
 class VolumeMoments {
  public:
+  using gradient_type = VolumeMoments;
+
   /// \brief Default constructor.
   VolumeMoments(void);
 

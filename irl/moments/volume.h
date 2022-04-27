@@ -21,6 +21,8 @@ namespace IRL {
 /// writing of functions.
 class Volume {
  public:
+  using gradient_type = Volume;
+
   /// \brief Default constructor.
   Volume(void);
 
@@ -70,4 +72,4 @@ std::ostream& operator<<(std::ostream& out, const Volume& a_volume);
 
 #include "irl/moments/volume.tpp"
 
-#endif // IRL_MOMENTS_VOLUME_H_ */
+#endif  // IRL_MOMENTS_VOLUME_H_ */

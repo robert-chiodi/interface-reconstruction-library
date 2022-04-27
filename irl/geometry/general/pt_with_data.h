@@ -49,6 +49,49 @@ class PtWithDataCommon {
   AttachedDataType data_m;
 };
 
+template <class GradientDataType>
+class PtWithGradient
+    : public PtWithDataCommon<PtWithGradient<GradientDataType>,
+                              std::array<GradientDataType, 3>> {
+ public:
+  using gradient_type = GradientDataType;
+
+  PtWithGradient(void);
+
+  using PtWithDataCommon<PtWithGradient<GradientDataType>,
+                         std::array<GradientDataType, 3>>::PtWithDataCommon;
+
+  explicit PtWithGradient(const Pt& a_pt);
+
+  PtWithGradient& operator-(void);
+  PtWithGradient& operator=(const Pt& a_pt);
+  PtWithGradient& operator=(const PtWithGradient& a_pt);
+  PtWithGradient& operator+=(const PtWithGradient& a_other_pt);
+
+  ~PtWithGradient(void) = default;
+};
+
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator*(
+    const double a_rhs, const PtWithGradient<GradientDataType>& a_pt);
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator*(
+    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs);
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator/(
+    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs);
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator+(
+    const PtWithGradient<GradientDataType>& a_pt1,
+    const PtWithGradient<GradientDataType>& a_pt2);
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator-(
+    const PtWithGradient<GradientDataType>& a_pt1,
+    const PtWithGradient<GradientDataType>& a_pt2);
+template <class GradientDataType>
+const PtWithGradient<GradientDataType> operator-(
+    const PtWithGradient<GradientDataType>& a_pt);
+
 template <class FunctorType, UnsignedIndex_t kArrayLength>
 class PtWithDoublesStatelessFunctor
     : public PtWithDataCommon<
@@ -90,4 +133,4 @@ std::ostream& operator<<(
 
 #include "irl/geometry/general/pt_with_data.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_H_
+#endif  // IRL_GEOMETRY_GENERAL_PT_WITH_DATA_H_

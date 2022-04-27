@@ -1,77 +1,75 @@
 // This file is part of the Interface Reconstruction Library (IRL),
 // a library for interface reconstruction and computational geometry operations.
 //
-// Copyright (C) 2019 Robert Chiodi <robert.chiodi@gmail.com>
+// Copyright (C) 2022 Fabien Evrard <fa.evrard@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_WEDGE_COMPUTATION_H_
-#define IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_WEDGE_COMPUTATION_H_
+#ifndef IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_MOMENT_CONTRIBUTIONS_H_
+#define IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_MOMENT_CONTRIBUTIONS_H_
+
+#include <float.h>
+#include <cassert>
+#include <cmath>
 
 #include "irl/data_structures/small_vector.h"
-#include "irl/geometry/general/geometry_type_traits.h"
-#include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
-#include "irl/paraboloid_reconstruction/ellipse.h"
+#include "irl/data_structures/stack_vector.h"
+#include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_helpers.h"
+#include "irl/geometry/general/normal.h"
+#include "irl/geometry/general/pt.h"
+#include "irl/geometry/general/reference_frame.h"
+#include "irl/geometry/general/rotations.h"
+#include "irl/geometry/general/unit_quaternion.h"
+#include "irl/helpers/mymath.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
-#include "irl/paraboloid_reconstruction/parametrized_surface.h"
 
 namespace IRL {
-
-static constexpr double MINIMUM_EDGE_LENGTH = DBL_EPSILON;
-
-template <class ReturnType>
-ReturnType calculateTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                       const Pt& a_pt_0, const Pt& a_pt_1,
-                                       const Pt& a_pt_2);
-
-Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
-                                  const Pt& a_pt);
 
 inline double signedDistance(const Pt& a_pt,
                              const AlignedParaboloid& a_paraboloid);
 
-StackVector<double, 2> solveQuadratic(const double a, const double b,
-                                      const double c);
+template <class ReturnType, class PtType>
+ReturnType computeType1Contribution(const PtType& a_ref_pt,
+                                    const PtType& a_pt_0, const PtType& a_pt_1);
 
-Normal computeTangentVectorAtPoint(const AlignedParaboloid& a_paraboloid,
-                                   const Plane& a_plane, const Pt& a_pt);
+template <class ReturnType, class PtType>
+ReturnType computeType2Contribution(
+    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_pt_0,
+    const PtType& a_pt_1);
 
-Normal computeAndCorrectTangentVectorAtPt(const AlignedParaboloid& a_paraboloid,
-                                          const Plane& a_plane,
-                                          const Pt& a_origin_pt,
-                                          const Pt& a_end_pt,
-                                          const Normal& a_end_tangent,
-                                          const Pt& a_intersection_pt);
+inline std::array<double, 3> coeffsV3SeriesOne(const double a_weight);
+template <class GradientType>
+inline std::array<std::pair<double, GradientType>, 3>
+coeffsV3SeriesOneWithGradient(const double a_weight,
+                              const GradientType& a_weight_grad);
 
-template <class ReturnType, class SurfaceOutputType = NoSurfaceOutput>
-ReturnType bezierIntegrate(const AlignedParaboloid& a_paraboloid,
-                           const Plane& a_plane, const Pt& a_pt_ref,
-                           const Pt& a_pt_0, const Pt& a_pt_1,
-                           const Normal& a_tangent_0, const Normal& a_tangent_1,
-                           SurfaceOutputType* a_surface = NULL);
+inline std::array<double, 12> coeffsV3andC3SeriesOne(const double a_weight);
+inline std::array<double, 3> coeffsV3SeriesInfinity(const double a_weight);
+inline std::array<double, 12> coeffsV3andC3SeriesInfinity(
+    const double a_weight);
 
-template <class ReturnType, class SurfaceOutputType = NoSurfaceOutput>
-inline ReturnType computeWedgeCorrection(const AlignedParaboloid& a_paraboloid,
-                                         const Plane& a_plane, const Pt& a_pt_0,
-                                         const Pt& a_pt_1,
-                                         const Pt& a_previous_edge,
-                                         const Pt& a_next_edge,
-                                         SurfaceOutputType* a_surface = NULL);
+inline std::array<double, 3> coeffsV3Exact(const double a_weight);
 
-template <class ReturnType, class SurfaceOutputType>
-ReturnType computeV3ContributionWithSplit(const AlignedParaboloid& a_paraboloid,
-                                          const Plane& a_plane,
-                                          const Pt& a_pt_ref, const Pt& a_pt_0,
-                                          const Pt& a_pt_1,
-                                          const Normal& a_tangent_0,
-                                          const Normal& a_tangent_1,
-                                          SurfaceOutputType* a_surface);
+template <class GradientType>
+inline std::array<std::pair<double, GradientType>, 3> coeffsV3ExactWithGradient(
+    const double a_weight, const GradientType& a_weight_grad);
 
-template <class ReturnType>
-ReturnType computeV3Contribution(const AlignedParaboloid& a_paraboloid,
-                                 const RationalBezierArc& a_arc);
+inline std::array<double, 12> coeffsV3andC3Exact(const double a_weight);
+
+template <class ReturnType, class RationalBezierArcType>
+ReturnType computeType3Contribution(const AlignedParaboloid& a_paraboloid,
+                                    const RationalBezierArcType& a_arc);
+template <class ReturnType, class PtType>
+ReturnType computeFaceOnlyContribution(const AlignedParaboloid& a_paraboloid,
+                                       const Plane& a_face_plane,
+                                       const PtType& a_pt_ref);
+
+template <class ReturnType, class PtType>
+ReturnType computeTriangleCorrection(const AlignedParaboloid& a_paraboloid,
+                                     const PtType& a_pt_0, const PtType& a_pt_1,
+                                     const PtType& a_pt_2);
 
 static double v3Series[41][3] = {
     {2.09523809523809528832e-01, 3.80952380952380931234e-01,
@@ -365,6 +363,6 @@ static double cz3Series[41][5] = {
      -5.0987752482180218611e-11}};
 }  // namespace IRL
 
-#include "irl/generic_cutting/paraboloid_intersection/wedge_computation.tpp"
+#include "irl/generic_cutting/paraboloid_intersection/moment_contributions.tpp"
 
-#endif  // IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_WEDGE_COMPUTATION_H_
+#endif  // IRL_GENERIC_CUTTING_PARABOLOID_INTERSECTION_MOMENT_CONTRIBUTIONS_H_

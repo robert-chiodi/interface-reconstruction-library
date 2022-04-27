@@ -11,15 +11,20 @@
 #define IRL_PARABOLOID_RECONSTRUCTIONS_PARABOLOID_H_
 
 #include <math.h>
+// extern "C" {
+// #include <quadmath.h>
+// }
 #include <cassert>
 #include <ostream>
 
 #include "irl/data_structures/stack_vector.h"
 #include "irl/geometry/general/normal.h"
 #include "irl/geometry/general/pt.h"
+#include "irl/geometry/general/pt_with_data.h"
 #include "irl/geometry/general/reference_frame.h"
 #include "irl/graphs/un_directed_graph_node.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
+#include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
 #include "irl/planar_reconstruction/joined_reconstructions.h"
 #include "irl/planar_reconstruction/planar_localizer.h"
 #include "irl/planar_reconstruction/reconstruction_link.h"
@@ -34,8 +39,8 @@ class Paraboloid {
   Paraboloid(void) = default;
 
   /// a_reference_frame should have the normal vector in a_reference_frame[2],
-  /// and the tangent vectors corresponding to a_coef_a and a_coef_b in element
-  /// 0 and 1, respectively.
+  /// and the tangent vectors corresponding to a_coef_a and a_coef_b in
+  /// element 0 and 1, respectively.
   Paraboloid(const Pt& a_datum, const ReferenceFrame& a_reference_frame,
              const double a_coef_a, const double a_coef_b);
 
@@ -54,12 +59,12 @@ class Paraboloid {
   /// Indicates that the intersection should actually be performed.
   void markAsRealReconstruction(void);
 
-  /// Marks paraboloid as being above any polyhedron (so any polyhedron will be
-  /// unclipped).
+  /// Marks paraboloid as being above any polyhedron (so any polyhedron will
+  /// be unclipped).
   void markAsAlwaysAbove(void);
 
-  /// Marks paraboloid as being below any polyhedron (so any polyhedron will be
-  /// clipped).
+  /// Marks paraboloid as being below any polyhedron (so any polyhedron will
+  /// be clipped).
   void markAsAlwaysBelow(void);
 
   /// Whether the paraboloid has been set to be above any polyhedron.
@@ -97,10 +102,20 @@ inline Pt conicCenter(const Plane& a_plane,
 inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
                                          const Pt& a_pt);
 
-// Returns solution to quadratic equation solve.
-// The smallest solution will always be first.
+template <class PtTypeWithGradient>
+inline PtTypeWithGradient getParaboloidSurfaceNormalWithGradient(
+    const AlignedParaboloid& a_paraboloid, const PtTypeWithGradient& a_pt);
+
 inline StackVector<double, 2> solveQuadratic(const double a, const double b,
                                              const double c);
+
+template <class GradientType>
+inline StackVector<std::pair<double, GradientType>, 2>
+solveQuadraticWithGradient(const double a, const double b, const double c,
+                           const GradientType& a_grad,
+                           const GradientType& b_grad,
+                           const GradientType& c_grad);
+
 inline Pt projectPtAlongLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
@@ -108,6 +123,11 @@ inline Pt projectPtAlongLineOntoParaboloid(
 inline Pt projectPtAlongHalfLineOntoParaboloid(
     const AlignedParaboloid& a_paraboloid, const Normal& a_line,
     const Pt& a_starting_pt);
+
+template <class PtTypeWithGradient>
+inline PtTypeWithGradient projectPtAlongHalfLineOntoParaboloidWithGradient(
+    const AlignedParaboloid& a_paraboloid, const PtTypeWithGradient& a_line,
+    const PtTypeWithGradient& a_starting_pt);
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const Paraboloid& a_paraboloid);
