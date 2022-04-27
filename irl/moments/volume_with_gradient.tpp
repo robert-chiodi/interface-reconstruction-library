@@ -48,8 +48,7 @@ template <class GradientType>
 template <class GeometryType>
 inline VolumeWithGradient<GradientType>
 VolumeWithGradient<GradientType>::calculateMoments(GeometryType* a_geometry) {
-  return VolumeWithGradient<GradientType>();
-  //   return a_geometry->calculateVolumeAndGradient();
+  return VolumeWithGradient<GradientType>(a_geometry->calculateVolume());
 }
 template <class GradientType>
 inline Volume& VolumeWithGradient<GradientType>::volume(void) {
