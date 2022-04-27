@@ -746,7 +746,7 @@ inline double ParametrizedSurfaceOutput::getGaussianCurvatureNonAligned(
 
 inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const double a_length_scale, const UnsignedIndex_t a_nsplit) const {
-#ifndef IRL_USE_TRIANGLE
+#ifdef IRL_NO_USE_TRIANGLE
   std::cout << "IRL not compiled with the Triangle library. Exiting..."
             << std::endl;
   std::exit(-1);

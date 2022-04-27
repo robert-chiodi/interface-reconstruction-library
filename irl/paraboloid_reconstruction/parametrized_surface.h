@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#ifdef IRL_USE_TRIANGLE
+#ifndef IRL_NO_USE_TRIANGLE
 #include "external/triangle/triangle.h"
 #endif
 

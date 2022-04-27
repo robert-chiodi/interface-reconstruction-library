@@ -91,10 +91,11 @@ else()
   add_library(irl_fortran STATIC)
 endif()
 
-if(NOT DEFINED USE_TRIANGLE OR (DEFINED USE_TRIANGLE AND USE_TRIANGLE))
+if(DEFINED USE_TRIANGLE AND NOT USE_TRIANGLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D IRL_NO_USE_TRIANGLE")
+else()
   target_sources(irl PRIVATE "external/triangle/triangle.h")
   target_sources(irl PRIVATE "external/triangle/triangle.cpp")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGs} -D IRL_USE_TRIANGLE")
 endif()
 
 
