@@ -104,10 +104,10 @@ class RationalBezierArcWithGradient {
                                 const PtTypeWithGradient& a_plane_normal,
                                 const AlignedParaboloid& a_paraboloid);
 
-  /// \brief Return const arc.
-  const RationalBezierArc& arc(void) const;
+  /// \brief Return arc.
+  RationalBezierArc arc(void) const;
   /// \brief Return const weight.
-  const double& weight(void) const;
+  double weight(void) const;
   /// \brief Return const weight.
   const gradient_type& weight_gradient(void) const;
   /// \brief Return const reference to stored start point.
