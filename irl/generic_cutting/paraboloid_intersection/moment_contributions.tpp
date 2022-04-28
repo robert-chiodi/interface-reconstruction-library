@@ -779,12 +779,12 @@ computeFaceOnlyContribution(const AlignedParaboloid& a_paraboloid,
 
   const double x_center = a / (2.0 * a_paraboloid.a());
   const double y_center = b / (2.0 * a_paraboloid.b());
-  const double K = (4.0 * a_paraboloid.a() * a_paraboloid.b() * c +
-                    a_paraboloid.a() * b * b + a_paraboloid.b() * a * a);
+  const double K = 4.0 * a_paraboloid.a() * a_paraboloid.b() * c -
+                   a_paraboloid.a() * b * b - a_paraboloid.b() * a * a;
 
   auto moments = VolumeMoments::fromScalarConstant(0.0);
   moments.volume() = std::copysign(
-      M_PI * fabs(K) * K /
+      M_PI * K * K /
           (32.0 * std::pow(a_paraboloid.a() * a_paraboloid.b(), 2.5)),
       -a_face_plane.normal()[2]);
   moments.centroid()[0] = x_center;
