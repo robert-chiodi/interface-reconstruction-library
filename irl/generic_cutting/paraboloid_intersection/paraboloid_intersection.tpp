@@ -430,8 +430,6 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     face->setPlane(Plane(normal, normal * start_location));
   }
 
-  //  std::cout << *a_polytope << std::endl;
-
   // Compute intersection
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
     moments.getSurface().setParaboloid(a_paraboloid);
@@ -960,11 +958,6 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
           pt_withgrad_1, tgt_withgrad_1, pt_withgrad_0, tgt_withgrad_0,
           face_normal_withgrad, a_paraboloid);
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        // std::cout << "Adding arc " << arc_with_gradient.arc() << std::endl;
-        // std::cout << "pt_0 " << pt_1 << " (id -> "
-        //           << reinterpret_cast<std::uintptr_t>(&pt_1) << std::endl;
-        // std::cout << "pt_1 " << pt_0 << " (id -> "
-        //           << reinterpret_cast<std::uintptr_t>(&pt_0) << std::endl;
         const auto arc =
             RationalBezierArc(pt_1, arc_with_gradient.control_point().getPt(),
                               pt_0, arc_with_gradient.weight());

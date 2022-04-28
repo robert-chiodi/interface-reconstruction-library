@@ -3,6 +3,12 @@
 
 namespace IRL {
 
+inline Paraboloid::Paraboloid(void)
+    : datum_m(),
+      frame_m(),
+      paraboloid_m(),
+      place_infinite_shortcut_m({false, false}) {}
+
 inline Paraboloid::Paraboloid(const Pt& a_datum,
                               const ReferenceFrame& a_reference_frame,
                               const double a_coef_a, const double a_coef_b)

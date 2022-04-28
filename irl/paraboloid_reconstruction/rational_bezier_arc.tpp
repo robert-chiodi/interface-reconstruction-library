@@ -308,14 +308,14 @@ inline RationalBezierArcWithGradient<PtTypeWithGradient>::
 }
 
 template <class PtTypeWithGradient>
-inline const RationalBezierArc&
-RationalBezierArcWithGradient<PtTypeWithGradient>::arc(void) const {
+inline RationalBezierArc RationalBezierArcWithGradient<PtTypeWithGradient>::arc(
+    void) const {
   return RationalBezierArc(start_point_m.getPt(), control_point_m.getPt(),
                            end_point_m.getPt(), weight_m);
 }
 
 template <class PtTypeWithGradient>
-inline const double& RationalBezierArcWithGradient<PtTypeWithGradient>::weight(
+inline double RationalBezierArcWithGradient<PtTypeWithGradient>::weight(
     void) const {
   return weight_m;
 }
