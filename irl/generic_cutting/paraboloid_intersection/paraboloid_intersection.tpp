@@ -470,7 +470,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
           pt[n] += ref_frame[d][n] * moments.centroid()[d];
         }
       }
-      pt += datum;
+      pt += moments.volume() * datum;
       moments.centroid() = pt;
     }
   }
@@ -482,7 +482,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
         pt[n] += ref_frame[d][n] * moments.centroid()[d];
       }
     }
-    pt += datum;
+    pt += moments.volume() * datum;
     moments.centroid() = pt;
   }
 
