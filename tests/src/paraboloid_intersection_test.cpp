@@ -976,7 +976,7 @@ TEST(ParaboloidIntersection, Dodecahedron) {
 
   int Ntests = 100;
   double max_error = 0.0, rms_error = 0.0;
-  bool first_vertex_on_surface = true;
+  bool first_vertex_on_surface = false;
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   // Rotate cube
   std::random_device
@@ -1001,6 +1001,15 @@ TEST(ParaboloidIntersection, Dodecahedron) {
                     random_translation(eng));
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
+
+    // aligned_paraboloid.a() = -1.4077378333274168654;
+    // aligned_paraboloid.b() = -3.8824479920417851453;
+    // angles[0] = 0.71624477503652372867;
+    // angles[1] = 0.15892377522170786364;
+    // angles[2] = -1.4763614058087308756;
+    // translations[0] = 0.4483991440918613236;
+    // translations[1] = -0.16719239417173020756;
+    // translations[2] = 0.3516101636110545714;
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1029,20 +1038,12 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     std::cout << std::setprecision(20)
               << "translations[2] = " << translations[2] << ";" << std::endl;
 
-    // aligned_paraboloid.a() = -0.26694474228540165939;
-    // aligned_paraboloid.b() = 1.7196560637755800016;
-    // angles[0] = 0.63717543887676297842;
-    // angles[1] = 0.18122299411755848908;
-    // angles[2] = 0;
-    // translations[0] = -0.10572858731641998631;
-    // translations[1] = -0.28009013184210029834;
-    // translations[2] = 0.26245924811106402519;
-
     if (first_vertex_on_surface) translations[2] = 0.0;
 
     UnitQuaternion x_rotation(angles[0], frame[0]);
     UnitQuaternion y_rotation(angles[1], frame[1]);
-    frame = x_rotation * y_rotation * frame;
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    frame = x_rotation * y_rotation * z_rotation * frame;
     for (auto& vertex : dodeca) {
       Pt tmp_pt = vertex + translations;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
@@ -1050,7 +1051,7 @@ TEST(ParaboloidIntersection, Dodecahedron) {
       }
     }
 
-    double local_space_translation;
+    double local_space_translation = 0.0;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;
@@ -1074,6 +1075,7 @@ TEST(ParaboloidIntersection, Dodecahedron) {
               << std::endl;
     dodeca.setHalfEdgeVersion(&half_edge);
     auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    std::cout << seg_half_edge << std::endl;
 
     for (auto& face : seg_half_edge) {
       auto normal = Normal(0.0, 0.0, 0.0);
@@ -1317,7 +1319,7 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
       }
     }
 
-    double local_space_translation;
+    double local_space_translation = 0.0;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;
@@ -1481,7 +1483,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
 
   int Ntests = 100;
   double max_error = 0.0, rms_error = 0.0;
-  bool first_vertex_on_surface = true;
+  bool first_vertex_on_surface = false;
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   // Rotate cube
   std::random_device
@@ -1509,6 +1511,15 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
 
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
+
+    // aligned_paraboloid.a() = -1.4077378333274168654;
+    // aligned_paraboloid.b() = -3.8824479920417851453;
+    // angles[0] = 0.71624477503652372867;
+    // angles[1] = 0.15892377522170786364;
+    // angles[2] = -1.4763614058087308756;
+    // translations[0] = 0.4483991440918613236;
+    // translations[1] = -0.16719239417173020756;
+    // translations[2] = 0.3516101636110545714;
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1541,7 +1552,8 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
 
     UnitQuaternion x_rotation(angles[0], frame[0]);
     UnitQuaternion y_rotation(angles[1], frame[1]);
-    frame = x_rotation * y_rotation * frame;
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    frame = x_rotation * y_rotation * z_rotation * frame;
     for (auto& vertex : dodeca) {
       Pt tmp_pt = vertex + translations;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
@@ -1549,7 +1561,7 @@ TEST(ParaboloidIntersection, getVolumeMomentsUse) {
       }
     }
 
-    double local_space_translation;
+    double local_space_translation = 0.0;
     if (first_vertex_on_surface) {
       for (auto& vertex : dodeca) {
         Pt tmp_pt = vertex;

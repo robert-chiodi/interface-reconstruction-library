@@ -36,7 +36,7 @@ namespace IRL {
 // z + c + a*x^2 + b*y^2 = 0
 class Paraboloid {
  public:
-  Paraboloid(void) = default;
+  Paraboloid(void);
 
   /// a_reference_frame should have the normal vector in a_reference_frame[2],
   /// and the tangent vectors corresponding to a_coef_a and a_coef_b in
