@@ -1136,8 +1136,8 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                      const Normal a_nudge_direction,
                      const double a_nudge_epsilon,
                      const UnsignedIndex_t a_nudge_iter) {
-  std::cout << " -----> Nudge along the direction " << a_nudge_direction
-            << std::endl;
+  // std::cout << " -----> Nudge along the direction " << a_nudge_direction
+  //           << std::endl;
   using pt_type =
       typename SegmentedHalfEdgePolyhedronType::vertex_type::pt_type;
   for (UnsignedIndex_t n = 0; n < a_polytope->getNumberOfVertices(); ++n) {
@@ -1196,12 +1196,22 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   // Early termination cases, only possible with elliptic
   if (elliptic && a_aligned_paraboloid.a() > 0.0 &&
       number_of_vertices_above == 0) {
+    // This is needed to that we can reset the polytope after the return
+    for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+      auto& vertex = *(a_polytope->getVertex(v));
+      vertex.setToSeek();
+    }
     // Whole volume below
     return ReturnType::calculateMoments(a_polytope);
   }
 
   if (elliptic && a_aligned_paraboloid.a() < 0.0 &&
       number_of_vertices_above == starting_number_of_vertices) {
+    // This is needed to that we can reset the polytope after the return
+    for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+      auto& vertex = *(a_polytope->getVertex(v));
+      vertex.setToSeek();
+    }
     // Zero volume - will be current value of full_moments
     return full_moments;
   }

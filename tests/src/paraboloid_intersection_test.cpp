@@ -29,6 +29,7 @@
 #include "irl/geometry/half_edge_structures/segmented_half_edge_polyhedron_paraboloid.h"
 #include "irl/geometry/polyhedrons/general_polyhedron.h"
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
+#include "irl/interface_reconstruction_methods/progressive_distance_solver_paraboloid.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 #include "irl/planar_reconstruction/planar_separator.h"
@@ -2901,7 +2902,7 @@ TEST(ParaboloidIntersection, Gradient) {
 }
 
 TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
-  using MyGradientType = ParaboloidGradientLocalZ;
+  using MyGradientType = ParaboloidGradientLocal;
   using MyPtType = PtWithGradient<MyGradientType>;
 
   AlignedParaboloid aligned_paraboloid;
@@ -2968,6 +2969,19 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
         &seg_half_edge, &half_edge, aligned_paraboloid, 10,
         poly_filename);  // This prints the AMR triangles
     ParametrizedSurfaceOutput surface(paraboloid);
+    // auto our_moments_test = Volume::fromScalarConstant(0.0);
+    // auto our_moments_test =
+    //     VolumeWithGradient<MyGradientType>::fromScalarConstant(0.0);
+    // auto start = std::chrono::system_clock::now();
+    // for (int j = 0; j < 1.0e6; j++) {
+    //   // our_moments_test += IRL::getVolumeMoments<Volume>(cube_pt,
+    //   paraboloid); our_moments_test +=
+    //       IRL::getVolumeMoments<VolumeWithGradient<MyGradientType>>(cube,
+    //                                                                 paraboloid);
+    // }
+    // auto end = std::chrono::system_clock::now();
+    // std::chrono::duration<double> runtime = end - start;
+    // printf("Total run time: %20f \n\n", runtime.count());
     auto our_moments =
         intersectPolyhedronWithParaboloid<VolumeWithGradient<MyGradientType>>(
             &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
@@ -3311,6 +3325,40 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
             << std::endl;
 
   EXPECT_NEAR(max_volume_error, 0.0, 1.0e-13);
+}
+
+TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {
+  AlignedParaboloid aligned_paraboloid;
+  aligned_paraboloid.a() = 0.1;
+  aligned_paraboloid.b() = 0.2;
+  std::array<double, 3> angles{{M_PI / 10.0, M_PI / 5.0}};
+  std::array<double, 3> translations{{0.0, 0.0, 0.0}};
+  ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                       Normal(0.0, 0.0, 1.0));
+  UnitQuaternion x_rotation(angles[0], frame[0]);
+  UnitQuaternion y_rotation(angles[1], frame[1]);
+  UnitQuaternion z_rotation(angles[2], frame[2]);
+  auto total_rotation = x_rotation * y_rotation * z_rotation;
+  total_rotation.normalize();
+  frame = total_rotation * frame;
+  auto datum = -Pt::fromArray(translations);
+  Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+                        aligned_paraboloid.b());
+
+  auto cube = RectangularCuboid::fromBoundingPts(Pt(-1.0, -1.0, -1.0),
+                                                 Pt(1.0, 1.0, 1.0));
+
+  std::cout << "Volume fraction before solve = "
+            << getVolumeFraction(cube, paraboloid) << std::endl;
+
+  ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
+      cube, 0.566789, 1.0e-14, paraboloid);
+  double distance = solver.getDistance();
+  std::cout << "Distance = " << distance << std::endl;
+  Paraboloid new_paraboloid(datum + distance * frame[2], frame,
+                            aligned_paraboloid.a(), aligned_paraboloid.b());
+  std::cout << "Volume fraction after solve = "
+            << getVolumeFraction(cube, new_paraboloid) << std::endl;
 }
 
 }  // namespace
