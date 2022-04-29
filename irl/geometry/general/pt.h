@@ -126,7 +126,7 @@ class Pt : public Expr<Pt> {
   Pt& operator-=(const Pt& a_rhs);
 
   /// \brief Divide each point location by the constant `a_rhs`.
-  Pt& operator/(const double a_rhs);
+  Pt operator/(const double a_rhs);
 
   /// \brief Divide each point location by the constant `a_rhs`.
   Pt& operator/=(const double a_rhs);

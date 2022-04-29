@@ -135,11 +135,10 @@ inline Pt& Pt::operator-=(const Pt& a_rhs) {
   return (*this);
 }
 
-inline Pt& Pt::operator/(const double a_rhs) {
-  (*this)[0] /= a_rhs;
-  (*this)[1] /= a_rhs;
-  (*this)[2] /= a_rhs;
-  return (*this);
+inline Pt Pt::operator/(const double a_rhs) {
+  auto pt = *this;
+  pt /= a_rhs;
+  return pt;
 }
 
 inline Pt& Pt::operator/=(const double a_rhs) {

@@ -131,7 +131,7 @@ set(IRL_EXAMPLES_OUTPUT_DIR "${CMAKE_BINARY_DIR}/compiled_examples")
 add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
 
 # Directory with development tools.
-#add_subdirectory("${PROJECT_SOURCE_DIR}/tools")
+add_subdirectory("${PROJECT_SOURCE_DIR}/tools")
 
 # Export targets to be used by other programs
 install(TARGETS irl EXPORT "irl_exp" ARCHIVE DESTINATION "lib")
