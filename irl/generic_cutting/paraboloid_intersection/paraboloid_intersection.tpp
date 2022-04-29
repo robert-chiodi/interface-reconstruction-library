@@ -467,11 +467,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
       auto pt = Pt(0.0, 0.0, 0.0);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
-          pt[n] += ref_frame[d][n] * moments.centroid()[d];
+          pt[n] += ref_frame[d][n] * moments.getMoments().centroid()[d];
         }
       }
-      pt += moments.volume() * datum;
-      moments.centroid() = pt;
+      pt += moments.getMoments().volume() * datum;
+      moments.getMoments().centroid() = pt;
     }
   }
   if constexpr (!has_paraboloid_surface<ReturnType>::value &&
