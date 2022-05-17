@@ -60,11 +60,11 @@ inline const Volume& VolumeWithGradient<GradientType>::volume(void) const {
   return volume_m;
 }
 template <class GradientType>
-inline GradientType& VolumeWithGradient<GradientType>::gradient(void) {
+inline GradientType& VolumeWithGradient<GradientType>::volume_gradient(void) {
   return gradient_m;
 }
 template <class GradientType>
-inline const GradientType& VolumeWithGradient<GradientType>::gradient(
+inline const GradientType& VolumeWithGradient<GradientType>::volume_gradient(
     void) const {
   return gradient_m;
 }
@@ -111,28 +111,30 @@ template <class GradientType>
 inline VolumeWithGradient<GradientType> operator+(
     const VolumeWithGradient<GradientType>& a_vm1,
     const VolumeWithGradient<GradientType>& a_vm2) {
-  return VolumeWithGradient<GradientType>(a_vm1.volume() + a_vm2.volume(),
-                                          a_vm1.gradient() + a_vm2.gradient());
+  return VolumeWithGradient<GradientType>(
+      a_vm1.volume() + a_vm2.volume(),
+      a_vm1.volume_gradient() + a_vm2.volume_gradient());
 }
 template <class GradientType>
 inline VolumeWithGradient<GradientType> operator-(
     const VolumeWithGradient<GradientType>& a_vm1,
     const VolumeWithGradient<GradientType>& a_vm2) {
-  return VolumeWithGradient<GradientType>(a_vm1.volume() - a_vm2.volume(),
-                                          a_vm1.gradient() - a_vm2.gradient());
+  return VolumeWithGradient<GradientType>(
+      a_vm1.volume() - a_vm2.volume(),
+      a_vm1.volume_gradient() - a_vm2.volume_gradient());
 }
 
 template <class GradientType>
 inline VolumeWithGradient<GradientType> operator*(
     const double a_multiplier, const VolumeWithGradient<GradientType>& a_vm) {
-  return VolumeWithGradient<GradientType>(a_multiplier * a_vm.volume(),
-                                          a_multiplier * a_vm.gradient());
+  return VolumeWithGradient<GradientType>(
+      a_multiplier * a_vm.volume(), a_multiplier * a_vm.volume_gradient());
 }
 template <class GradientType>
 inline VolumeWithGradient<GradientType> operator*(
     const VolumeWithGradient<GradientType>& a_vm, const double a_multiplier) {
-  return VolumeWithGradient<GradientType>(a_multiplier * a_vm.volume(),
-                                          a_multiplier * a_vm.gradient());
+  return VolumeWithGradient<GradientType>(
+      a_multiplier * a_vm.volume(), a_multiplier * a_vm.volume_gradient());
 }
 
 }  // namespace IRL

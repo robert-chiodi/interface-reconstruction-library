@@ -33,6 +33,8 @@
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 #include "irl/planar_reconstruction/planar_separator.h"
+#include "tests/src/basic_mesh.h"
+#include "tests/src/vtk.h"
 
 namespace {
 
@@ -1195,7 +1197,7 @@ TEST(ParaboloidIntersection, ParametrizedSurface) {
 
 TEST(ParaboloidIntersection, DodecahedronWithSurface) {
   double tau = (sqrt(5.0) + 1.0) / 2.0;
-  Pt M[12] = {Pt(0, tau, 1),       Pt(0.0, -tau, 1.0),  Pt(0.0, tau, -1.0),
+  Pt M[12] = {Pt(0.0, tau, 1.0),   Pt(0.0, -tau, 1.0),  Pt(0.0, tau, -1.0),
               Pt(0.0, -tau, -1.0), Pt(1.0, 0.0, tau),   Pt(-1.0, 0.0, tau),
               Pt(1.0, 0.0, -tau),  Pt(-1.0, 0.0, -tau), Pt(tau, 1.0, 0.0),
               Pt(-tau, 1.0, 0.0),  Pt(tau, -1.0, 0.0),  Pt(-tau, -1.0, 0.0)};
@@ -1269,14 +1271,41 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     aligned_paraboloid.a() = random_coeffs_a(eng);
     aligned_paraboloid.b() = random_coeffs_b(eng);
 
-    aligned_paraboloid.a() = -3.888977805367693108;
-    aligned_paraboloid.b() = -2.4465052134162230679;
-    angles[0] = 1.1092694497205981552;
-    angles[1] = -1.2573575618334449366;
-    angles[2] = 0.01533621948900898424;
-    translations[0] = -0.46516830225756305994;
-    translations[1] = -0.49182923844069248442;
-    translations[2] = -0.04080364573176781251;
+    // aligned_paraboloid.a() = 3.6157030206049824983;
+    // aligned_paraboloid.b() = 4.1295193652799984108;
+    // angles[0] = -0.97868152343085124123;
+    // angles[1] = -0.57539771632986991268;
+    // angles[2] = 0;
+    // translations[0] = -0.43414184358285634602;
+    // translations[1] = 0.28645929816099324761;
+    // translations[2] = -0.086163975224342714831;
+
+    // aligned_paraboloid.a() = 10.0;
+    // aligned_paraboloid.b() = 10.0;
+    // angles[0] = M_PI / 10.0;
+    // angles[1] = 0.0;
+    // angles[2] = 0.0;
+    // translations[0] = 0.2;
+    // translations[1] = 0.02;
+    // translations[2] = 0.45;
+
+    // aligned_paraboloid.a() = -10.0;
+    // aligned_paraboloid.b() = -10.0;
+    // angles[0] = M_PI / 10.0;
+    // angles[1] = 0.0;
+    // angles[2] = 0.0;
+    // translations[0] = 0.2;
+    // translations[1] = 0.02;
+    // translations[2] = -0.45;
+
+    aligned_paraboloid.a() = 0.5;
+    aligned_paraboloid.b() = -0.5;
+    angles[0] = M_PI / 10.0;
+    angles[1] = M_PI / 10.0;
+    angles[2] = 0;
+    translations[0] = 0.0;
+    translations[1] = 0.0;
+    translations[2] = 0.0;
 
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1383,18 +1412,33 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
     centroid -= amr_moments.volume() * translations;
     amr_moments.centroid() = centroid;
 
-    //    ParametrizedSurfaceOutput surface(paraboloid);
-    // auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
-    //     &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
-    auto volume_and_surface = getVolumeMoments<
-        AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
-        HalfEdgeCutting>(dodeca_unrotated, paraboloid);
-    auto& our_moments = volume_and_surface.getMoments();
-    auto& surface = volume_and_surface.getSurface();
+    ParametrizedSurfaceOutput surface(
+        Paraboloid(Pt(0.0, 0.0, 0.0),
+                   ReferenceFrame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                                  Normal(0.0, 0.0, 1.0)),
+                   aligned_paraboloid.a(), aligned_paraboloid.b()));
+    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+    // auto volume_and_surface = getVolumeMoments<
+    //     AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
+    //     HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+    // auto& our_moments = volume_and_surface.getMoments();
+    // auto& surface = volume_and_surface.getSurface();
     const double length_scale = 0.0025;
     TriangulatedSurfaceOutput triangulated_surface =
         surface.triangulate(length_scale);
     triangulated_surface.write(surf_filename);
+
+    std::cout << seg_half_edge;
+    VTKOutput vtk_io("dodeca_out", "viz", BasicMesh(1, 1, 1, 0));
+    std::vector<ParametrizedSurfaceOutput> surfaces;
+    surface.setLengthScale(length_scale);
+    surfaces.push_back(surface);
+    vtk_io.writeVTKInterface(0.0, surfaces, true);
+
+    // auto our_moments = getVolumeMoments<VolumeMoments, HalfEdgeCutting>(
+    //     dodeca_unrotated, paraboloid);
+
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
@@ -1418,11 +1462,17 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
               << fabs(our_moments.volume() - amr_moments.volume()) / poly_vol
               << std::endl;
     std::cout << std::setprecision(20) << "Centroid unclipped AMR = "
-              << amr_moments.centroid() / safelyTiny(amr_moments.volume())
+              << amr_moments.centroid() / safelyEpsilon(amr_moments.volume())
               << std::endl;
     std::cout << std::setprecision(20) << "Centroid unclipped IRL = "
-              << our_moments.centroid() / safelyTiny(our_moments.volume())
+              << our_moments.centroid() / safelyEpsilon(our_moments.volume())
               << std::endl;
+    std::cout << std::setprecision(20) << "Diff centroid AMR/IRL = "
+              << Pt(fabs(our_moments.centroid()[0] - amr_moments.centroid()[0]),
+                    fabs(our_moments.centroid()[1] - amr_moments.centroid()[1]),
+                    fabs(our_moments.centroid()[2] - amr_moments.centroid()[2]))
+              << std::endl;
+
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
@@ -1437,6 +1487,12 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
 
     if (fabs(our_moments.volume() - amr_moments.volume()) / poly_vol > 1.0e-10)
       exit(-1);
+    if (magnitude(
+            Pt(fabs(our_moments.centroid()[0] - amr_moments.centroid()[0]),
+               fabs(our_moments.centroid()[1] - amr_moments.centroid()[1]),
+               fabs(our_moments.centroid()[2] - amr_moments.centroid()[2]))) >
+        1.0e-12)
+      exit(-1);
   }
   rms_error = sqrt(rms_error / static_cast<double>(Ntests));
 
@@ -1446,7 +1502,7 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
                "---------------------------------------------------------"
             << std::endl;
 
-  EXPECT_NEAR(max_error, 0.0, 1.0e-13);
+  EXPECT_NEAR(max_error, 0.0, 1.0e-12);
 }
 
 TEST(ParaboloidIntersection, getVolumeMomentsUse) {
@@ -2879,28 +2935,33 @@ TEST(ParaboloidIntersection, Gradient) {
               << "Volume = " << volume_with_gradients.volume() << std::endl;
     std::cout << std::setprecision(20) << "Gradient = [" << std::endl;
     std::cout << std::setprecision(20) << "  A -> "
-              << volume_with_gradients.gradient().getGradA() << std::endl
+              << volume_with_gradients.volume_gradient().getGradA() << std::endl
               << std::setprecision(20) << "  B -> "
-              << volume_with_gradients.gradient().getGradB() << std::endl
+              << volume_with_gradients.volume_gradient().getGradB() << std::endl
               << std::setprecision(20) << " Tx -> "
-              << volume_with_gradients.gradient().getGradTx() << std::endl
+              << volume_with_gradients.volume_gradient().getGradTx()
+              << std::endl
               << std::setprecision(20) << " Ty -> "
-              << volume_with_gradients.gradient().getGradTy() << std::endl
+              << volume_with_gradients.volume_gradient().getGradTy()
+              << std::endl
               << std::setprecision(20) << " Tz -> "
-              << volume_with_gradients.gradient().getGradTz()
+              << volume_with_gradients.volume_gradient().getGradTz()
               << std::setprecision(20) << "      Finite differences -> "
               << (volume_plus_epsilon - volume_minus_epsilon) / (2.0 * epsilon)
               << std::setprecision(20) << "      Error -> "
-              << std::fabs(volume_with_gradients.gradient().getGradTz() -
+              << std::fabs(volume_with_gradients.volume_gradient().getGradTz() -
                            (volume_plus_epsilon - volume_minus_epsilon) /
                                (2.0 * epsilon))
               << std::endl
               << std::setprecision(20) << " Rx -> "
-              << volume_with_gradients.gradient().getGradRx() << std::endl
+              << volume_with_gradients.volume_gradient().getGradRx()
+              << std::endl
               << std::setprecision(20) << " Ry -> "
-              << volume_with_gradients.gradient().getGradRy() << std::endl
+              << volume_with_gradients.volume_gradient().getGradRy()
+              << std::endl
               << std::setprecision(20) << " Rz -> "
-              << volume_with_gradients.gradient().getGradRz() << std::endl
+              << volume_with_gradients.volume_gradient().getGradRz()
+              << std::endl
               << "]" << std::endl;
     std::cout << std::setprecision(20) << "Volume difference = "
               << std::fabs(volume_with_gradients.volume() - amr_volume)
@@ -3226,21 +3287,21 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
     }
     std::cout << std::setprecision(20) << "Gradient = [" << std::endl;
     std::cout << std::setprecision(20) << "  A -> "
-              << our_moments.gradient().getGradA() << std::endl
+              << our_moments.volume_gradient().getGradA() << std::endl
               << std::setprecision(20) << "  B -> "
-              << our_moments.gradient().getGradB() << std::endl
+              << our_moments.volume_gradient().getGradB() << std::endl
               << std::setprecision(20) << " Tx -> "
-              << our_moments.gradient().getGradTx() << std::endl
+              << our_moments.volume_gradient().getGradTx() << std::endl
               << std::setprecision(20) << " Ty -> "
-              << our_moments.gradient().getGradTy() << std::endl
+              << our_moments.volume_gradient().getGradTy() << std::endl
               << std::setprecision(20) << " Tz -> "
-              << our_moments.gradient().getGradTz() << std::endl
+              << our_moments.volume_gradient().getGradTz() << std::endl
               << std::setprecision(20) << " Rx -> "
-              << our_moments.gradient().getGradRx() << std::endl
+              << our_moments.volume_gradient().getGradRx() << std::endl
               << std::setprecision(20) << " Ry -> "
-              << our_moments.gradient().getGradRy() << std::endl
+              << our_moments.volume_gradient().getGradRy() << std::endl
               << std::setprecision(20) << " Rz -> "
-              << our_moments.gradient().getGradRz() << std::endl
+              << our_moments.volume_gradient().getGradRz() << std::endl
               << "]" << std::endl;
     std::cout << std::setprecision(20)
               << "Surface EXACT  = " << exact_surface_area << std::endl;
@@ -3263,7 +3324,7 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
               << exact_volume_gradk / std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
     std::cout << std::setprecision(20) << "GradZ unclipped IRL = "
-              << our_moments.gradient().getGradTz() /
+              << our_moments.volume_gradient().getGradTz() /
                      std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
     std::cout << std::setprecision(20) << "GradZ unclipped FD = "
@@ -3280,7 +3341,8 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
                      std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
     std::cout << "Diff GradZ EX/IRL   = "
-              << fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) /
+              << fabs(our_moments.volume_gradient().getGradTz() -
+                      exact_volume_gradk) /
                      std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
 
@@ -3293,11 +3355,12 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
             ? max_volume_error
             : fabs(our_moments.volume() - exact_volume) / poly_vol;
     max_gradient_error =
-        max_gradient_error >
-                fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) /
-                    std::pow(poly_vol, 2.0 / 3.0)
+        max_gradient_error > fabs(our_moments.volume_gradient().getGradTz() -
+                                  exact_volume_gradk) /
+                                 std::pow(poly_vol, 2.0 / 3.0)
             ? max_gradient_error
-            : fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) /
+            : fabs(our_moments.volume_gradient().getGradTz() -
+                   exact_volume_gradk) /
                   std::pow(poly_vol, 2.0 / 3.0);
     max_surface_error =
         max_surface_error > fabs(our_surface_area - exact_surface_area) /
@@ -3309,14 +3372,15 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
                         fabs(our_moments.volume() - exact_volume) / poly_vol /
                         poly_vol;
     rms_gradient_error +=
-        fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) *
-        fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) /
+        fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) *
+        fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) /
         std::pow(poly_vol, 4.0 / 3.0);
     rms_surface_error += fabs(our_surface_area - exact_surface_area) *
                          fabs(our_surface_area - exact_surface_area) /
                          std::pow(poly_vol, 4.0 / 3.0);
 
-    // if (fabs(our_moments.gradient().getGradTz() - exact_volume_gradk) /
+    // if (fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk)
+    // /
     //         std::pow(poly_vol, 2.0 / 3.0) >
     //     1.0e-6)
     //   exit(1);
@@ -3340,9 +3404,10 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
 
 TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {
   AlignedParaboloid aligned_paraboloid;
-  aligned_paraboloid.a() = 0.1;
-  aligned_paraboloid.b() = 0.2;
+  aligned_paraboloid.a() = 10.0;
+  aligned_paraboloid.b() = 20.0;
   std::array<double, 3> angles{{M_PI / 10.0, M_PI / 5.0}};
+  // std::array<double, 3> angles{{0.0, 0.0}};
   std::array<double, 3> translations{{0.0, 0.0, 0.0}};
   ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
                        Normal(0.0, 0.0, 1.0));
@@ -3358,18 +3423,39 @@ TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {
 
   auto cube = RectangularCuboid::fromBoundingPts(Pt(-1.0, -1.0, -1.0),
                                                  Pt(1.0, 1.0, 1.0));
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
+  std::uniform_real_distribution<double> random_vfrac(0.0, 1.0);
 
-  std::cout << "Volume fraction before solve = "
-            << getVolumeFraction(cube, paraboloid) << std::endl;
+  double max_error = 0.0;
+  double tolerance = 1.0e-14;
+  int Ntest = 1e4;
+  for (int i = 0; i < Ntest; ++i) {
+    double vfrac_required = random_vfrac(eng);
+    ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
+        cube, vfrac_required, tolerance, paraboloid);
+    double distance = solver.getDistance();
+    Paraboloid new_paraboloid(datum + distance * frame[2], frame,
+                              aligned_paraboloid.a(), aligned_paraboloid.b());
+    double error =
+        std::fabs(getVolumeFraction(cube, new_paraboloid) - vfrac_required);
+    max_error = std::max(max_error, error);
+    // if (error > 1.0e-12) {
+    // std::cout << std::setprecision(20) << "VFRAC = " << vfrac_required;
+    // std::cout << std::setprecision(20) << " -- distance = " << distance;
+    // std::cout << std::setprecision(20) << " -- error = " << error <<
+    // std::endl;
+    if (error > 1.0e-12) {
+      exit(-1);
+    }
+  }
 
-  ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
-      cube, 0.566789, 1.0e-14, paraboloid);
-  double distance = solver.getDistance();
-  std::cout << "Distance = " << distance << std::endl;
-  Paraboloid new_paraboloid(datum + distance * frame[2], frame,
-                            aligned_paraboloid.a(), aligned_paraboloid.b());
-  std::cout << "Volume fraction after solve = "
-            << getVolumeFraction(cube, new_paraboloid) << std::endl;
+  std::cout << std::setprecision(20) << Ntest
+            << " tests -- max error = " << max_error << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 10.0 * tolerance);
 }
 
 }  // namespace

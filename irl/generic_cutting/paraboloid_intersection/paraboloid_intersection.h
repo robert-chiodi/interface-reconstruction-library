@@ -24,6 +24,7 @@
 #include "irl/geometry/general/rotations.h"
 #include "irl/geometry/general/unit_quaternion.h"
 #include "irl/helpers/mymath.h"
+#include "irl/moments/volume_moments_with_gradient.h"
 #include "irl/moments/volume_with_gradient.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
@@ -180,11 +181,15 @@ template <class C>
 struct has_embedded_gradient<const C> : has_embedded_gradient<C> {};
 
 template <class GradientType>
+struct has_embedded_gradient<PtWithGradient<GradientType>> : std::true_type {};
+
+template <class GradientType>
 struct has_embedded_gradient<VolumeWithGradient<GradientType>>
     : std::true_type {};
 
 template <class GradientType>
-struct has_embedded_gradient<PtWithGradient<GradientType>> : std::true_type {};
+struct has_embedded_gradient<VolumeMomentsWithGradient<GradientType>>
+    : std::true_type {};
 
 }  // namespace IRL
 

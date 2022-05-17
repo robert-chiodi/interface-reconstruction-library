@@ -69,8 +69,8 @@ class ParaboloidGradientLocal {
   ParaboloidGradientLocal& operator+=(
       const ParaboloidGradientLocal& a_gradient);
   ParaboloidGradientLocal& operator=(const ParaboloidGradientLocal& a_gradient);
-  std::array<double, 6>& getGrad(void);
-  const std::array<double, 6>& getGrad(void) const;
+  std::array<double, 8>& getGrad(void);
+  const std::array<double, 8>& getGrad(void) const;
   void setGrad(const ParaboloidGradientLocal& a_rhs);
   double getGradA(void) const;
   double getGradB(void) const;
@@ -97,8 +97,10 @@ class ParaboloidGradientLocal {
   // 2 - gradTx
   // 3 - gradTy
   // 4 - gradTz
-  // 5 - gradRz
-  std::array<double, 6> gradient_m;
+  // 5 - gradRx
+  // 6 - gradRy
+  // 7 - gradRz
+  std::array<double, 8> gradient_m;
 };
 
 ParaboloidGradientLocal operator*(const ParaboloidGradientLocal& a_gradient,

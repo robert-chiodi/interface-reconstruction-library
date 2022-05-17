@@ -669,7 +669,7 @@ inline Normal ParametrizedSurfaceOutput::getNormalAligned(const Pt a_pt) {
 inline Normal ParametrizedSurfaceOutput::getNormalNonAligned(const Pt a_pt) {
   const auto& datum = this->getParaboloid().getDatum();
   const auto& ref_frame = this->getParaboloid().getReferenceFrame();
-  assert(ref_frame.isOrthonormalBasis());
+  // assert(ref_frame.isOrthonormalBasis());
   const Pt original_pt = a_pt - datum;
   auto aligned_pt = a_pt;
   for (std::size_t n = 0; n < 3; ++n) {
@@ -706,7 +706,7 @@ inline double ParametrizedSurfaceOutput::getMeanCurvatureNonAligned(
     const Pt a_pt) {
   const auto& datum = this->getParaboloid().getDatum();
   const auto& ref_frame = this->getParaboloid().getReferenceFrame();
-  assert(ref_frame.isOrthonormalBasis());
+  // assert(ref_frame.isOrthonormalBasis());
   const Pt original_pt = a_pt - datum;
   auto aligned_pt = a_pt;
   for (std::size_t n = 0; n < 3; ++n) {
@@ -735,7 +735,7 @@ inline double ParametrizedSurfaceOutput::getGaussianCurvatureNonAligned(
     const Pt a_pt) {
   const auto& datum = this->getParaboloid().getDatum();
   const auto& ref_frame = this->getParaboloid().getReferenceFrame();
-  assert(ref_frame.isOrthonormalBasis());
+  // assert(ref_frame.isOrthonormalBasis());
   const Pt original_pt = a_pt - datum;
   auto aligned_pt = a_pt;
   for (std::size_t n = 0; n < 3; ++n) {

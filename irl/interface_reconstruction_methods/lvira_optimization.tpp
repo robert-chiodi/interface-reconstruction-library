@@ -35,7 +35,7 @@ PlanarSeparator LVIRACommon<CellType, kColumns>::getFinalReconstruction(void) {
 
 template <class CellType, UnsignedIndex_t kColumns>
 void LVIRACommon<CellType, kColumns>::setOptimizationBehavior(
-    const OptimizationBehavior &a_parameters) {
+    const OptimizationBehavior& a_parameters) {
   optimization_behavior_m = a_parameters;
 }
 
@@ -69,7 +69,8 @@ void LVIRACommon<CellType, kColumns>::decreaseLambda(double* a_lambda) {
 template <class CellType, UnsignedIndex_t kColumns>
 bool LVIRACommon<CellType, kColumns>::shouldComputeJacobian(
     const UnsignedIndex_t a_iteration, const UnsignedIndex_t a_last_jacobian) {
-  return a_iteration - a_last_jacobian > optimization_behavior_m.delay_jacobian_amount;
+  return a_iteration - a_last_jacobian >
+         optimization_behavior_m.delay_jacobian_amount;
 }
 
 #ifndef USING_INTEL_COMPILER
@@ -77,15 +78,18 @@ template <class CellType, UnsignedIndex_t kColumns>
 bool LVIRACommon<CellType, kColumns>::minimumReached(
     const Eigen::Matrix<double, static_cast<int>(kColumns), 1>& a_delta) const {
   return a_delta.squaredNorm() <
-         LVIRACommon<CellType, kColumns>::optimization_behavior_m.minimum_angle_change *
-             LVIRACommon<CellType, kColumns>::optimization_behavior_m.minimum_angle_change;
+         LVIRACommon<CellType, kColumns>::optimization_behavior_m
+                 .minimum_angle_change *
+             LVIRACommon<CellType, kColumns>::optimization_behavior_m
+                 .minimum_angle_change;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 Eigen::Matrix<double, static_cast<int>(kColumns), 1>
 LVIRACommon<CellType, kColumns>::getJacobianStepSize(void) const {
   const double angle_to_use =
-      LVIRACommon<CellType, kColumns>::optimization_behavior_m.finite_difference_angle;
+      LVIRACommon<CellType, kColumns>::optimization_behavior_m
+          .finite_difference_angle;
   return Eigen::Matrix<double, static_cast<int>(kColumns), 1>::Constant(
       angle_to_use);
 }
@@ -95,15 +99,18 @@ template <class CellType, UnsignedIndex_t kColumns>
 bool LVIRACommon<CellType, kColumns>::minimumReached(
     const Eigen::Matrix<double, kColumns, 1>& a_delta) const {
   return a_delta.squaredNorm() <
-         LVIRACommon<CellType, kColumns>::optimization_behavior_m.minimum_angle_change *
-             LVIRACommon<CellType, kColumns>::optimization_behavior_m.minimum_angle_change;
+         LVIRACommon<CellType, kColumns>::optimization_behavior_m
+                 .minimum_angle_change *
+             LVIRACommon<CellType, kColumns>::optimization_behavior_m
+                 .minimum_angle_change;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 Eigen::Matrix<double, kColumns, 1>
 LVIRACommon<CellType, kColumns>::getJacobianStepSize(void) const {
   const double angle_to_use =
-      LVIRACommon<CellType, kColumns>::optimization_behavior_m.finite_difference_angle;
+      LVIRACommon<CellType, kColumns>::optimization_behavior_m
+          .finite_difference_angle;
   return Eigen::Matrix<double, static_cast<int>(kColumns), 1>::Constant(
       angle_to_use);
 }
@@ -365,4 +372,4 @@ void LVIRADebug<LVIRAType>::writeOutVolumesAndWeights(void) {
 
 }  // namespace IRL
 
-#endif // IRL_INTERFACE_RECONSTRUCTION_METHODS_LVIRA_OPTIMIZATION_TPP_
+#endif  // IRL_INTERFACE_RECONSTRUCTION_METHODS_LVIRA_OPTIMIZATION_TPP_

@@ -126,7 +126,7 @@ inline ParaboloidGradientLocal::ParaboloidGradientLocal(
 
 inline ParaboloidGradientLocal& ParaboloidGradientLocal::operator+=(
     const ParaboloidGradientLocal& a_gradient) {
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     this->getGrad()[i] += a_gradient.getGrad()[i];
   }
   return (*this);
@@ -134,7 +134,7 @@ inline ParaboloidGradientLocal& ParaboloidGradientLocal::operator+=(
 
 inline ParaboloidGradientLocal& ParaboloidGradientLocal::operator=(
     const ParaboloidGradientLocal& a_gradient) {
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     this->getGrad()[i] = a_gradient.getGrad()[i];
   }
   return (*this);
@@ -143,7 +143,7 @@ inline ParaboloidGradientLocal& ParaboloidGradientLocal::operator=(
 inline ParaboloidGradientLocal operator*(
     const ParaboloidGradientLocal& a_gradient, const double a_rhs) {
   ParaboloidGradientLocal gradient(0.0);
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient.getGrad()[i] = a_gradient.getGrad()[i] * a_rhs;
   }
   return gradient;
@@ -157,7 +157,7 @@ inline ParaboloidGradientLocal operator*(
 inline ParaboloidGradientLocal operator/(
     const ParaboloidGradientLocal& a_gradient, const double a_rhs) {
   ParaboloidGradientLocal gradient(0.0);
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient.getGrad()[i] = a_gradient.getGrad()[i] / a_rhs;
   }
   return gradient;
@@ -167,7 +167,7 @@ inline ParaboloidGradientLocal operator+(
     const ParaboloidGradientLocal& a_gradient1,
     const ParaboloidGradientLocal& a_gradient2) {
   ParaboloidGradientLocal gradient(0.0);
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient.getGrad()[i] = a_gradient1.getGrad()[i] + a_gradient2.getGrad()[i];
   }
   return gradient;
@@ -177,7 +177,7 @@ inline ParaboloidGradientLocal operator-(
     const ParaboloidGradientLocal& a_gradient1,
     const ParaboloidGradientLocal& a_gradient2) {
   ParaboloidGradientLocal gradient(0.0);
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient.getGrad()[i] = a_gradient1.getGrad()[i] - a_gradient2.getGrad()[i];
   }
   return gradient;
@@ -185,17 +185,17 @@ inline ParaboloidGradientLocal operator-(
 inline ParaboloidGradientLocal operator-(
     const ParaboloidGradientLocal& a_gradient) {
   ParaboloidGradientLocal gradient(0.0);
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient.getGrad()[i] = -a_gradient.getGrad()[i];
   }
   return gradient;
 }
 
-inline std::array<double, 6>& ParaboloidGradientLocal::getGrad(void) {
+inline std::array<double, 8>& ParaboloidGradientLocal::getGrad(void) {
   return gradient_m;
 }
 
-inline const std::array<double, 6>& ParaboloidGradientLocal::getGrad(
+inline const std::array<double, 8>& ParaboloidGradientLocal::getGrad(
     void) const {
   return gradient_m;
 }
@@ -215,14 +215,18 @@ inline double ParaboloidGradientLocal::getGradTy(void) const {
 inline double ParaboloidGradientLocal::getGradTz(void) const {
   return gradient_m[4];
 }
-inline double ParaboloidGradientLocal::getGradRx(void) const { return 0.0; }
-inline double ParaboloidGradientLocal::getGradRy(void) const { return 0.0; }
-inline double ParaboloidGradientLocal::getGradRz(void) const {
+inline double ParaboloidGradientLocal::getGradRx(void) const {
   return gradient_m[5];
+}
+inline double ParaboloidGradientLocal::getGradRy(void) const {
+  return gradient_m[6];
+}
+inline double ParaboloidGradientLocal::getGradRz(void) const {
+  return gradient_m[7];
 }
 inline void ParaboloidGradientLocal::setGrad(
     const ParaboloidGradientLocal& a_rhs) {
-  for (UnsignedIndex_t i = 0; i < 6; ++i) {
+  for (UnsignedIndex_t i = 0; i < 8; ++i) {
     gradient_m[i] = a_rhs.getGrad()[i];
   }
 }
@@ -241,10 +245,14 @@ inline void ParaboloidGradientLocal::setGradTy(const double a_rhs) {
 inline void ParaboloidGradientLocal::setGradTz(const double a_rhs) {
   gradient_m[4] = a_rhs;
 }
-inline void ParaboloidGradientLocal::setGradRx(const double a_rhs) {}
-inline void ParaboloidGradientLocal::setGradRy(const double a_rhs) {}
-inline void ParaboloidGradientLocal::setGradRz(const double a_rhs) {
+inline void ParaboloidGradientLocal::setGradRx(const double a_rhs) {
   gradient_m[5] = a_rhs;
+}
+inline void ParaboloidGradientLocal::setGradRy(const double a_rhs) {
+  gradient_m[6] = a_rhs;
+}
+inline void ParaboloidGradientLocal::setGradRz(const double a_rhs) {
+  gradient_m[7] = a_rhs;
 }
 
 }  // namespace IRL

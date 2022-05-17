@@ -16,7 +16,7 @@ inline Paraboloid::Paraboloid(const Pt& a_datum,
       frame_m(a_reference_frame),
       paraboloid_m(std::array<double, 2>({a_coef_a, a_coef_b})),
       place_infinite_shortcut_m({false, false}) {
-  assert(frame_m.isOrthonormalBasis());
+  // assert(frame_m.isOrthonormalBasis());
 }
 
 inline Paraboloid Paraboloid::createAlwaysAbove(void) {
@@ -245,7 +245,14 @@ inline Pt projectPtAlongHalfLineOntoParaboloid(
   } else {
     const auto solutions = solveQuadratic(a, b, c);
     if (solutions.size() == 0) {
-      std::cout << a_line << a_starting_pt << std::endl;
+      if (std::fabs(b * b - 4.0 * a * c) > -10.0 * DBL_EPSILON) {
+        return a_starting_pt;
+      }
+      std::cout << "No solution found for projection on paraboloid from "
+                << a_starting_pt << " along direction " << a_line << std::endl;
+      std::cout << "Determinant = " << std::setprecision(20)
+                << b * b - 4.0 * a * c << std::endl;
+      exit(-1);
     }
     assert(solutions.size() > 0);
     if (solutions.size() == 1) {

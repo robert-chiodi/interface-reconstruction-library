@@ -397,7 +397,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
       a_polytope->getNumberOfVertices();
   const auto& datum = a_paraboloid.getDatum();
   const auto& ref_frame = a_paraboloid.getReferenceFrame();
-  assert(ref_frame.isOrthonormalBasis());
+  // assert(ref_frame.isOrthonormalBasis());
 
   for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
     const Pt original_pt =
@@ -460,6 +460,90 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
+  // Rotate gradient of first moment
+  if constexpr (has_embedded_gradient<ReturnType>::value) {
+    if constexpr (std::is_same<typename ReturnType::moment_type,
+                               VolumeMoments>::value) {
+      using gradient_type = typename ReturnType::gradient_type;
+      // Compute gradient of ref frame
+      std::array<std::array<gradient_type, 3>, 3> frame_grad;
+      std::array<gradient_type, 3> datum_grad;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        datum_grad[d] = gradient_type(0.0);
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          frame_grad[d][n] = gradient_type(0.0);
+        }
+      }
+      frame_grad[0][0].setGradRy(ref_frame[0][2] * ref_frame[1][1] -
+                                 ref_frame[0][1] * ref_frame[1][2]);
+      frame_grad[0][1].setGradRy(-ref_frame[0][2] * ref_frame[1][0] +
+                                 ref_frame[0][0] * ref_frame[1][2]);
+      frame_grad[0][2].setGradRy(ref_frame[0][1] * ref_frame[1][0] -
+                                 ref_frame[0][0] * ref_frame[1][1]);
+      frame_grad[0][0].setGradRz(ref_frame[0][2] * ref_frame[2][1] -
+                                 ref_frame[0][1] * ref_frame[2][2]);
+      frame_grad[0][1].setGradRz(-ref_frame[0][2] * ref_frame[2][0] +
+                                 ref_frame[0][0] * ref_frame[2][2]);
+      frame_grad[0][2].setGradRz(ref_frame[0][1] * ref_frame[2][0] -
+                                 ref_frame[0][0] * ref_frame[2][1]);
+      frame_grad[1][0].setGradRx(-ref_frame[0][2] * ref_frame[1][1] +
+                                 ref_frame[0][1] * ref_frame[1][2]);
+      frame_grad[1][1].setGradRx(ref_frame[0][2] * ref_frame[1][0] -
+                                 ref_frame[0][0] * ref_frame[1][2]);
+      frame_grad[1][2].setGradRx(-ref_frame[0][1] * ref_frame[1][0] +
+                                 ref_frame[0][0] * ref_frame[1][1]);
+      frame_grad[1][0].setGradRz(ref_frame[1][2] * ref_frame[2][1] -
+                                 ref_frame[1][1] * ref_frame[2][2]);
+      frame_grad[1][1].setGradRz(-ref_frame[1][2] * ref_frame[2][0] +
+                                 ref_frame[1][0] * ref_frame[2][2]);
+      frame_grad[1][2].setGradRz(ref_frame[1][1] * ref_frame[2][0] -
+                                 ref_frame[1][0] * ref_frame[2][1]);
+      frame_grad[2][0].setGradRx(-ref_frame[0][2] * ref_frame[2][1] +
+                                 ref_frame[0][1] * ref_frame[2][2]);
+      frame_grad[2][1].setGradRx(ref_frame[0][2] * ref_frame[2][0] -
+                                 ref_frame[0][0] * ref_frame[2][2]);
+      frame_grad[2][2].setGradRx(-ref_frame[0][1] * ref_frame[2][0] +
+                                 ref_frame[0][0] * ref_frame[2][1]);
+      frame_grad[2][0].setGradRy(-ref_frame[1][2] * ref_frame[2][1] +
+                                 ref_frame[1][1] * ref_frame[2][2]);
+      frame_grad[2][1].setGradRy(ref_frame[1][2] * ref_frame[2][0] -
+                                 ref_frame[1][0] * ref_frame[2][2]);
+      frame_grad[2][2].setGradRy(-ref_frame[1][1] * ref_frame[2][0] +
+                                 ref_frame[1][0] * ref_frame[2][1]);
+      datum_grad[0].setGradTx(ref_frame[0][0]);
+      datum_grad[0].setGradTy(ref_frame[1][0]);
+      datum_grad[0].setGradTz(ref_frame[2][0]);
+      datum_grad[1].setGradTx(ref_frame[0][1]);
+      datum_grad[1].setGradTy(ref_frame[1][1]);
+      datum_grad[1].setGradTz(ref_frame[2][1]);
+      datum_grad[2].setGradTx(ref_frame[0][2]);
+      datum_grad[2].setGradTy(ref_frame[1][2]);
+      datum_grad[2].setGradTz(ref_frame[2][2]);
+      auto pt_grad = std::array<gradient_type, 3>(
+          {gradient_type(0.0), gradient_type(0.0), gradient_type(0.0)});
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          pt_grad[n] += ref_frame[d][n] * moments.centroid().getData()[d] +
+                        frame_grad[d][n] * moments.centroid().getPt()[d];
+        }
+      }
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        pt_grad[d] += moments.volume_gradient() * datum[d] +
+                      moments.volume() * datum_grad[d];
+      }
+      moments.centroid().getData() = pt_grad;
+
+      // Move first moment back to original frame of reference
+      auto pt = Pt(0.0, 0.0, 0.0);
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        for (UnsignedIndex_t n = 0; n < 3; ++n) {
+          pt[n] += ref_frame[d][n] * moments.centroid().getPt()[d];
+        }
+      }
+      pt += moments.volume() * datum;
+      moments.centroid().getPt() = pt;
+    }
+  }
   // Move first moment back to original frame of reference
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
     if constexpr (std::is_same<typename ReturnType::moment_type,
@@ -467,11 +551,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
       auto pt = Pt(0.0, 0.0, 0.0);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
-          pt[n] += ref_frame[d][n] * moments.getMoments().centroid()[d];
+          pt[n] += ref_frame[d][n] * moments.getMoments().centroid().getPt()[d];
         }
       }
       pt += moments.getMoments().volume() * datum;
-      moments.getMoments().centroid() = pt;
+      moments.getMoments().centroid().getPt() = pt;
     }
   }
   if constexpr (!has_paraboloid_surface<ReturnType>::value &&
@@ -479,11 +563,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     auto pt = Pt(0.0, 0.0, 0.0);
     for (UnsignedIndex_t d = 0; d < 3; ++d) {
       for (UnsignedIndex_t n = 0; n < 3; ++n) {
-        pt[n] += ref_frame[d][n] * moments.centroid()[d];
+        pt[n] += ref_frame[d][n] * moments.centroid().getPt()[d];
       }
     }
     pt += moments.volume() * datum;
-    moments.centroid() = pt;
+    moments.centroid().getPt() = pt;
   }
 
   return moments;
@@ -913,11 +997,15 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
   auto face_normal_withgrad =
       pt_type(Pt(face_normal[0], face_normal[1], face_normal[2]));
   auto& face_normal_grad = face_normal_withgrad.getData();
-  for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    face_normal_grad[d].setGradRx(0.0);
-    face_normal_grad[d].setGradRy(0.0);
-    face_normal_grad[d].setGradRz(0.0);
-  }
+  face_normal_grad[0].setGradRx(0.0);
+  face_normal_grad[1].setGradRx(face_normal[2]);
+  face_normal_grad[2].setGradRx(-face_normal[1]);
+  face_normal_grad[0].setGradRy(-face_normal[2]);
+  face_normal_grad[1].setGradRy(0.0);
+  face_normal_grad[2].setGradRy(face_normal[0]);
+  face_normal_grad[0].setGradRz(face_normal[1]);
+  face_normal_grad[1].setGradRz(-face_normal[0]);
+  face_normal_grad[2].setGradRz(0.0);
 
   // Compute tangents and their gradient
   auto tgt_withgrad_0 = computeTangentVectorAndGradientAtPoint<pt_type>(
@@ -1273,10 +1361,20 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   // Compute gradients of polyhedron corners (if gradients are requested)
   if constexpr (has_embedded_gradient<ReturnType>::value) {
     for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+      auto& pt = a_polytope->getVertex(v)->getLocation().getPt();
       auto& gradient = a_polytope->getVertex(v)->getLocation().getData();
       gradient[0].setGradTx(-1.0);
       gradient[1].setGradTy(-1.0);
       gradient[2].setGradTz(-1.0);
+      gradient[0].setGradRx(0.0);
+      gradient[1].setGradRx(pt[2]);
+      gradient[2].setGradRx(-pt[1]);
+      gradient[0].setGradRy(-pt[2]);
+      gradient[1].setGradRy(0.0);
+      gradient[2].setGradRy(pt[0]);
+      gradient[0].setGradRz(pt[1]);
+      gradient[1].setGradRz(-pt[0]);
+      gradient[2].setGradRz(0.0);
     }
   }
 
@@ -1636,6 +1734,55 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
 
   if (new_intersection_vertices == 0) {
+    // If no intersections at all, gradient need to be updated
+    if constexpr (has_embedded_gradient<ReturnType>::value) {
+      // if constexpr (std::is_same<typename ReturnType::moment_type,
+      //                            VolumeMoments>::value) {
+      // If volume == 0, then there are no face-only intersections
+      if (full_moments.volume() == 0.0) {
+        // Find vertex closest to the paraboloid
+        double min_dist = DBL_MAX;
+        pt_type closest_pt;
+        for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+          auto& vertex = *(a_polytope->getVertex(v));
+          const double dist = std::fabs(signedDistance(
+              vertex.getLocation().getPt(), a_aligned_paraboloid));
+          if (dist < min_dist) {
+            min_dist = dist;
+            closest_pt = vertex.getLocation();
+          }
+        }
+        // Add (normalized) signed distance to the volume
+        using gradient_type = typename ReturnType::gradient_type;
+        using scalar_type = ScalarWithGradient<gradient_type>;
+        std::array<scalar_type, 3> pt;
+        for (UnsignedIndex_t d = 0; d < 3; ++d) {
+          pt[d] = scalar_type(closest_pt.getPt()[d], closest_pt.getData()[d]);
+        }
+        auto A_grad = gradient_type(0.0), B_grad = gradient_type(0.0);
+        A_grad.setGradA(1.0);
+        B_grad.setGradB(1.0);
+        const auto A = scalar_type(a_aligned_paraboloid.a(), A_grad),
+                   B = scalar_type(a_aligned_paraboloid.b(), B_grad);
+        const auto volume_add_on =
+            -(A * pt[0] * pt[0] + B * pt[1] * pt[1] + pt[2]);
+        const double scale = std::pow(a_polytope->calculateVolume(), 2.0 / 3.0);
+        full_moments.volume() = volume_add_on.value() * scale;
+        full_moments.volume_gradient() = volume_add_on.gradient() * scale;
+        // if (number_of_vertices_above == starting_number_of_vertices) {
+        //   std::cout << "New VF = "
+        //             << full_moments.volume() / a_polytope->calculateVolume()
+        //             << std::endl;
+        // } else {
+        //   std::cout << "New VF = "
+        //             << 1.0 + full_moments.volume() /
+        //                          a_polytope->calculateVolume()
+        //             << std::endl;
+        // }
+        // }
+      }
+    }
+
     if (number_of_vertices_above == starting_number_of_vertices) {
       // All points above
       return full_moments;
