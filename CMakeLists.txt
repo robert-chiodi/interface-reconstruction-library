@@ -51,7 +51,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -DNDEBUG_PERF")
 endif()
 
 # Find external packages needed by IRL
-find_package(Eigen) # Provide -D EIGEN_PATH=/path/to/Eigen
+find_package(Eigen3) # Provide -D EIGEN_PATH=/path/to/Eigen
 
 # Add packages IRL stores in external
 set(IRL_USE_ABSL ON)
@@ -92,7 +92,7 @@ endif()
 
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")
-target_link_libraries(irl INTERFACE PUBLIC Eigen::Eigen)
+target_link_libraries(irl INTERFACE PUBLIC Eigen3::Eigen)
 if(IRL_USE_ABSL)
   target_include_directories(irl SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/external/abseil-cpp")
   target_link_libraries(irl PUBLIC absl::inlined_vector absl::flat_hash_map)
@@ -135,6 +135,16 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/irl" # source directory
         DESTINATION "include" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.tpp"# select header files
+)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/abseil-cpp" # source directory
+        DESTINATION "include/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h"# select header files
+)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/abseil-cpp" # source directory
+        DESTINATION "include/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.inc"# select header files
 )
 install(TARGETS irl_c EXPORT "irl_c_exp" ARCHIVE DESTINATION "lib")
 install(TARGETS irl_fortran EXPORT "irl_fortran_exp" ARCHIVE DESTINATION "lib")
