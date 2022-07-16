@@ -33,7 +33,7 @@ void c_OptimizationBehavior_setAcceptableError(c_OptimizationBehavior* a_self, c
 void c_OptimizationBehavior_setMaxIterations(c_OptimizationBehavior* a_self, const int a_parameter) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
-  assert(*a_parameter >= 0);
+  assert(a_parameter >= 0);
   (*a_self->obj_ptr).maximum_iterations = static_cast<IRL::UnsignedIndex_t>(a_parameter);
 }
 
