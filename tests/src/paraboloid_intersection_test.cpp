@@ -1751,12 +1751,18 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                         aligned_paraboloid.b());
 
   //////////////////////////////// YOU CAN CHANGE THESE PARAMETERS
-  int Ntests = 201;  // Number of tests
-  double h = 0.75;   // Edge length of the cube
+  int Ntests = 7;  // Number of tests
+  double h = 1.0;  // Edge length of the cube
   ////////////////////////////////
 
   double max_volume_error = 0.0, rms_volume_error = 0.0;
   double max_surface_error = 0.0, rms_surface_error = 0.0;
+
+  std::ofstream myfile;
+  myfile.open("translating_cube.txt");
+  myfile << "k m0 m0_ex m0_err m1x m1x_ex m1x_err m1z m1z_ex m1z_err m0s "
+            "m0s_ex m0s_err\n";
+  myfile.close();
 
   for (int i = 0; i < Ntests; i++) {
     double k = (2.0 * h * h + h) * static_cast<double>(i) /
@@ -1788,11 +1794,12 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     std::string poly_filename = "cell_" + std::to_string(i);
     std::string surf_filename = "surface_" + std::to_string(i);
     auto poly_vol = seg_half_edge.calculateVolume();
-    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
-        poly_filename);  // This prints the AMR triangles
-    auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
-        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+    // auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
+    //     &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+    //     poly_filename);  // This prints the AMR triangles
+    // auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+    //     &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+    auto amr_moments = VolumeMoments::fromScalarConstant(0.0);
     ParametrizedSurfaceOutput surface(paraboloid);
     auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
@@ -2069,6 +2076,19 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
+
+    myfile.open("translating_cube.txt", std::ios::app);
+    // myfile << "k m0_err m1x_err m1z_err m0s_err\n";
+    myfile << std::scientific << std::setprecision(20) << k << " "
+           << our_moments.volume() << " " << exact_volume << " "
+           << fabs(our_moments.volume() - exact_volume) << " "
+           << our_moments.centroid()[0] << " " << exact_m1x << " "
+           << fabs(our_moments.centroid()[0] - exact_m1x) << " "
+           << our_moments.centroid()[2] << " " << exact_m1z << " "
+           << fabs(our_moments.centroid()[2] - exact_m1z) << " "
+           << our_surface_area << " " << exact_surface_area << " "
+           << fabs(our_surface_area - exact_surface_area) << "\n";
+    myfile.close();
 
     max_volume_error =
         max_volume_error > fabs(our_moments.volume() - exact_volume) / poly_vol
@@ -3456,6 +3476,178 @@ TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {
             << " tests -- max error = " << max_error << std::endl;
 
   EXPECT_NEAR(max_error, 0.0, 10.0 * tolerance);
+}
+
+TEST(ParaboloidIntersection, Armadillo) {
+  std::ifstream myfile("bunny.vtk");
+  std::string line;
+  char space_char = ' ';
+  std::vector<Pt> point_list{};
+  std::vector<std::array<UnsignedIndex_t, 3>> triangle_mapping{};
+  if (myfile.is_open()) {
+    std::vector<std::string> words{};
+    bool read_points = false;
+    bool read_connectivity = false;
+    while (getline(myfile, line)) {
+      std::stringstream line_stream(line);
+      std::string split_line;
+      while (std::getline(line_stream, split_line, space_char)) {
+        words.push_back(split_line);
+      }
+
+      if (read_points) {
+        for (unsigned i = 0; i < words.size() / 3; i++) {
+          point_list.push_back(Pt(std::stod(words[3 * i + 0]),
+                                  std::stod(words[3 * i + 1]),
+                                  std::stod(words[3 * i + 2])));
+        }
+      }
+      if (read_connectivity) {
+        for (unsigned i = 0; i < words.size() / 3; i++) {
+          triangle_mapping.push_back(std::array<UnsignedIndex_t, 3>{
+              static_cast<UnsignedIndex_t>(std::stoi(words[3 * i + 0])),
+              static_cast<UnsignedIndex_t>(std::stoi(words[3 * i + 1])),
+              static_cast<UnsignedIndex_t>(std::stoi(words[3 * i + 2]))});
+        }
+      }
+      if (words.size() == 0) {
+        read_points = false;
+        read_connectivity = false;
+      } else if (words[0] == "POINTS") {
+        read_points = true;
+      } else if (words[0] == "CONNECTIVITY") {
+        read_connectivity = true;
+      } else if (words[0] == "CELL_DATA") {
+        read_connectivity = false;
+      }
+      words.clear();
+    }
+    myfile.close();
+  }
+  std::cout << "THERE ARE " << point_list.size() << " POINTS!" << std::endl;
+  std::cout << "THERE ARE " << triangle_mapping.size() << " TRIANGLES!"
+            << std::endl;
+
+  // double scale = 1.0e-2;
+  double scale = 1.0;
+  for (int i = 0; i < point_list.size(); i++) {
+    point_list[i] *= scale;
+  }
+  PolyhedronConnectivity connectivity(triangle_mapping);
+  GeneralPolyhedron armadillo(point_list, &connectivity);
+
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+
+  for (UnsignedIndex_t i = 0; i < 1; ++i) {
+    AlignedParaboloid aligned_paraboloid;
+    ReferenceFrame orig_frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                              Normal(0.0, 0.0, 1.0));
+    double angles[3] = {0.0, 0.0, 0.0};
+    Pt translations(0.0, 0.0, 0.0);
+    aligned_paraboloid.a() = 1.0;
+    aligned_paraboloid.b() = 1.0;
+
+    aligned_paraboloid.a() = -3.0;
+    aligned_paraboloid.b() = 3.0;
+    angles[0] = M_PI / 2.0;
+    angles[1] = M_PI;
+    // angles[2] = 0;
+    // translations[0] = 0.0;
+    translations[1] = -0.3;
+    translations[2] = -0.1;
+
+    auto frame = orig_frame;
+    UnitQuaternion x_rotation(angles[0], frame[0]);
+    UnitQuaternion y_rotation(angles[1], frame[1]);
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    frame = x_rotation * y_rotation * z_rotation * frame;
+    for (auto& vertex : armadillo) {
+      Pt tmp_pt = vertex + translations;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        vertex[d] = frame[d] * tmp_pt;
+      }
+    }
+
+    std::string poly_filename = "cell_" + std::to_string(i);
+    std::string surf_filename = "surface_" + std::to_string(i);
+    armadillo.setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    auto poly_vol = seg_half_edge.calculateVolume();
+
+    for (auto& face : seg_half_edge) {
+      auto normal = Normal(0.0, 0.0, 0.0);
+      const auto starting_half_edge = face->getStartingHalfEdge();
+      auto current_half_edge = starting_half_edge;
+      auto next_half_edge = starting_half_edge->getNextHalfEdge();
+      const auto& start_location =
+          starting_half_edge->getPreviousVertex()->getLocation();
+      do {
+        normal += crossProduct(
+            current_half_edge->getVertex()->getLocation() - start_location,
+            next_half_edge->getVertex()->getLocation() - start_location);
+        current_half_edge = next_half_edge;
+        next_half_edge = next_half_edge->getNextHalfEdge();
+      } while (next_half_edge != starting_half_edge);
+      normal.normalize();
+      face->setPlane(Plane(normal, normal * start_location));
+    }
+
+    Paraboloid paraboloid(-translations, frame, aligned_paraboloid.a(),
+                          aligned_paraboloid.b());
+
+    std::cout << "CELL READY" << std::endl;
+
+    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 5,
+        poly_filename);  // This prints the AMR triangles
+    auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 15);
+    // // Move centroid to global reference frame
+    // auto centroid = IRL::Pt(0.0, 0.0, 0.0);
+    // for (std::size_t d = 0; d < 3; ++d) {
+    //   for (std::size_t n = 0; n < 3; ++n) {
+    //     centroid[n] += frame[d][n] * amr_moments.centroid()[d];
+    //   }
+    // }
+    // centroid -= amr_moments.volume() * translations;
+    // amr_moments.centroid() = centroid;
+
+    std::cout << "AMR VOLUME = " << amr_moments.volume() << std::endl;
+
+    ParametrizedSurfaceOutput surface(
+        Paraboloid(Pt(0.0, 0.0, 0.0),
+                   ReferenceFrame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                                  Normal(0.0, 0.0, 1.0)),
+                   aligned_paraboloid.a(), aligned_paraboloid.b()));
+
+    auto start = std::chrono::system_clock::now();
+    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> runtime = end - start;
+    std::cout << "IRL VOLUME = " << our_moments.volume() << std::endl;
+    std::cout << "     ERROR = "
+              << std::abs(amr_moments.volume() - our_moments.volume()) /
+                     amr_moments.volume()
+              << std::endl;
+    printf("Total IRL run time: %20f \n\n", runtime.count());
+
+    // auto volume_and_surface = getVolumeMoments<
+    //     AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
+    //     HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+    // auto& our_moments = volume_and_surface.getMoments();
+    // auto& surface = volume_and_surface.getSurface();
+    const double length_scale = 1.0e-3;
+    TriangulatedSurfaceOutput triangulated_surface =
+        surface.triangulate(length_scale);
+    triangulated_surface.write(surf_filename);
+
+    // VTKOutput vtk_io("armadillo_out", "viz", BasicMesh(1, 1, 1, 0));
+    // std::vector<ParametrizedSurfaceOutput> surfaces;
+    // surface.setLengthScale(length_scale);
+    // surfaces.push_back(surface);
+    // vtk_io.writeVTKInterface(0.0, surfaces, true);
+  }
 }
 
 }  // namespace

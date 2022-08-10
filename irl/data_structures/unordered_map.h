@@ -11,7 +11,7 @@
 #define IRL_DATA_STRUCTURES_UNORDERED_MAP_H_
 
 #ifndef IRL_NO_ABSL
-#include "external/abseil-cpp/absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_map.h"
 namespace IRL {
 template <class KeyType, class ValueType>
 using unordered_map = absl::flat_hash_map<KeyType, ValueType>;
@@ -26,4 +26,4 @@ using unordered_map = std::unordered_map<KeyType, ValueType>;
 }  // namespace IRL
 #endif
 
-#endif // IRL_DATA_STRUCTURES_UNORDERED_MAP_H_
+#endif  // IRL_DATA_STRUCTURES_UNORDERED_MAP_H_
