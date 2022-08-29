@@ -257,25 +257,61 @@ class ArcContributionToSurfaceArea_Functor {
         return pt[0] * der[1];
       } else if (std::fabs(a) > std::fabs(b)) {
         const double primitive =
-            (2. * a * pt[0] *
+            (2. * pt[0] *
                  std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
                            4. * (b * b) * (pt[1] * pt[1])) +
              (1. + 4. * (b * b) * (pt[1] * pt[1])) *
-                 std::log(a * (2. * a * pt[0] +
-                               std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
-                                         4. * (b * b) * (pt[1] * pt[1]))))) /
-            (4. * a);
+                 std::log(-2. * std::fabs(a) * pt[0] +
+                          std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                                    4. * (b * b) * (pt[1] * pt[1]))) /
+                 std::fabs(a)) /
+            4.;
+        if (std::isnan(primitive)) {
+          std::cout << "Pr = " << pt << std::endl;
+          std::cout << "Der = " << der << std::endl;
+          std::cout << "a = " << a << std::endl;
+          std::cout << "b = " << b << std::endl;
+          std::cout << "Arc: weight = " << arc_m.weight() << std::endl;
+          std::cout << "Arc: start = " << arc_m.start_point() << std::endl;
+          std::cout << "Arc: ctrl  = " << arc_m.control_point() << std::endl;
+          std::cout << "Arc: end   = " << arc_m.end_point() << std::endl;
+          std::cout << "Primitive is NaN" << std::endl;
+          exit(1);
+        }
+        if (std::isnan(der[1])) {
+          std::cout << "der[1] is NaN" << std::endl;
+          exit(1);
+        }
+
         return primitive * der[1];
       } else {
         const double primitive =
-            -(2. * b * pt[1] *
+            -(2. * pt[1] *
                   std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
                             4. * (b * b) * (pt[1] * pt[1])) +
               (1. + 4. * (a * a) * (pt[0] * pt[0])) *
-                  std::log(b * (2. * b * pt[1] +
-                                std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
-                                          4. * (b * b) * (pt[1] * pt[1]))))) /
-            (4. * b);
+                  std::log(-2. * std::fabs(b) * pt[1] +
+                           std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
+                                     4. * (b * b) * (pt[1] * pt[1]))) /
+                  std::fabs(b)) /
+            (4.);
+        if (std::isnan(primitive)) {
+          std::cout << "Pr = " << pt << std::endl;
+          std::cout << "Der = " << der << std::endl;
+          std::cout << "a = " << a << std::endl;
+          std::cout << "b = " << b << std::endl;
+          std::cout << "Arc: weight = " << arc_m.weight() << std::endl;
+          std::cout << "Arc: start = " << arc_m.start_point() << std::endl;
+          std::cout << "Arc: ctrl  = " << arc_m.control_point() << std::endl;
+          std::cout << "Arc: end   = " << arc_m.end_point() << std::endl;
+          std::cout << "Primitive is NaN" << std::endl;
+          exit(1);
+        }
+        if (std::isnan(der[0])) {
+          std::cout << "der[0] is NaN" << std::endl;
+          exit(1);
+        }
+
         return primitive * der[0];
       }
     }

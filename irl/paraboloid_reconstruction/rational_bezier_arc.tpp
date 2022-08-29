@@ -45,31 +45,54 @@ inline RationalBezierArc::RationalBezierArc(
   const Normal edge_vector = end_point_m - start_point_m;
   const Pt average_pt = 0.5 * (start_point_m + end_point_m);
   const Normal n_cross_t0 = crossProduct(a_plane_normal, a_start_tangent);
-  if (std::fabs(n_cross_t0 * a_end_tangent) < DBL_EPSILON) {
+  if (std::fabs(n_cross_t0 * a_end_tangent) < 100.0 * DBL_EPSILON) {
     control_point_m = average_pt;
-    weight_m = 0.0;
+    weight_m = DBL_MAX;
   } else {
-    assert(std::fabs(n_cross_t0 * a_end_tangent) >= DBL_EPSILON);
+    assert(std::fabs(n_cross_t0 * a_end_tangent) >= 100.0 * DBL_EPSILON);
     const double lambda_1 =
         -(n_cross_t0 * edge_vector) / (n_cross_t0 * a_end_tangent);
     control_point_m = Pt(end_point_m + lambda_1 * a_end_tangent);
-    const auto mid_to_control = Normal(control_point_m - average_pt);
-    const auto projected_pt = projectPtAlongHalfLineOntoParaboloid(
-        a_paraboloid, mid_to_control, average_pt);
-    weight_m = 1.0;
-    if (squaredMagnitude(projected_pt - control_point_m) <
-        DBL_EPSILON * DBL_EPSILON) {
+    const double ct_correction =
+        Normal(control_point_m - start_point_m) * a_plane_normal;
+    control_point_m = control_point_m - ct_correction * a_plane_normal;
+    auto mid_to_control = Normal(control_point_m - average_pt);
+    if (squaredMagnitude(mid_to_control) < 1.0e4 * DBL_EPSILON * DBL_EPSILON) {
       weight_m = DBL_MAX;
     } else {
-      double previous_best = -DBL_MAX;
-      for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        const double denominator = projected_pt[d] - control_point_m[d];
-        if (std::fabs(denominator) > previous_best) {
-          previous_best = std::fabs(denominator);
-          weight_m =
-              (start_point_m[d] + end_point_m[d] - 2.0 * projected_pt[d]) /
-              (2.0 * denominator);
+      mid_to_control.normalize();
+      const double mid_dot_face_normal = mid_to_control * a_plane_normal;
+      mid_to_control = mid_to_control - mid_dot_face_normal * a_plane_normal;
+      const auto projected_pt = projectPtAlongHalfLineOntoParaboloid(
+          a_paraboloid, mid_to_control, average_pt);
+      weight_m = 1.0;
+      if (squaredMagnitude(projected_pt - control_point_m) <
+          1.0e4 * DBL_EPSILON * DBL_EPSILON) {
+        weight_m = DBL_MAX;
+      } else if (projected_pt[0] == DBL_MAX) {
+        if (std::fabs(a_paraboloid.a() * average_pt[0] * average_pt[0] +
+                      a_paraboloid.b() * average_pt[1] * average_pt[1] +
+                      average_pt[2]) < 100.0 * DBL_EPSILON) {
+          weight_m = 0.0;
+        } else {
+          weight_m = -1.0e15;
         }
+      } else {
+        double previous_best = 0.0;
+        double sign = 1.0;
+        for (UnsignedIndex_t d = 0; d < 3; ++d) {
+          const double denominator = projected_pt[d] - control_point_m[d];
+          if (std::fabs(denominator) > previous_best) {
+            previous_best = std::fabs(denominator);
+            weight_m =
+                (start_point_m[d] + end_point_m[d] - 2.0 * projected_pt[d]) /
+                (2.0 * denominator);
+          }
+        }
+        if (previous_best < DBL_EPSILON) {
+          weight_m = DBL_MAX;
+        }
+        weight_m = std::max(weight_m, 0.0);
       }
     }
   }

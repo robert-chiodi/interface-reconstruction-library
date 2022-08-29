@@ -937,8 +937,8 @@ computeType3Contribution(const AlignedParaboloid& a_paraboloid,
   //   coeffs = coeffsV3andC3SeriesInfinity(weight);
   else  // This is within DBL_EPSILON of the actual value
   {
-    coeffs = std::array<double, 12>({1.0 / 6.0, 2.0 / 3.0, -1.0 / 140.0,
-                                     1.0 / 420.0, -1.0 / 280.0, 1.0 / 14.0, 0.0,
+    coeffs = std::array<double, 12>({1.0 / 6.0, 2.0 / 3.0, 0.0, -1.0 / 140.0,
+                                     1.0 / 420.0, -1.0 / 280.0, 1.0 / 14.0,
                                      1.0 / 630.0, -1.0 / 1890.0, 1.0 / 3780.0,
                                      -1.0 / 252.0, 1.0 / 18.0});
   }

@@ -240,33 +240,32 @@ inline Pt projectPtAlongHalfLineOntoParaboloid(
                     a_paraboloid.a() * a_starting_pt[0] * a_starting_pt[0] +
                     a_paraboloid.b() * a_starting_pt[1] * a_starting_pt[1]);
   // check if starting point is on paraboloid (then solution = 0)
-  if (std::fabs(c) < 5.0 * DBL_EPSILON) {
-    return a_starting_pt;
-  } else {
-    const auto solutions = solveQuadratic(a, b, c);
-    if (solutions.size() == 0) {
-      if (std::fabs(b * b - 4.0 * a * c) > -10.0 * DBL_EPSILON) {
-        return a_starting_pt;
-      }
-      std::cout << "No solution found for projection on paraboloid from "
-                << a_starting_pt << " along direction " << a_line << std::endl;
-      std::cout << "Determinant = " << std::setprecision(20)
-                << b * b - 4.0 * a * c << std::endl;
-      exit(-1);
-    }
-    assert(solutions.size() > 0);
-    if (solutions.size() == 1) {
-      assert(solutions[0] >= 0.0);
-      return a_starting_pt + a_line * solutions[0];
-    } else {
-      assert(std::max(solutions[0], solutions[1]) >= 0.0);
-      const double distance_along_line =
-          solutions[0] > 0.0 && solutions[1] > 0.0
-              ? std::min(solutions[0], solutions[1])
-              : std::max(solutions[0], solutions[1]);
-      return a_starting_pt + a_line * distance_along_line;
-    }
+  // if (std::fabs(c) < DBL_EPSILON) {
+  //   return Pt(DBL_MAX, DBL_MAX, DBL_MAX);
+  // } else {
+  const auto solutions = solveQuadratic(a, b, c);
+  if (solutions.size() == 0) {
+    return Pt(DBL_MAX, DBL_MAX, DBL_MAX);
   }
+  assert(solutions.size() > 0);
+  if (solutions.size() == 1) {
+    assert(solutions[0] >= 0.0);
+    if (solutions[0] < 0.0) {
+      return Pt(DBL_MAX, DBL_MAX, DBL_MAX);
+    }
+    return a_starting_pt + a_line * solutions[0];
+  } else {
+    assert(std::max(solutions[0], solutions[1]) >= 0.0);
+    const double distance_along_line =
+        solutions[0] > 0.0 && solutions[1] > 0.0
+            ? std::min(solutions[0], solutions[1])
+            : std::max(solutions[0], solutions[1]);
+    if (distance_along_line < 0.0) {
+      return Pt(DBL_MAX, DBL_MAX, DBL_MAX);
+    }
+    return a_starting_pt + a_line * distance_along_line;
+  }
+  // }
 }
 
 template <class PtTypeWithGradient>
