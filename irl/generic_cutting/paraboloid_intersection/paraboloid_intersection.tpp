@@ -108,6 +108,15 @@ inline Normal computeAndCorrectTangentVectorAtPt(
   if ((a_end_tangent * edge_normal > 0.0) == (tangent * edge_normal > 0.0)) {
     tangent = -tangent;
   }
+
+  // const Normal correct_sign =
+  //     crossProduct(a_plane_normal, a_end_pt - a_origin_pt);
+  // if ((a_end_tangent * correct_sign > 0.0) !=
+  //     (tangent * Normal(crossProduct(a_plane_normal,
+  //                                    a_intersection_pt - a_origin_pt)) >
+  //      0.0)) {
+  //   tangent = -tangent;
+  // }
   return tangent;
 }
 
@@ -2354,8 +2363,6 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         }
         const double normal_invert = std::copysign(1.0, face_normal[dir]);
         const double invert = z_diff < 0.0 ? normal_invert : -normal_invert;
-        std::size_t pos_end = 0;
-        std::size_t neg_end = 0;
         // Compute convex hull on projected plane
         const std::size_t x_id = (dir + 1) % 3;
         const std::size_t y_id = (dir + 2) % 3;
@@ -2411,36 +2418,40 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           }
           p = q;
         } while (p != left_id && !is_flat && hull_size <= intersection_size);
-        if (!is_flat && has_flat) {
-          for (auto& element : intersections) {
-            const auto& pt = element.first->getVertex()->getLocation().getPt();
-            // element.second =
-            //     invert *
-            //     std::atan2(pt[y_id] - intersection_avg[y_id],
-            //                pt[x_id] - intersection_avg[x_id]);
-            element.second =
-                invert *
-                std::copysign(
-                    1. - (pt[x_id] - intersection_avg[x_id]) /
-                             (std::fabs(pt[x_id] - intersection_avg[x_id]) +
-                              std::fabs(pt[y_id] - intersection_avg[y_id])),
-                    (pt[y_id] - intersection_avg[y_id]));
-          }
-          std::sort(intersections.begin(), intersections.end(),
-                    [](const stype& a, const stype& b) {
-                      return a.second < b.second;
-                    });
-        } else {
-          if (hull_size != intersection_size) {
-            std::cout << "Parabolic ntersections don't form a convex polygon!"
-                      << std::endl;
-            exit(-1);
-          }
-          if (invert > 0.0) {
-            intersections = intersection_copy;
+        if (!is_flat) {
+          if (!is_flat && has_flat) {
+            for (auto& element : intersections) {
+              const auto& pt =
+                  element.first->getVertex()->getLocation().getPt();
+              // element.second =
+              //     invert *
+              //     std::atan2(pt[store_ind] - intersection_avg[store_ind],
+              //                pt[x_id] - intersection_avg[x_id]);
+              element.second =
+                  invert *
+                  std::copysign(
+                      1. - (pt[x_id] - intersection_avg[x_id]) /
+                               (std::fabs(pt[x_id] - intersection_avg[x_id]) +
+                                std::fabs(pt[y_id] - intersection_avg[y_id])),
+                      (pt[y_id] - intersection_avg[y_id]));
+            }
+            std::sort(intersections.begin(), intersections.end(),
+                      [](const stype& a, const stype& b) {
+                        return a.second < b.second;
+                      });
           } else {
-            for (std::size_t i = 0; i < intersection_size; ++i) {
-              intersections[i] = intersection_copy[intersection_size - 1 - i];
+            if (hull_size != intersection_size) {
+              std::cout
+                  << "Parabolic intersections don't form a convex polygon!"
+                  << std::endl;
+              exit(-1);
+            }
+            if (invert > 0.0) {
+              intersections = intersection_copy;
+            } else {
+              for (std::size_t i = 0; i < intersection_size; ++i) {
+                intersections[i] = intersection_copy[intersection_size - 1 - i];
+              }
             }
           }
         }
