@@ -74,20 +74,26 @@ if(IRL_USE_ABSL)
 endif()
 
 # Path for Fortran Module files
+if(IRL_BUILD_FORTRAN)
 set( CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
+endif()
 
 # Add IRL Libraries that we are creating
 if(BUILD_SHARED_LIBS)
   add_library(irl SHARED)
-  add_library(irl_c SHARED)
-  add_library(irl_fortran SHARED)
+  if(IRL_BUILD_FORTRAN)
+    add_library(irl_c SHARED)
+    add_library(irl_fortran SHARED)
+  endif()
   if(APPLE AND IRL_USE_ABSL)
     target_link_libraries(irl PUBLIC "-framework CoreFoundation")
   endif()
 else()
   add_library(irl STATIC)
-  add_library(irl_c STATIC)
-  add_library(irl_fortran STATIC)
+  if(IRL_BUILD_FORTRAN)
+    add_library(irl_c STATIC)
+    add_library(irl_fortran STATIC)
+  endif()
 endif()
 
 # C++ IRL Base
@@ -98,11 +104,13 @@ if(IRL_USE_ABSL)
   target_link_libraries(irl PUBLIC absl::inlined_vector absl::flat_hash_map)
 endif()
 
-# C Interface
-target_link_libraries(irl_c PUBLIC irl)
+if(IRL_BUILD_FORTRAN)
+  # C Interface
+  target_link_libraries(irl_c PUBLIC irl)
 
-# Fortran Interface
-target_link_libraries(irl_fortran PUBLIC irl_c)
+  # Fortran Interface
+  target_link_libraries(irl_fortran PUBLIC irl_c)
+endif()
 
 
 # Directory for test files
@@ -146,6 +154,9 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/abseil-cpp" # source directory
         FILES_MATCHING # install only matched files
         PATTERN "*.inc"# select header files
 )
-install(TARGETS irl_c EXPORT "irl_c_exp" ARCHIVE DESTINATION "lib")
-install(TARGETS irl_fortran EXPORT "irl_fortran_exp" ARCHIVE DESTINATION "lib")
-install(DIRECTORY "${CMAKE_Fortran_MODULE_DIRECTORY}/" DESTINATION "include/irl_fortran")
+
+if(IRL_BUILD_FORTRAN)
+  install(TARGETS irl_c EXPORT "irl_c_exp" ARCHIVE DESTINATION "lib")
+  install(TARGETS irl_fortran EXPORT "irl_fortran_exp" ARCHIVE DESTINATION "lib")
+  install(DIRECTORY "${CMAKE_Fortran_MODULE_DIRECTORY}/" DESTINATION "include/irl_fortran")
+endif()
