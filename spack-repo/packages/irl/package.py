@@ -42,7 +42,7 @@ class Irl(CMakePackage):
             description='Enable Unit Tests')    
     variant('absl', default=True,
             description='Use ABSL for some underlying classes')            
-    variant('fort_lib', default=False,
+    variant('fortran', default=False,
             description='Build Fortran library interface')
 
     # Dependencies
@@ -53,5 +53,5 @@ class Irl(CMakePackage):
         return [
             self.define_from_variant('BUILD_TESTING', 'unit'),
             self.define_from_variant('IRL_USE_ABSL', 'absl'),
-            self.define_from_variant('IRL_BUILD_FORTRAN', 'fort_lib')
+            self.define_from_variant('IRL_BUILD_FORTRAN', 'fortran')
         ]

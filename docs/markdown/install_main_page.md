@@ -2,24 +2,28 @@
 
 IRL uses CMake (version >= 3.9) to handle its configuration and compilation. By default, the IRL C++, C, and Fortran interfaces will be built. The install directory can be modified in typical cmake fashion by defining `-D CMAKE_INSTALL_PREFIX=install_directory`.
 After installing the dependencies (detailed below), the simplest IRL CMake build command can be executed as
+
 ```
 mkdir build &&
 cd build &&
 cmake .. &&
 make install
 ```
-The path to Eigen (a required dependency) can be given through the CMake variable `-D EIGEN_DIR=path/to/Eigen`.  If not supplied, Eigen will be searched for in the CMake default locations, such as `/usr/include`.
+
+The path to Eigen (a required dependency) can be given through the CMake variable `-D EIGEN_DIR=path/to/Eigen`. If not supplied, Eigen will be searched for in the CMake default locations, such as `/usr/include`, or paths specified by `CMAKE_PREFIX_PATH`.
 
 To change the compiler or compiler options, change the environment variables `CXX` and `FC` for C++ and Fortran, respectively. The compiler flags can also be changed via the environment variables `CXXFLAGS` and `FFLAGS`. As opposed to settign the environment variables, the above information can also be supplied via the CMake variables `CMAKE_CXX_COMPILER`, `CMAKE_Fortran_COMPILER`, `CMAKE_CXX_FLAGS`, and `CMAKE_Fortran_FLAGS`. Note: If the `CMAKE_BUILD_TYPE` is not `Debug`, the compiler flags `-DNDEBUG` and `-DNDEBUG_PERF` will be appended to `CMAKE_CXX_FLAGS`. The default value for `CMAKE_BUILD_TYPE` is `Release` if one is not supplied.
 
+By default, the Fortran library interface is not built. To enable this, supply `-D IRL_BUILD_FORTRAN=ON` when configuring CMake.
+
 Several additional options can be passed to the CMake configuration to tailor IRL to your needs. They are described below.
 
-* `-D EIGEN_DIR=/path/to/Eigen` ----- Provides path to Eigen directory.
-* `-D BUILD_TESTING=ON` ----- Turns on building of unit tests, which are not built by default.  If building tests, GoogleTest will be downloaded and compiled unless the GOOGLETEST_DIR CMake flag is given. 
-* `-D GOOGLETEST_DIR=/path/to/google_test` ----- Provides path to [Google Test](https://github.com/google/googletest) that will be used if when building tests (if turned on).
-* `-D USE_ABSL=OFF` ----- IRL ships with a version of [Google Abseil](https://github.com/abseil/abseil-cpp) for use of its `inlined_vector` and `flat_hash_map` classes. By turning it off, IRL will revert back to its own implementation. This is strongly discouraged for performance reasons.
-* `-D BUILD_SHARED_LIBS=TRUE` ----- Build IRL as a shared library
-
+- `-D EIGEN_DIR=/path/to/Eigen` ----- Provides path to Eigen directory.
+- `-D BUILD_TESTING=ON` ----- Turns on building of unit tests, which are not built by default. If building tests, GoogleTest will be downloaded and compiled unless the GOOGLETEST_DIR CMake flag is given.
+- `-D GOOGLETEST_DIR=/path/to/google_test` ----- Provides path to [Google Test](https://github.com/google/googletest) that will be used if when building tests (if turned on).
+- `-D IRL_BUILD_FORTRAN=ON` ----- Results in the IRL Fortran and C interfaces being built and installed.
+- `-D IRL_USE_ABSL=OFF` ----- IRL ships with a version of [Google Abseil](https://github.com/abseil/abseil-cpp) for use of its `inlined_vector` and `flat_hash_map` classes. By turning it off, IRL will revert back to its own implementation. This is strongly discouraged for performance reasons.
+- `-D BUILD_SHARED_LIBS=TRUE` ----- Build IRL as a shared library
 
 ## External Dependencies
 
