@@ -63,6 +63,7 @@ endif()
 
 if(IRL_USE_ABSL)
   # Add Abseil as a sub-directory but temporarily turn testing off.
+  set(ABSL_PROPAGATE_CXX_STD ON)
   set(ABSEIL_DIR "${PROJECT_SOURCE_DIR}/external/abseil-cpp")
   set(BUILD_TESTING_ORIG ${BUILD_TESTING})
   set(BUILD_TESTING OFF)
@@ -74,26 +75,20 @@ if(IRL_USE_ABSL)
 endif()
 
 # Path for Fortran Module files
-if(IRL_BUILD_FORTRAN)
-set( CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
-endif()
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
 
 # Add IRL Libraries that we are creating
 if(BUILD_SHARED_LIBS)
   add_library(irl SHARED)
-  if(IRL_BUILD_FORTRAN)
-    add_library(irl_c SHARED)
-    add_library(irl_fortran SHARED)
-  endif()
+  add_library(irl_c SHARED)
+  add_library(irl_fortran SHARED)
   if(APPLE AND IRL_USE_ABSL)
     target_link_libraries(irl PUBLIC "-framework CoreFoundation")
   endif()
 else()
   add_library(irl STATIC)
-  if(IRL_BUILD_FORTRAN)
-    add_library(irl_c STATIC)
-    add_library(irl_fortran STATIC)
-  endif()
+  add_library(irl_c STATIC)
+  add_library(irl_fortran STATIC)
 endif()
 
 # C++ IRL Base
@@ -104,14 +99,16 @@ if(IRL_USE_ABSL)
   target_link_libraries(irl PUBLIC absl::inlined_vector absl::flat_hash_map)
 endif()
 
-if(IRL_BUILD_FORTRAN)
-  # C Interface
-  target_link_libraries(irl_c PUBLIC irl)
+# C Interface
+target_link_libraries(irl_c PUBLIC irl)
 
-  # Fortran Interface
-  target_link_libraries(irl_fortran PUBLIC irl_c)
+# Fortran Interface
+target_link_libraries(irl_fortran PUBLIC irl_c)
+
+if(NOT IRL_BUILD_FORTRAN)
+  set_target_properties(irl_c irl_fortran 
+			PROPERTIES EXCLUDE_FROM_ALL TRUE)
 endif()
-
 
 # Directory for test files
 # Will automatically download GoogleTest and compile it to
