@@ -47,7 +47,7 @@ namespace IRL {
 template <class CellType>
 class ProgressiveDistanceSolverParaboloid {
   /// \brief Max number of iterations for the secant Solver
-  static constexpr UnsignedIndex_t max_iter_m = {15};
+  static constexpr UnsignedIndex_t max_iter_m = {80};
   static constexpr UnsignedIndex_t max_bisection_iter = {80};
 
  public:

@@ -16,6 +16,7 @@
 #include "irl/moments/volume_with_gradient.h"
 #include "irl/optimization/constrained_levenberg_marquardt.h"
 #include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
+#include "irl/paraboloid_reconstruction/hessian_paraboloid.h"
 
 #include <cmath>
 #include <random>
@@ -125,16 +126,16 @@ class PLVIRA_test {
     }
     correct_constraints_m(0) =
         neighborhood_m->getConstraints().volume() / ref_volume_m;
-    correct_constraints_m(1) =
-        neighborhood_m->getConstraints().centroid()[0] / ref_moment_m;
-    correct_constraints_m(2) =
-        neighborhood_m->getConstraints().centroid()[1] / ref_moment_m;
-    correct_constraints_m(3) =
-        neighborhood_m->getConstraints().centroid()[2] / ref_moment_m;
+    // correct_constraints_m(1) =
+    //     neighborhood_m->getConstraints().centroid()[0] / ref_moment_m;
+    // correct_constraints_m(2) =
+    //     neighborhood_m->getConstraints().centroid()[1] / ref_moment_m;
+    // correct_constraints_m(3) =
+    //     neighborhood_m->getConstraints().centroid()[2] / ref_moment_m;
     // correct_constraints_m(0) = 0.0;
-    // correct_constraints_m(1) = 0.0;
-    // correct_constraints_m(2) = 0.0;
-    // correct_constraints_m(3) = 0.0;
+    correct_constraints_m(1) = 0.0;
+    correct_constraints_m(2) = 0.0;
+    correct_constraints_m(3) = 0.0;
     for (UnsignedIndex_t i = 0; i < kConstraints; ++i) {
       correct_values_m(kMeasures + i) = correct_constraints_m(i);
     }
@@ -214,10 +215,10 @@ class PLVIRA_test {
         neighborhood_m->getConstrainedCell(), guess_reconstruction_m);
     guess_values_m(kMeasures) =
         moments_constrained_cell.volume() / ref_volume_m;
-    for (UnsignedIndex_t d = 0; d < 3; ++d) {
-      guess_values_m(kMeasures + 1 + d) =
-          moments_constrained_cell.centroid()[d] / ref_moment_m;
-    }
+    // for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    //   guess_values_m(kMeasures + 1 + d) =
+    //       moments_constrained_cell.centroid()[d] / ref_moment_m;
+    // }
   }
 
   void updateBestGuess(void) {
@@ -314,6 +315,8 @@ class PLVIRA_test {
     (*a_error_vector).setZero();
     (*a_constraints).setZero();
     (*a_jacobian_transpose).setZero();
+    // using MyGradientType =
+    //     ParaboloidGradientAndHessianLocal<ParaboloidGradientLocal>;
     using MyGradientType = ParaboloidGradientLocal;
     using MyPtType = PtWithGradient<MyGradientType>;
     // Jacobian of unconstrained measure
@@ -334,14 +337,14 @@ class PLVIRA_test {
       } else {
         (*a_error_vector)(i) = (correct_values_m(i) -
                                 moments_with_gradients.volume() / ref_volume_m);
-        (*a_jacobian_transpose)(0, i) = gradient.getGradTx() / ref_volume_m;
-        (*a_jacobian_transpose)(1, i) = gradient.getGradTy() / ref_volume_m;
-        (*a_jacobian_transpose)(2, i) = gradient.getGradTz() / ref_volume_m;
-        (*a_jacobian_transpose)(3, i) = gradient.getGradRx() / ref_volume_m;
-        (*a_jacobian_transpose)(4, i) = gradient.getGradRy() / ref_volume_m;
-        (*a_jacobian_transpose)(5, i) = gradient.getGradRz() / ref_volume_m;
-        (*a_jacobian_transpose)(6, i) = gradient.getGradA() / ref_volume_m;
-        (*a_jacobian_transpose)(7, i) = gradient.getGradB() / ref_volume_m;
+        (*a_jacobian_transpose)(0, i) = gradient.getGrad()(2) / ref_volume_m;
+        (*a_jacobian_transpose)(1, i) = gradient.getGrad()(3) / ref_volume_m;
+        (*a_jacobian_transpose)(2, i) = gradient.getGrad()(4) / ref_volume_m;
+        (*a_jacobian_transpose)(3, i) = gradient.getGrad()(5) / ref_volume_m;
+        (*a_jacobian_transpose)(4, i) = gradient.getGrad()(6) / ref_volume_m;
+        (*a_jacobian_transpose)(5, i) = gradient.getGrad()(7) / ref_volume_m;
+        (*a_jacobian_transpose)(6, i) = gradient.getGrad()(0) / ref_volume_m;
+        (*a_jacobian_transpose)(7, i) = gradient.getGrad()(1) / ref_volume_m;
       }
     }
     // Jacobian of constraints
@@ -367,21 +370,21 @@ class PLVIRA_test {
         correct_constraints_m(0) -
         constrained_moments_with_gradients.volume() / ref_volume_m;
     (*a_jacobian_transpose)(0, kMeasures) =
-        constrained_volume_gradient.getGradTx() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(2) / ref_volume_m;
     (*a_jacobian_transpose)(1, kMeasures) =
-        constrained_volume_gradient.getGradTy() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(3) / ref_volume_m;
     (*a_jacobian_transpose)(2, kMeasures) =
-        constrained_volume_gradient.getGradTz() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(4) / ref_volume_m;
     (*a_jacobian_transpose)(3, kMeasures) =
-        constrained_volume_gradient.getGradRx() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(5) / ref_volume_m;
     (*a_jacobian_transpose)(4, kMeasures) =
-        constrained_volume_gradient.getGradRy() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(6) / ref_volume_m;
     (*a_jacobian_transpose)(5, kMeasures) =
-        constrained_volume_gradient.getGradRz() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(7) / ref_volume_m;
     (*a_jacobian_transpose)(6, kMeasures) =
-        constrained_volume_gradient.getGradA() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(0) / ref_volume_m;
     (*a_jacobian_transpose)(7, kMeasures) =
-        constrained_volume_gradient.getGradB() / ref_volume_m;
+        constrained_volume_gradient.getGrad()(1) / ref_volume_m;
     // double norm_grad = 0.0;
     // for (int i = 0; i < 8; i++) {
     //   norm_grad += (constrained_volume_gradient.getGrad()[i] +
@@ -395,28 +398,28 @@ class PLVIRA_test {
     // }
     // std::cout << "Constrained grad norm = " << std::sqrt(norm_grad)
     //           << std::endl;
-    for (UnsignedIndex_t d = 0; d < 3; ++d) {
-      (*a_constraints)(1 + d) =
-          correct_constraints_m(1 + d, 0) -
-          constrained_moments_with_gradients.centroid().getPt()[d] /
-              ref_moment_m;
-      (*a_jacobian_transpose)(0, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradTx() / ref_moment_m;
-      (*a_jacobian_transpose)(1, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradTy() / ref_moment_m;
-      (*a_jacobian_transpose)(2, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradTz() / ref_moment_m;
-      (*a_jacobian_transpose)(3, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradRx() / ref_moment_m;
-      (*a_jacobian_transpose)(4, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradRy() / ref_moment_m;
-      (*a_jacobian_transpose)(5, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradRz() / ref_moment_m;
-      (*a_jacobian_transpose)(6, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradA() / ref_moment_m;
-      (*a_jacobian_transpose)(7, kMeasures + 1 + d) =
-          constrained_centroid_gradient[d].getGradB() / ref_moment_m;
-    }
+    // for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    //   (*a_constraints)(1 + d) =
+    //       correct_constraints_m(1 + d, 0) -
+    //       constrained_moments_with_gradients.centroid().getPt()[d] /
+    //           ref_moment_m;
+    //   (*a_jacobian_transpose)(0, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(2) / ref_moment_m;
+    //   (*a_jacobian_transpose)(1, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(3) / ref_moment_m;
+    //   (*a_jacobian_transpose)(2, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(4) / ref_moment_m;
+    //   (*a_jacobian_transpose)(3, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(5) / ref_moment_m;
+    //   (*a_jacobian_transpose)(4, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(6) / ref_moment_m;
+    //   (*a_jacobian_transpose)(5, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(7) / ref_moment_m;
+    //   (*a_jacobian_transpose)(6, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(0) / ref_moment_m;
+    //   (*a_jacobian_transpose)(7, kMeasures + 1 + d) =
+    //       constrained_centroid_gradient[d].getGrad()(1) / ref_moment_m;
+    // }
     for (UnsignedIndex_t i = 0; i < kConstraints; ++i) {
       (*a_error_vector)(kMeasures + i) =
           std::sqrt(a_penalty) *
@@ -428,7 +431,7 @@ class PLVIRA_test {
   }
 
   bool minimumReached(const Eigen::Matrix<double, kParameters, 1> a_delta) {
-    return a_delta.squaredNorm() < 1.0e-16;
+    return a_delta.squaredNorm() < 1.0e-30;  // 1.0e-16;
   }
 
   Paraboloid& getBestReconstruction(void) { return best_reconstruction_m; }
@@ -456,17 +459,19 @@ TEST(ParaboloidLVIRA, PLVIRA) {
   using PLVIRA_type = PLVIRA_test<RectangularCuboid, 26, 8, 4>;
 
   // Construct NxNxN mesh
-  int n_cells = 10;
+  int n_cells_diam = 10;
+  double radius = static_cast<double>(n_cells_diam) / 2.0;
+  int n_cells = 2 + n_cells_diam;
   constexpr const int number_of_ghost_cells = 0;
-  const double dx = 1.0 / static_cast<double>(n_cells);
-  Pt lower_domain(-0.5, -0.5, -0.5);
-  Pt upper_domain(0.5, 0.5, 0.5);
+  const double dx = 2.0 * radius / static_cast<double>(n_cells_diam);
+  const double lx = dx * static_cast<double>(n_cells);
+  Pt lower_domain(-lx / 2.0, -lx / 2.0, -lx / 2.0);
+  Pt upper_domain(lx / 2.0, lx / 2.0, lx / 2.0);
   BasicMesh mesh(n_cells, n_cells, n_cells, number_of_ghost_cells);
   mesh.setCellBoundaries(lower_domain, upper_domain);
 
   // Initialize VF from sphere
-  auto center = Pt(0.001, 0.001, 0.001);
-  double radius = 0.2;
+  auto center = Pt(1.0e-6, 1.0e-6, 1.0e-6);
   double curvature = 1.0 / radius;
 
   Data<double> liquid_vf(mesh);
@@ -556,8 +561,8 @@ TEST(ParaboloidLVIRA, PLVIRA) {
             a = 0.5 * curvature;
             b = 0.5 * curvature;
           }
-          // a = 0.0;
-          // b = 0.0;
+          a = 1.0e-6;
+          b = 1.0e-6;
           Paraboloid paraboloid(center + radius * normal, frame, a, b);
           ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
               cell, liquid_vf(i, j, k), 1.0e-14, paraboloid);
@@ -601,6 +606,9 @@ TEST(ParaboloidLVIRA, PLVIRA) {
   ++viz_output;
 
   surfaces.clear();
+
+  double total_surface = 0.0;
+  double avg_mean_curv = 0.0;
   for (int i = mesh.imin() + 1; i <= mesh.imax() - 1; ++i) {
     for (int j = mesh.jmin() + 1; j <= mesh.jmax() - 1; ++j) {
       for (int k = mesh.kmin() + 1; k <= mesh.kmax() - 1; ++k) {
@@ -673,17 +681,44 @@ TEST(ParaboloidLVIRA, PLVIRA) {
           //           << std::endl;
 
           const auto cell = neighborhood_VF.getConstrainedCell();
+          Paraboloid paraboloid = plvira_object.getBestReconstruction();
+          auto aligned_paraboloid = paraboloid.getAlignedParaboloid();
+          auto datum = paraboloid.getDatum();
+          auto frame = paraboloid.getReferenceFrame();
+          ProgressiveDistanceSolverParaboloid<RectangularCuboid>
+              solver_distance(cell, liquid_vf(i, j, k), 1.0e-14, paraboloid);
+          Paraboloid new_paraboloid(
+              Pt(datum + solver_distance.getDistance() * frame[2]), frame,
+              aligned_paraboloid.a(), aligned_paraboloid.b());
+
           auto volume_and_surface = getVolumeMoments<
               AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
-              cell, plvira_object.getBestReconstruction());
+              cell, new_paraboloid);
           auto& surface = volume_and_surface.getSurface();
+          total_surface += surface.getSurfaceArea();
+          avg_mean_curv += surface.getMeanCurvatureIntegral();
           surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0) /
-                                 30.0);
+                                 15.0);
           surfaces.push_back(surface);
         }
       }
     }
   }
+
+  avg_mean_curv /= total_surface;
+  total_surface = std::sqrt(total_surface);
+  std::cout << "Cells / diameter = " << n_cells_diam << std::endl;
+  std::cout << "Surface area = " << total_surface << " instead of "
+            << std::sqrt(4.0 * M_PI * radius * radius) << " (rel error = "
+            << std::fabs(total_surface -
+                         std::sqrt(4.0 * M_PI * radius * radius)) /
+                   std::sqrt(4.0 * M_PI * radius * radius)
+            << ")" << std::endl;
+  std::cout << "Avg mean curvature = " << avg_mean_curv << " instead of "
+            << 2.0 / radius << " (rel error = "
+            << std::fabs(avg_mean_curv - 2.0 / radius) / (2.0 / radius) << ")"
+            << std::endl;
+
   std::cout << "Printing final solution " << std::endl;
   vtk_io.writeVTKInterface(time, surfaces, true);
 }

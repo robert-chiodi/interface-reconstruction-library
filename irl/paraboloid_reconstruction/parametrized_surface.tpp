@@ -206,45 +206,47 @@ class ArcContributionToSurfaceArea_Functor {
         return 0.0;
       } else if (std::fabs(a) > std::fabs(b)) {
         const double primitive0 =
-            (2. * a * pt0[0] *
+            (2. * pt0[0] *
                  std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
-                           4. * (b * b) * (pt0[1] * pt0[1])) +
+                           4. * (b * b) * (pt0[1] * pt0[1])) -
              (1. + 4. * (b * b) * (pt0[1] * pt0[1])) *
-                 std::log(a * (2. * a * pt0[0] +
-                               std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
-                                         4. * (b * b) * (pt0[1] * pt0[1]))))) /
-            (4. * a);
+                 std::log(-2. * std::fabs(a) * pt0[0] +
+                          std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                                    4. * (b * b) * (pt0[1] * pt0[1]))) /
+                 std::fabs(a)) /
+            4.;
         const double primitive1 =
-            (2. * a * pt1[0] *
+            (2. * pt1[0] *
                  std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
-                           4. * (b * b) * (pt1[1] * pt1[1])) +
+                           4. * (b * b) * (pt1[1] * pt1[1])) -
              (1. + 4. * (b * b) * (pt1[1] * pt1[1])) *
-                 std::log(a * (2. * a * pt1[0] +
-                               std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
-                                         4. * (b * b) * (pt1[1] * pt1[1]))))) /
-            (4. * a);
+                 std::log(-2. * std::fabs(a) * pt1[0] +
+                          std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                                    4. * (b * b) * (pt1[1] * pt1[1]))) /
+                 std::fabs(a)) /
+            4.;
         return 0.5 * (primitive0 * der0[1] + primitive1 * der1[1]);
       } else {
         const double primitive0 =
-            -(2. * b * pt0[1] *
+            -(2. * pt0[1] *
                   std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
-                            4. * (b * b) * (pt0[1] * pt0[1])) +
+                            4. * (b * b) * (pt0[1] * pt0[1])) -
               (1. + 4. * (a * a) * (pt0[0] * pt0[0])) *
-                  std::log(b *
-                           (2. * b * pt0[1] +
-                            std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
-                                      4. * (b * b) * (pt0[1] * pt0[1]))))) /
-            (4. * b);
+                  std::log(-2. * std::fabs(b) * pt0[1] +
+                           std::sqrt(1. + 4. * (a * a) * (pt0[0] * pt0[0]) +
+                                     4. * (b * b) * (pt0[1] * pt0[1]))) /
+                  std::fabs(b)) /
+            (4.);
         const double primitive1 =
-            -(2. * b * pt1[1] *
+            -(2. * pt1[1] *
                   std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
-                            4. * (b * b) * (pt1[1] * pt1[1])) +
+                            4. * (b * b) * (pt1[1] * pt1[1])) -
               (1. + 4. * (a * a) * (pt1[0] * pt1[0])) *
-                  std::log(b *
-                           (2. * b * pt1[1] +
-                            std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
-                                      4. * (b * b) * (pt1[1] * pt1[1]))))) /
-            (4. * b);
+                  std::log(-2. * std::fabs(b) * pt1[1] +
+                           std::sqrt(1. + 4. * (a * a) * (pt1[0] * pt1[0]) +
+                                     4. * (b * b) * (pt1[1] * pt1[1]))) /
+                  std::fabs(b)) /
+            (4.);
         return 0.5 * (primitive0 * der0[0] + primitive1 * der1[0]);
       }
     } else {
@@ -259,7 +261,7 @@ class ArcContributionToSurfaceArea_Functor {
         const double primitive =
             (2. * pt[0] *
                  std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
-                           4. * (b * b) * (pt[1] * pt[1])) +
+                           4. * (b * b) * (pt[1] * pt[1])) -
              (1. + 4. * (b * b) * (pt[1] * pt[1])) *
                  std::log(-2. * std::fabs(a) * pt[0] +
                           std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
@@ -288,7 +290,7 @@ class ArcContributionToSurfaceArea_Functor {
         const double primitive =
             -(2. * pt[1] *
                   std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
-                            4. * (b * b) * (pt[1] * pt[1])) +
+                            4. * (b * b) * (pt[1] * pt[1])) -
               (1. + 4. * (a * a) * (pt[0] * pt[0])) *
                   std::log(-2. * std::fabs(b) * pt[1] +
                            std::sqrt(1. + 4. * (a * a) * (pt[0] * pt[0]) +
@@ -626,6 +628,18 @@ inline Normal ParametrizedSurfaceOutput::getAverageNormal(void) {
   return avg_normal_m;
 }
 
+inline Normal ParametrizedSurfaceOutput::getAverageNormalNonAligned(void) {
+  auto aligned_normal = this->getAverageNormal();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+  auto normal = Normal();
+  for (std::size_t d = 0; d < 3; ++d) {
+    for (std::size_t n = 0; n < 3; ++n) {
+      normal[n] += ref_frame[d][n] * aligned_normal[d];
+    }
+  }
+  return normal;
+}
+
 inline double ParametrizedSurfaceOutput::getMeanCurvatureIntegral(void) {
   if (!knows_int_mean_curv_m) {
     const UnsignedIndex_t nArcs = this->size();
@@ -800,6 +814,9 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
   // First, we need to order the arcs so as to form closed curves
   double min_arc_length = DBL_MAX;
+  bool valid_curves = true;
+  // std::cout << "Starting building curves from " << nArcs << " arcs"
+  //           << std::endl;
   for (std::size_t t = 0; t < nArcs; ++t) {
     if (visited[t]) {
       continue;
@@ -810,6 +827,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
         std::vector<RationalBezierArc>({arc_list_m[t]}));
     const std::uintptr_t start_id = arc_list_m[t].start_point_id();
     std::uintptr_t end_id = arc_list_m[t].end_point_id();
+    int counter = 0;
     while (end_id != start_id) {
       for (std::size_t e = t + 1; e < nArcs; ++e) {
         if (arc_list_m[e].start_point_id() == end_id) {
@@ -819,185 +837,306 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
           break;
         }
       }
+      if (++counter > nArcs) {
+        valid_curves = false;
+        break;
+      }
     }
   }
 
-  // Second, we approximate the arc length of the arc, so as to know how
-  // many times it needs to be split
-  std::vector<REAL> input_points;
-  std::vector<REAL> input_holes;
-  std::vector<int> input_segments;
-  const UnsignedIndex_t nCurves =
-      static_cast<UnsignedIndex_t>(list_of_closed_curves.size());
-  // Loop over curves
-  UnsignedIndex_t start_points = 0;
-  for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
-    const UnsignedIndex_t nLocalArcs = list_of_closed_curves[i].size();
-    // Loop over arcs of curve
-    UnsignedIndex_t added_points = 0;
-    double signed_area = 0.0;
-    for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
-      // Compute approximate arc length
-      const RationalBezierArc& arc = list_of_closed_curves[i][j];
-      const auto& sp = arc.start_point();
-      const auto& ep = arc.start_point();
-      const double arc_length = arc.arc_length();
-      signed_area += (sp[0] * ep[1] - ep[0] * sp[1]);
-
-      // Split arc
-      UnsignedIndex_t nSplit = a_nsplit <= 0 ? 1 : a_nsplit;
-      if (length_scale_ref > 0.0) {
-        nSplit = static_cast<UnsignedIndex_t>(arc_length / length_scale_ref);
-        nSplit = nSplit < a_nsplit ? a_nsplit : nSplit;
-      }
-      const double step = 1.0 / static_cast<double>(nSplit);
-      length_scale = std::min(length_scale, step * arc_length);
-      if (length_scale_ref > 0.0) length_scale = length_scale_ref;
-      added_points += nSplit;
-      const auto start_ind = input_points.size();
-      input_points.resize(start_ind + 2 * nSplit);
-      auto loc = input_points.begin() + start_ind;
-      for (UnsignedIndex_t k = 1; k <= nSplit; ++k) {
-        const double t = static_cast<double>(k) * step;
-        const auto pt = arc.point(t);
-        *(loc++) = pt[0];
-        *(loc++) = pt[1];
-      }
-    }
-
-    if (signed_area < 0.0) {
-      // Add hole
-      const auto p1x = input_points[start_points];
-      const auto p1y = input_points[start_points + 1];
-      const auto p2x = input_points[start_points + 2];
-      const auto p2y = input_points[start_points + 3];
-      std::array<double, 2> hole_location{
-          {0.5 * (p1x + p2x), 0.5 * (p1y + p2y)}};
-      Normal shift_dir = Normal(p2y - p1y, p1x - p2x, 0.0);
-      shift_dir.normalize();
-      const auto start_ind = input_points.size();
-      input_holes.resize(start_ind + 2);
-      input_holes[start_ind] =
-          hole_location[0] + (5.0 * DBL_EPSILON) * shift_dir[0];
-      input_holes[start_ind + 1] =
-          hole_location[1] + (5.0 * DBL_EPSILON) * shift_dir[1];
-    }
-
-    // Create segments
-    const int seg_size = input_segments.size();
-    input_segments.resize(seg_size + 2 * (added_points));
-    auto seg_loc = input_segments.begin() + seg_size;
-    *(seg_loc++) = start_points + added_points - 1;
-    *(seg_loc++) = start_points;
-    for (UnsignedIndex_t j = start_points; j < start_points + added_points - 1;
-         ++j) {
-      *(seg_loc++) = j;
-      *(seg_loc++) = j + 1;
-    }
-    start_points += added_points;
-  }
+  // std::cout << "Done with "
+  //           << static_cast<UnsignedIndex_t>(list_of_closed_curves.size())
+  //           << " curves and validity is " << valid_curves << std::endl;
 
   TriangulatedSurfaceOutput returned_surface;
+  returned_surface.clearAll();
 
-  // Below section is for Triangle library
-  if (input_points.size() > 0) {
-    // Calling triangulation library
-    struct triangulateio in = {0}, out = {0};
-    in.numberofpoints = input_points.size() / 2;
-    in.pointlist = input_points.data();
+  if (valid_curves) {
+    // Second, we approximate the arc length of the arc, so as to know how
+    // many times it needs to be split
+    std::vector<REAL> input_points;
+    std::vector<REAL> input_holes;
+    std::vector<int> input_segments;
+    const UnsignedIndex_t nCurves =
+        static_cast<UnsignedIndex_t>(list_of_closed_curves.size());
+    // Loop over curves
+    UnsignedIndex_t start_points = 0;
+    double total_signed_area = 0.0;
+    for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
+      const UnsignedIndex_t nLocalArcs = list_of_closed_curves[i].size();
+      // Loop over arcs of curve
+      UnsignedIndex_t added_points = 0;
+      double signed_area = 0.0;
+      for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
+        // Compute approximate arc length
+        const RationalBezierArc& arc = list_of_closed_curves[i][j];
+        // const auto& sp = arc.start_point();
+        // const auto& ep = arc.start_point();
+        // signed_area += (sp[0] * ep[1] - ep[0] * sp[1]);
+        const double arc_length = arc.arc_length();
 
-    std::vector<int> pointmarkerlist(in.numberofpoints, 1);
-    in.pointmarkerlist = pointmarkerlist.data();
-
-    in.numberofsegments = input_segments.size() / 2;
-    in.segmentlist = input_segments.data();
-    std::vector<int> segmentmarkerlist(in.numberofsegments, 1);
-    in.segmentmarkerlist = segmentmarkerlist.data();
-
-    in.numberofholes = input_holes.size() / 2;
-    if (in.numberofholes > 0) {
-      in.holelist = input_holes.data();
-    }
-
-    char flags[50];
-    sprintf(flags, "pzqYYia%.15feQ", 0.5 * length_scale * length_scale);
-    triangulate_from_lib(flags, &in, &out, (struct triangulateio*)NULL);
-
-    auto& vlist = returned_surface.getVertexList();
-    vlist.resize(out.numberofpoints);
-    for (UnsignedIndex_t i = 0; i < out.numberofpoints; ++i) {
-      const double x = out.pointlist[2 * i + 0];
-      const double y = out.pointlist[2 * i + 1];
-      const double z =
-          -aligned_paraboloid.a() * x * x - aligned_paraboloid.b() * y * y;
-      vlist[i] = Pt(x, y, z);
-    }
-
-    // Translate and rotate triangulated surface vertices
-    const auto& datum = paraboloid_m.getDatum();
-    const auto& ref_frame = paraboloid_m.getReferenceFrame();
-    for (auto& vertex : vlist) {
-      const Pt base_pt = vertex;
-      vertex = Pt(0.0, 0.0, 0.0);
-      for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        for (UnsignedIndex_t n = 0; n < 3; ++n) {
-          vertex[n] += ref_frame[d][n] * base_pt[d];
+        // Split arc
+        UnsignedIndex_t nSplit = a_nsplit <= 0 ? 1 : a_nsplit;
+        if (length_scale_ref > 0.0) {
+          nSplit = static_cast<UnsignedIndex_t>(arc_length / length_scale_ref);
+          nSplit = nSplit < a_nsplit ? a_nsplit : nSplit;
+        }
+        const double step = 1.0 / static_cast<double>(nSplit);
+        length_scale = std::min(length_scale, step * arc_length);
+        if (length_scale_ref > 0.0) length_scale = length_scale_ref;
+        added_points += nSplit;
+        const auto start_ind = input_points.size();
+        input_points.resize(start_ind + 2 * nSplit);
+        auto loc = input_points.begin() + start_ind;
+        for (UnsignedIndex_t k = 1; k <= nSplit; ++k) {
+          const double t = static_cast<double>(k) * step;
+          const auto pt = arc.point(t);
+          *(loc++) = pt[0];
+          *(loc++) = pt[1];
         }
       }
-      vertex += datum;
+
+      signed_area += (input_points[start_points + 2 * added_points - 2] *
+                          input_points[start_points + 1] -
+                      input_points[start_points + 0] *
+                          input_points[start_points + 2 * added_points - 1]);
+      for (UnsignedIndex_t j = 0; j < added_points - 1; ++j) {
+        signed_area += (input_points[start_points + 2 * j + 0] *
+                            input_points[start_points + 2 * j + 3] -
+                        input_points[start_points + 2 * j + 2] *
+                            input_points[start_points + 2 * j + 1]);
+      }
+
+      if (nCurves > 1 && signed_area < 0.0) {
+        // Add hole
+        const auto p1x = input_points[start_points];
+        const auto p1y = input_points[start_points + 1];
+        const auto p2x = input_points[start_points + 2];
+        const auto p2y = input_points[start_points + 3];
+        std::array<double, 2> hole_location{
+            {0.5 * (p1x + p2x), 0.5 * (p1y + p2y)}};
+        Normal shift_dir = Normal(p2y - p1y, p1x - p2x, 0.0);
+        shift_dir.normalize();
+        const auto start_ind = input_holes.size();
+        input_holes.resize(start_ind + 2);
+        input_holes[start_ind] = 0.0;
+        // hole_location[0] - (500.0 * DBL_EPSILON) * shift_dir[0];
+        input_holes[start_ind + 1] = 0.0;
+        // hole_location[1] - (500.0 * DBL_EPSILON) * shift_dir[1];
+      }
+
+      // Create segments
+      const int seg_size = input_segments.size();
+      input_segments.resize(seg_size + 2 * (added_points));
+      auto seg_loc = input_segments.begin() + seg_size;
+      *(seg_loc++) = start_points + added_points - 1;
+      *(seg_loc++) = start_points;
+      for (UnsignedIndex_t j = start_points;
+           j < start_points + added_points - 1; ++j) {
+        *(seg_loc++) = j;
+        *(seg_loc++) = j + 1;
+      }
+      start_points += added_points;
+      total_signed_area += 0.5 * signed_area;
     }
 
-    for (UnsignedIndex_t i = 0; i < out.numberofedges; ++i) {
-      if (out.edgemarkerlist[i] == 1) {
-        returned_surface.addBoundaryEdge(out.edgelist[2 * i],
-                                         out.edgelist[2 * i + 1]);
+    // Below section is for Triangle library
+    if (input_points.size() > 0) {
+      // std::cout << " Total area = " << total_signed_area << " compared to "
+      //           << 2.0 * length_scale * length_scale << std::endl;
+      if (std::fabs(total_signed_area) > length_scale * length_scale) {
+        // Calling triangulation library
+        struct triangulateio in = {0}, out = {0};
+        in.numberofpoints = input_points.size() / 2;
+        in.pointlist = input_points.data();
+
+        std::vector<int> pointmarkerlist(in.numberofpoints, 1);
+        in.pointmarkerlist = pointmarkerlist.data();
+
+        in.numberofsegments = input_segments.size() / 2;
+        in.segmentlist = input_segments.data();
+        std::vector<int> segmentmarkerlist(in.numberofsegments, 1);
+        in.segmentmarkerlist = segmentmarkerlist.data();
+
+        in.numberofholes = input_holes.size() / 2;
+        if (in.numberofholes > 0) {
+          in.holelist = input_holes.data();
+        }
+
+        char flags[50];
+        sprintf(flags, "pza%.15feiQ", 0.5 * length_scale * length_scale);
+
+        // std::cout << "Calling triangle with flags " << flags << " and with "
+        //           << in.numberofpoints << " points and " <<
+        //           in.numberofsegments
+        //           << " segments and " << in.numberofholes
+        //           << " holes and max area = "
+        //           << 0.5 * length_scale * length_scale << std::endl;
+
+        // for (UnsignedIndex_t i = 0; i < in.numberofpoints; ++i) {
+        //   const double x = in.pointlist[2 * i + 0];
+        //   const double y = in.pointlist[2 * i + 1];
+        //   std::cout << "Point " << i << " = (" << x << ", " << y << ")"
+        //             << std::endl;
+        // }
+        // for (UnsignedIndex_t i = 0; i < in.numberofsegments; ++i) {
+        //   const int j = in.segmentlist[2 * i + 0];
+        //   const int k = in.segmentlist[2 * i + 1];
+        //   std::cout << "Segment " << i << " = (" << j << ", " << k << ")"
+        //             << std::endl;
+        // }
+
+        try {
+          triangulate_from_lib(flags, &in, &out, (struct triangulateio*)NULL);
+          // std::cout << "Triangle finished" << std::endl;
+
+        } catch (std::runtime_error& e) {
+          // std::cerr << e.what() << std::endl;
+          // free(in.pointlist);
+          free(in.pointattributelist);
+          // free(in.pointmarkerlist);
+          free(in.trianglelist);
+          free(in.triangleattributelist);
+          free(in.trianglearealist);
+          free(in.neighborlist);
+          // free(in.segmentlist);
+          // free(in.segmentmarkerlist);
+          // free(in.holelist);
+          free(in.regionlist);
+          free(in.edgelist);
+          free(in.edgemarkerlist);
+          free(in.normlist);
+          free(out.pointlist);
+          free(out.pointattributelist);
+          free(out.pointmarkerlist);
+          free(out.trianglelist);
+          free(out.triangleattributelist);
+          free(out.trianglearealist);
+          free(out.neighborlist);
+          free(out.segmentlist);
+          free(out.segmentmarkerlist);
+          free(out.regionlist);
+          free(out.edgelist);
+          free(out.edgemarkerlist);
+          free(out.normlist);
+
+          return returned_surface;
+        }
+
+        auto& vlist = returned_surface.getVertexList();
+        vlist.resize(out.numberofpoints);
+        for (UnsignedIndex_t i = 0; i < out.numberofpoints; ++i) {
+          const double x = out.pointlist[2 * i + 0];
+          const double y = out.pointlist[2 * i + 1];
+          const double z =
+              -aligned_paraboloid.a() * x * x - aligned_paraboloid.b() * y * y;
+          vlist[i] = Pt(x, y, z);
+        }
+
+        // Translate and rotate triangulated surface vertices
+        const auto& datum = paraboloid_m.getDatum();
+        const auto& ref_frame = paraboloid_m.getReferenceFrame();
+        for (auto& vertex : vlist) {
+          const Pt base_pt = vertex;
+          vertex = Pt(0.0, 0.0, 0.0);
+          for (UnsignedIndex_t d = 0; d < 3; ++d) {
+            for (UnsignedIndex_t n = 0; n < 3; ++n) {
+              vertex[n] += ref_frame[d][n] * base_pt[d];
+            }
+          }
+          vertex += datum;
+        }
+
+        for (UnsignedIndex_t i = 0; i < out.numberofedges; ++i) {
+          if (out.edgemarkerlist[i] == 1) {
+            returned_surface.addBoundaryEdge(out.edgelist[2 * i],
+                                             out.edgelist[2 * i + 1]);
+          }
+        }
+
+        auto& tlist = returned_surface.getTriangleList();
+        tlist.resize(out.numberoftriangles,
+                     TriangulatedSurfaceOutput::TriangleStorage::value_type::
+                         fromNoExistencePlane(vlist, {0, 0, 0}));
+        for (UnsignedIndex_t i = 0; i < out.numberoftriangles; ++i) {
+          tlist[i] = TriangulatedSurfaceOutput::TriangleStorage::value_type::
+              fromNoExistencePlane(
+                  vlist,
+                  {static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 0]),
+                   static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 1]),
+                   static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 2])});
+        }
+
+        /* free all allocated arrays, including those allocated by Triangle.
+         */
+        free(out.pointlist);
+        free(out.pointattributelist);
+        free(out.pointmarkerlist);
+        free(out.trianglelist);
+        free(out.triangleattributelist);
+        free(out.trianglearealist);
+        free(out.neighborlist);
+        free(out.segmentlist);
+        free(out.segmentmarkerlist);
+        free(out.regionlist);
+        free(out.edgelist);
+        free(out.edgemarkerlist);
+        free(out.normlist);
+        // free(in.pointlist);
+        free(in.pointattributelist);
+        // free(in.pointmarkerlist);
+        free(in.trianglelist);
+        free(in.triangleattributelist);
+        free(in.trianglearealist);
+        free(in.neighborlist);
+        // free(in.segmentlist);
+        // free(in.segmentmarkerlist);
+        // free(in.holelist);
+        free(in.regionlist);
+        free(in.edgelist);
+        free(in.edgemarkerlist);
+        free(in.normlist);
+      } else {  // Triangulate by hand
+        auto& vlist = returned_surface.getVertexList();
+        vlist.resize(input_points.size() / 2);
+        for (UnsignedIndex_t i = 0; i < input_points.size() / 2; ++i) {
+          const double x = input_points[2 * i + 0];
+          const double y = input_points[2 * i + 1];
+          const double z =
+              -aligned_paraboloid.a() * x * x - aligned_paraboloid.b() * y * y;
+          vlist[i] = Pt(x, y, z);
+        }
+
+        // Translate and rotate triangulated surface vertices
+        const auto& datum = paraboloid_m.getDatum();
+        const auto& ref_frame = paraboloid_m.getReferenceFrame();
+        for (auto& vertex : vlist) {
+          const Pt base_pt = vertex;
+          vertex = Pt(0.0, 0.0, 0.0);
+          for (UnsignedIndex_t d = 0; d < 3; ++d) {
+            for (UnsignedIndex_t n = 0; n < 3; ++n) {
+              vertex[n] += ref_frame[d][n] * base_pt[d];
+            }
+          }
+          vertex += datum;
+        }
+
+        returned_surface.addBoundaryEdge(input_points.size() / 2 - 1, 0);
+        for (UnsignedIndex_t i = 0; i < input_points.size() / 2 - 1; ++i) {
+          returned_surface.addBoundaryEdge(i, i + 1);
+        }
+
+        auto& tlist = returned_surface.getTriangleList();
+        tlist.resize(input_points.size() / 2 - 2,
+                     TriangulatedSurfaceOutput::TriangleStorage::value_type::
+                         fromNoExistencePlane(vlist, {0, 0, 0}));
+        for (UnsignedIndex_t i = 0; i < input_points.size() / 2 - 2; ++i) {
+          tlist[i] = TriangulatedSurfaceOutput::TriangleStorage::value_type::
+              fromNoExistencePlane(vlist, {0, i + 1, i + 2});
+        }
       }
     }
-
-    auto& tlist = returned_surface.getTriangleList();
-    tlist.resize(out.numberoftriangles,
-                 TriangulatedSurfaceOutput::TriangleStorage::value_type::
-                     fromNoExistencePlane(vlist, {0, 0, 0}));
-    for (UnsignedIndex_t i = 0; i < out.numberoftriangles; ++i) {
-      tlist[i] = TriangulatedSurfaceOutput::TriangleStorage::value_type::
-          fromNoExistencePlane(
-              vlist,
-              {static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 0]),
-               static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 1]),
-               static_cast<UnsignedIndex_t>(out.trianglelist[3 * i + 2])});
-    }
-
-    /* free all allocated arrays, including those allocated by Triangle.
-     */
-    // free(in.pointlist);
-    free(in.pointattributelist);
-    // free(in.pointmarkerlist);
-    free(in.trianglelist);
-    free(in.triangleattributelist);
-    free(in.trianglearealist);
-    free(in.neighborlist);
-    // free(in.segmentlist);
-    // free(in.segmentmarkerlist);
-    // free(in.holelist);
-    free(in.regionlist);
-    free(in.edgelist);
-    free(in.edgemarkerlist);
-    free(in.normlist);
-    free(out.pointlist);
-    free(out.pointattributelist);
-    free(out.pointmarkerlist);
-    free(out.trianglelist);
-    free(out.triangleattributelist);
-    free(out.trianglearealist);
-    free(out.neighborlist);
-    free(out.segmentlist);
-    free(out.segmentmarkerlist);
-    free(out.regionlist);
-    free(out.edgelist);
-    free(out.edgemarkerlist);
-    free(out.normlist);
   }
-
   return returned_surface;
 }
 

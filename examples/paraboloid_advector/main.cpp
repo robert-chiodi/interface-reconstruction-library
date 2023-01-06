@@ -4,8 +4,11 @@
 
 #include "examples/paraboloid_advector/circle_rotation_2d.h"
 #include "examples/paraboloid_advector/deformation_2d.h"
+#include "examples/paraboloid_advector/deformation_3d.h"
 #include "examples/paraboloid_advector/reconstruction_types.h"
+#include "examples/paraboloid_advector/rotation_3d.h"
 #include "examples/paraboloid_advector/solver.h"
+#include "examples/paraboloid_advector/translation_3d.h"
 #include "examples/paraboloid_advector/vof_advection.h"
 
 static int startSimulation(const std::string& a_simulation_type,
@@ -23,7 +26,7 @@ int main(int argc, char* argv[]) {
         << "Simulation to run. Options: Deformation2D, CircleRotation2D\n";
     std::cout << "Advection method. Options: SemiLagrangian, "
                  "SemiLagrangianCorrected, FullLagrangian\n";
-    std::cout << "Reconstruction method. Options: KnownCircle\n";
+    std::cout << "Reconstruction method. Options: KnownCircle, Basic\n";
     std::cout << "Time step size, dt (double)\n";
     std::cout << "Simulation duration(double)\n";
     std::cout
@@ -62,6 +65,18 @@ static int startSimulation(const std::string& a_simulation_type,
     return runSimulation<Deformation2D>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
         a_time_duration, a_viz_frequency);
+  } else if (a_simulation_type == "Deformation3D") {
+    return runSimulation<Deformation3D>(
+        a_advection_method, a_reconstruction_method, a_time_step_size,
+        a_time_duration, a_viz_frequency);
+  } else if (a_simulation_type == "Translation3D") {
+    return runSimulation<Translation3D>(
+        a_advection_method, a_reconstruction_method, a_time_step_size,
+        a_time_duration, a_viz_frequency);
+  } else if (a_simulation_type == "Rotation3D") {
+    return runSimulation<Rotation3D>(a_advection_method,
+                                     a_reconstruction_method, a_time_step_size,
+                                     a_time_duration, a_viz_frequency);
   } else {
     std::cout << "Unknown simulation type of : " << a_simulation_type << '\n';
     std::cout << "Value entries are: CircleRotation2D, Deformation2D. \n";

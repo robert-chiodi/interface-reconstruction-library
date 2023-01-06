@@ -10,12 +10,15 @@
 #ifndef IRL_PARABOLOID_RECONSTRUCTION_GRADIENT_PARABOLOID_H_
 #define IRL_PARABOLOID_RECONSTRUCTION_GRADIENT_PARABOLOID_H_
 
+#include <Eigen/Dense>  // Eigen header
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
 
 class ParaboloidGradientLocalZ {
  public:
+  static constexpr UnsignedIndex_t NParameters = 1;
+  static constexpr bool has_hessian = false;
   ParaboloidGradientLocalZ(void);
   ParaboloidGradientLocalZ(const double a_value);
   ParaboloidGradientLocalZ(const ParaboloidGradientLocalZ& a_gradient);
@@ -23,8 +26,8 @@ class ParaboloidGradientLocalZ {
       const ParaboloidGradientLocalZ& a_gradient);
   ParaboloidGradientLocalZ& operator=(
       const ParaboloidGradientLocalZ& a_gradient);
-  double& getGrad(void);
-  const double& getGrad(void) const;
+  Eigen::Matrix<double, 1, 1>& getGrad(void);
+  const Eigen::Matrix<double, 1, 1>& getGrad(void) const;
   void setGrad(const ParaboloidGradientLocalZ& a_rhs);
   double getGradA(void) const;
   double getGradB(void) const;
@@ -46,7 +49,7 @@ class ParaboloidGradientLocalZ {
 
  private:
   // The array onbly contains gradTz
-  double gradient_m;
+  Eigen::Matrix<double, 1, 1> gradient_m;
 };
 
 ParaboloidGradientLocalZ operator*(const ParaboloidGradientLocalZ& a_gradient,
@@ -63,14 +66,16 @@ ParaboloidGradientLocalZ operator-(const ParaboloidGradientLocalZ& a_gradient);
 
 class ParaboloidGradientLocal {
  public:
+  static constexpr UnsignedIndex_t NParameters = 8;
+  static constexpr bool has_hessian = false;
   ParaboloidGradientLocal(void);
   ParaboloidGradientLocal(const double a_value);
   ParaboloidGradientLocal(const ParaboloidGradientLocal& a_gradient);
   ParaboloidGradientLocal& operator+=(
       const ParaboloidGradientLocal& a_gradient);
   ParaboloidGradientLocal& operator=(const ParaboloidGradientLocal& a_gradient);
-  std::array<double, 8>& getGrad(void);
-  const std::array<double, 8>& getGrad(void) const;
+  Eigen::Matrix<double, 8, 1>& getGrad(void);
+  const Eigen::Matrix<double, 8, 1>& getGrad(void) const;
   void setGrad(const ParaboloidGradientLocal& a_rhs);
   double getGradA(void) const;
   double getGradB(void) const;
@@ -100,7 +105,7 @@ class ParaboloidGradientLocal {
   // 5 - gradRx
   // 6 - gradRy
   // 7 - gradRz
-  std::array<double, 8> gradient_m;
+  Eigen::Matrix<double, 8, 1> gradient_m;
 };
 
 ParaboloidGradientLocal operator*(const ParaboloidGradientLocal& a_gradient,

@@ -82,7 +82,7 @@ template <class GradientType>
 inline VolumeWithGradient<GradientType>&
 VolumeWithGradient<GradientType>::operator*=(const double a_rhs) {
   volume_m *= a_rhs;
-  gradient_m *= a_rhs;
+  gradient_m = gradient_m * a_rhs;
   return (*this);
 }
 
@@ -90,7 +90,7 @@ template <class GradientType>
 inline VolumeWithGradient<GradientType>&
 VolumeWithGradient<GradientType>::operator/=(const double a_rhs) {
   volume_m /= a_rhs;
-  gradient_m /= a_rhs;
+  gradient_m = gradient_m / a_rhs;
   return (*this);
 }
 

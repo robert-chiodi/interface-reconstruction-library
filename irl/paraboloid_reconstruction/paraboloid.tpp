@@ -111,7 +111,7 @@ inline PtTypeWithGradient getParaboloidSurfaceNormalWithGradient(
   auto& surface_normal_grad = surface_normal_withgrad.getData();
   surface_normal_grad[0] = 2.0 * (A_grad * pt[0] + A * pt_grad[0]);
   surface_normal_grad[1] = 2.0 * (B_grad * pt[1] + B * pt_grad[1]);
-  surface_normal_grad[2] = 0.0;
+  // surface_normal_grad[2] = 0.0;
   return surface_normal_withgrad;
 };
 
@@ -360,6 +360,8 @@ inline std::ostream& operator<<(std::ostream& out,
       << frame[1] << '\n'
       << frame[2] << '\n';
   out << "Aligned Paraboloid: " << aligned_paraboloid << '\n';
+  out << "is always above? " << a_paraboloid.isAlwaysAbove() << '\n';
+  out << "is always below? " << a_paraboloid.isAlwaysBelow() << '\n';
   return out;
 }
 

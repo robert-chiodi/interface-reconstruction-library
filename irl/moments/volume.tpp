@@ -10,7 +10,6 @@
 #ifndef IRL_MOMENTS_VOLUME_TPP_
 #define IRL_MOMENTS_VOLUME_TPP_
 
-
 namespace IRL {
 
 inline Volume::Volume(void) : volume_m{0.0} {}
@@ -29,6 +28,10 @@ inline Volume Volume::calculateMoments(GeometryType* a_geometry) {
 inline void Volume::multiplyByVolume(void) {}
 
 inline void Volume::normalizeByVolume(void) {}
+
+inline double& Volume::volume(void) { return volume_m; }
+
+inline const double& Volume::volume(void) const { return volume_m; }
 
 inline Volume& Volume::operator+=(const Volume& a_rhs) {
   volume_m += a_rhs.volume_m;
@@ -59,4 +62,4 @@ inline std::ostream& operator<<(std::ostream& out, const Volume& a_volume) {
 
 }  // namespace IRL
 
-#endif // IRL_MOMENTS_VOLUME_TPP_
+#endif  // IRL_MOMENTS_VOLUME_TPP_

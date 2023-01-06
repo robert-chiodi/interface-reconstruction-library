@@ -87,23 +87,28 @@ template <class CellType>
 void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
     const CellType& a_cell) {
   // Calculate volume of cell
-  initial_cell_volume_m = a_cell.calculateVolume();
+  auto initial_cell_volume = a_cell.calculateVolume();
 
   // Generate half-edge structure
   auto& complete_polytope = setHalfEdgeStructureParaboloid(a_cell);
   auto half_edge_polytope =
       generateSegmentedVersionParaboloid<CellType>(&complete_polytope);
   assert(half_edge_polytope.checkValidHalfEdgeStructure());
-
-  // Move cell to local frame of reference of the paraboloid
-  const auto& datum = reconstruction_m.getDatum();
-  const auto& ref_frame = reconstruction_m.getReferenceFrame();
-  const auto& aligned_paraboloid = reconstruction_m.getAlignedParaboloid();
   const UnsignedIndex_t number_of_vertices =
       half_edge_polytope.getNumberOfVertices();
+  const double inv_scale =
+      std::max(1.0e-6, std::pow(initial_cell_volume, 1.0 / 3.0));
+  const double scale = 1.0 / inv_scale;
+
+  // Move cell to local frame of reference of the paraboloid
+  const auto& datum = scale * reconstruction_m.getDatum();
+  const auto& ref_frame = reconstruction_m.getReferenceFrame();
+  const auto aligned_paraboloid = AlignedParaboloid(std::array<double, 2>(
+      {inv_scale * reconstruction_m.getAlignedParaboloid().a(),
+       inv_scale * reconstruction_m.getAlignedParaboloid().b()}));
   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
     const Pt original_pt =
-        half_edge_polytope.getVertex(v)->getLocation().getPt() - datum;
+        scale * half_edge_polytope.getVertex(v)->getLocation().getPt() - datum;
     typename CellType::pt_type projected_location;
     auto& pt = projected_location.getPt();
     for (UnsignedIndex_t n = 0; n < 3; ++n) {
@@ -113,11 +118,14 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
     half_edge_polytope.getVertex(v)->setLocation(projected_location);
   }
 
+  initial_cell_volume_m = half_edge_polytope.calculateVolume();
+
   // Sort the vertices Z positions in the local frame of reference
-  std::vector<double> vertices_z;
-  vertices_z.resize(number_of_vertices);
+  std::vector<Pt> original_vertices;
+  original_vertices.resize(number_of_vertices);
   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
-    vertices_z[v] = half_edge_polytope.getVertex(v)->getLocation().getPt()[2];
+    original_vertices[v] =
+        half_edge_polytope.getVertex(v)->getLocation().getPt();
   }
 
   // Compute new face planes
@@ -155,9 +163,13 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
     cell_zmax = std::max({vertex[2], cell_zmax});
   }
   // Sort  into ascending
-  sorted_distances_m[count++] = cell_zmin;
-  sorted_distances_m[count++] = cell_zmax;
+  sorted_distances_m[count++] = -1.0e15;
+  sorted_distances_m[count++] = 1.0e15;
   std::sort(sorted_distances_m.begin(), sorted_distances_m.end());
+  sorted_distances_m[0] =
+      sorted_distances_m[1] - 10.0 * (cell_zmax - cell_zmin);
+  sorted_distances_m[number_of_vertices + 1] =
+      sorted_distances_m[number_of_vertices] + 10.0 * (cell_zmax - cell_zmin);
 
   // std::cout << "List of sorted distances = ";
   // for (UnsignedIndex_t v = 0; v < number_of_vertices + 2; ++v) {
@@ -171,34 +183,45 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   std::array<UnsignedIndex_t, 3> bounding_indices{
       {0, 0, static_cast<UnsignedIndex_t>(sorted_distances_m.size()) - 1}};
   std::array<double, 3> bounding_values{{0.0, 0.0, 1.0}};
-  while (bounding_indices[2] - bounding_indices[0] > 1) {
-    bounding_indices[1] = (bounding_indices[0] + bounding_indices[2]) / 2;
-    // std::cout << "Distance = " << sorted_distances_m[bounding_indices[1]]
-    // << std::endl;
-    shiftSegmentedPolytopeAndUpdateFaces(
-        &half_edge_polytope, vertices_z,
-        sorted_distances_m[bounding_indices[1]]);
-    assert(half_edge_polytope.checkValidHalfEdgeStructure());
-    // std::cout << "Caculating volume... " << std::endl;
-    const double volume_fraction_cut =
-        intersectPolyhedronWithParaboloid<Volume>(
-            &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
-        initial_cell_volume_m;
-    resetPolyhedron(&half_edge_polytope, &complete_polytope);
-    // std::cout << "Volume calculated is " << volume_fraction_cut << std::endl;
-    if (volume_fraction_cut >
-        target_volume_fraction_m + volume_fraction_tolerance_m) {
-      bounding_indices[2] = bounding_indices[1];
-      bounding_values[2] = volume_fraction_cut;
-    } else if (volume_fraction_cut <
-               target_volume_fraction_m - volume_fraction_tolerance_m) {
-      bounding_indices[0] = bounding_indices[1];
-      bounding_values[0] = volume_fraction_cut;
-    } else {
-      distances_m = sorted_distances_m[bounding_indices[1]];
-      return;
-    }
-  }
+  // while (bounding_indices[2] - bounding_indices[0] > 1) {
+  //   bounding_indices[1] = (bounding_indices[0] + bounding_indices[2]) / 2;
+  //   // std::cout << "Distance = " << sorted_distances_m[bounding_indices[1]]
+  //   // << std::endl;
+  //   shiftSegmentedPolytopeAndUpdateFaces(
+  //       &half_edge_polytope, original_vertices,
+  //       sorted_distances_m[bounding_indices[1]]);
+  //   assert(half_edge_polytope.checkValidHalfEdgeStructure());
+  //   // std::cout << "Caculating volume... " << std::endl;
+  //   const double volume_fraction_cut =
+  //       intersectPolyhedronWithParaboloid<Volume>(
+  //           &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
+  //       initial_cell_volume_m;
+  //   if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
+  //     distances_m =
+  //         -999999.0 + inv_scale * sorted_distances_m[bounding_indices[1]];
+  //     std::cout << "Initial bisection between " << sorted_distances_m[0]
+  //               << " and " << sorted_distances_m[number_of_vertices + 1]
+  //               << " / distance = "
+  //               << inv_scale * sorted_distances_m[bounding_indices[1]]
+  //               << std::endl;
+  //     return;
+  //   }
+  //   resetPolyhedron(&half_edge_polytope, &complete_polytope);
+  //   // std::cout << "Volume calculated is " << volume_fraction_cut <<
+  //   std::endl; if (volume_fraction_cut >
+  //       target_volume_fraction_m + volume_fraction_tolerance_m) {
+  //     bounding_indices[2] = bounding_indices[1];
+  //     bounding_values[2] = volume_fraction_cut;
+  //   } else if (volume_fraction_cut <
+  //              target_volume_fraction_m - volume_fraction_tolerance_m) {
+  //     bounding_indices[0] = bounding_indices[1];
+  //     bounding_values[0] = volume_fraction_cut;
+  //   } else {
+  //     // std::cout << "DISTANCE1 = " <<
+  //     sorted_distances_m[bounding_indices[1]]; distances_m = inv_scale *
+  //     sorted_distances_m[bounding_indices[1]]; return;
+  //   }
+  // }
 
   double interval_min = sorted_distances_m[bounding_indices[0]];
   double interval_max = sorted_distances_m[bounding_indices[2]];
@@ -211,43 +234,55 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
 
   // // Now just have a prismatoid left. Perform secant, fall back to
   // Bisection if it fails.
-  double distance = sorted_distances_m[bounding_indices[0]];
-  double delta = sorted_distances_m[bounding_indices[0]] -
-                 sorted_distances_m[bounding_indices[2]];
-  double old_error = bounding_values[2] - target_volume_fraction_m;
-  double error = bounding_values[0] - target_volume_fraction_m;
-  bounding_values[0] = sorted_distances_m[bounding_indices[0]];
-  bounding_values[2] = sorted_distances_m[bounding_indices[2]];
-  for (UnsignedIndex_t iter = 0; iter < max_iter_m; ++iter) {
-    delta *= -error / safelyEpsilon(error - old_error);
-    old_error = error;
-    distance += delta;
-    // std::cout << "Distance = " << distance << std::endl;
-    shiftSegmentedPolytopeAndUpdateFaces(&half_edge_polytope, vertices_z,
-                                         distance);
-    // std::cout << "Caculating volume... " << std::endl;
-    const double volume_fraction_cut =
-        intersectPolyhedronWithParaboloid<Volume>(
-            &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
-        initial_cell_volume_m;
-    resetPolyhedron(&half_edge_polytope, &complete_polytope);
-    // std::cout << "Volume calculated is " << volume_fraction_cut << std::endl;
-    error = volume_fraction_cut - target_volume_fraction_m;
-    if (volume_fraction_cut >
-        target_volume_fraction_m + volume_fraction_tolerance_m) {
-      if (distance < bounding_values[2]) {
-        bounding_values[2] = distance;
-      }
-    } else if (volume_fraction_cut <
-               target_volume_fraction_m - volume_fraction_tolerance_m) {
-      if (distance > bounding_values[0]) {
-        bounding_values[0] = distance;
-      }
-    } else {
-      distances_m = distance;
-      return;
-    }
-  }
+  // double distance = sorted_distances_m[bounding_indices[0]];
+  // double delta = sorted_distances_m[bounding_indices[0]] -
+  //                sorted_distances_m[bounding_indices[2]];
+  // double old_error = bounding_values[2] - target_volume_fraction_m;
+  // double error = bounding_values[0] - target_volume_fraction_m;
+  // bounding_values[0] = sorted_distances_m[bounding_indices[0]];
+  // bounding_values[2] = sorted_distances_m[bounding_indices[2]];
+  // for (UnsignedIndex_t iter = 0; iter < max_iter_m; ++iter) {
+  //   delta *= -error / safelyEpsilon(error - old_error);
+  //   old_error = error;
+  //   distance += delta;
+  //   if (distance < interval_min || distance > interval_max) {
+  //     break;
+  //   }
+  //   // std::cout << "Distance = " << distance << std::endl;
+  //   shiftSegmentedPolytopeAndUpdateFaces(&half_edge_polytope,
+  //   original_vertices,
+  //                                        distance);
+  //   // std::cout << "Caculating volume... " << std::endl;
+  //   const double volume_fraction_cut =
+  //       intersectPolyhedronWithParaboloid<Volume>(
+  //           &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
+  //       initial_cell_volume_m;
+  //   if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
+  //     distances_m = -999999.0 + inv_scale * distance;
+  //     std::cout << "Secant between " << interval_min << " and " <<
+  //     interval_max
+  //               << " / distance = " << inv_scale * distance << std::endl;
+  //     return;
+  //   }
+  //   resetPolyhedron(&half_edge_polytope, &complete_polytope);
+  //   // std::cout << "Volume calculated is " << volume_fraction_cut
+  //   //           << " for target " << target_volume_fraction_m << std::endl;
+  //   error = volume_fraction_cut - target_volume_fraction_m;
+  //   if (volume_fraction_cut >
+  //       target_volume_fraction_m + volume_fraction_tolerance_m) {
+  //     if (distance < bounding_values[2]) {
+  //       bounding_values[2] = distance;
+  //     }
+  //   } else if (volume_fraction_cut <
+  //              target_volume_fraction_m - volume_fraction_tolerance_m) {
+  //     if (distance > bounding_values[0]) {
+  //       bounding_values[0] = distance;
+  //     }
+  //   } else if (!std::isnan(volume_fraction_cut)) {
+  //     distances_m = inv_scale * distance;
+  //     return;
+  //   }
+  // }
   bounding_values[0] = interval_min;  // std::max(bounding_values[0],
                                       // sorted_distances_m.front());
   bounding_values[2] =
@@ -265,13 +300,21 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   for (UnsignedIndex_t iter = 0; iter < max_bisection_iter; ++iter) {
     bounding_values[1] = 0.5 * (bounding_values[0] + bounding_values[2]);
     // std::cout << "Distance =  " << bounding_values[1] << std::endl;
-    shiftSegmentedPolytopeAndUpdateFaces(&half_edge_polytope, vertices_z,
+    shiftSegmentedPolytopeAndUpdateFaces(&half_edge_polytope, original_vertices,
                                          bounding_values[1]);
     // std::cout << "Caculating volume... " << std::endl;
     const double volume_fraction_cut =
         intersectPolyhedronWithParaboloid<Volume>(
             &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
         initial_cell_volume_m;
+    if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
+      distances_m = -999999.0 + inv_scale * bounding_values[1];
+      std::cout << "Bisection between " << bounding_values[0] << " and "
+                << bounding_values[2]
+                << " / distance = " << inv_scale * bounding_values[1]
+                << std::endl;
+      return;
+    }
     resetPolyhedron(&half_edge_polytope, &complete_polytope);
     // std::cout << "Volume calculated is " << volume_fraction_cut << std::endl;
     if (volume_fraction_cut >
@@ -281,31 +324,58 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
                target_volume_fraction_m - volume_fraction_tolerance_m) {
       bounding_values[0] = bounding_values[1];
     } else {
-      distances_m = bounding_values[1];
+      // std::cout << "DISTANCE3 = " << bounding_values[1];
+      distances_m = inv_scale * bounding_values[1];
       return;
     }
   }
 
-  std::cout << "BISECTION HAS FAILED" << std::endl;
-  distances_m = bounding_values[1];
+  const double volume_fraction_cut =
+      intersectPolyhedronWithParaboloid<Volume>(
+          &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
+      initial_cell_volume_m;
+  if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
+    std::string poly_filename = "error_cell";
+    std::cout << "Bisection FAILED between " << bounding_values[0] << " and "
+              << bounding_values[2]
+              << " / distance = " << inv_scale * distances_m << std::endl;
+    distances_m = -999999.0 + inv_scale * distances_m;
+    return;
+  }
+
+  // if (std::fabs(volume_fraction_cut - target_volume_fraction_m) > 1.0e-13) {
+  //   std::cout << "BISECTION HAS FAILED : volume fraction = "
+  //             << volume_fraction_cut << " instead of "
+  //             << target_volume_fraction_m
+  //             << " diff = " << (volume_fraction_cut -
+  //             target_volume_fraction_m)
+  //             << "\n Zmin/max = " << sorted_distances_m[0] << " -- "
+  //             << sorted_distances_m[number_of_vertices + 1]
+  //             << "\n Bounding values = " << bounding_values[0] << " -- "
+  //             << bounding_values[1] << " -- " << bounding_values[2]
+  //             << "\n Paraboloid = " << aligned_paraboloid.a() << " -- "
+  //             << aligned_paraboloid.b() << std::endl;
+  // }
+  std::cout << "DISTANCE FAILED = " << inv_scale * bounding_values[1];
+  distances_m = inv_scale * bounding_values[1];
   return;
 }  // namespace IRL
 
 template <class SegmentedHalfEdgePolytopeType>
 void shiftSegmentedPolytopeAndUpdateFaces(
     SegmentedHalfEdgePolytopeType* a_seg_half_edge,
-    const std::vector<double>& a_original_vert_Z, const double a_distance) {
+    const std::vector<Pt>& a_original_verts, const double a_distance) {
   // Shift along Z
   const UnsignedIndex_t number_of_vertices =
       a_seg_half_edge->getNumberOfVertices();
   assert(a_original_vert_Z.size() == number_of_vertices);
   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
-    const Pt pt = a_seg_half_edge->getVertex(v)->getLocation().getPt();
+    // const Pt pt = a_seg_half_edge->getVertex(v)->getLocation().getPt();
     typename SegmentedHalfEdgePolytopeType::pt_type new_location;
     Pt& new_pt = new_location.getPt();
-    new_pt[0] = pt[0];
-    new_pt[1] = pt[1];
-    new_pt[2] = a_original_vert_Z[v] - a_distance;
+    new_pt[0] = a_original_verts[v][0];
+    new_pt[1] = a_original_verts[v][1];
+    new_pt[2] = a_original_verts[v][2] - a_distance;
     // std::cout << "New point = " << new_pt << std::endl;
     a_seg_half_edge->getVertex(v)->setLocation(new_location);
   }

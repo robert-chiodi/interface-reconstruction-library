@@ -3650,4 +3650,257 @@ TEST(ParaboloidIntersection, Armadillo) {
   }
 }
 
+TEST(ParaboloidIntersection, Subgrid) {
+  int Ntests = 1;
+  double max_error = 0.0, rms_error = 0.0;
+  bool first_vertex_on_surface = false;
+  HalfEdgePolyhedronParaboloid<Pt> half_edge;
+  // Rotate cube
+  std::random_device
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(3);  // Use the 64-bit Mersenne Twister 19937
+                           // generator and seed it with entropy.
+  static const int ncycles = 1;
+  std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
+                                                         0.5 * M_PI);
+  std::uniform_real_distribution<double> random_coeffs_a(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_coeffs_b(-5.0, 5.0);
+  std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+
+  for (int i = 0; i < Ntests; i++) {
+    auto cube = RectangularCuboid::fromBoundingPts(Pt(-0.5, -0.5, -0.5),
+                                                   Pt(0.5, 0.5, 0.5));
+
+    AlignedParaboloid aligned_paraboloid;
+    ReferenceFrame orig_frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                              Normal(0.0, 0.0, 1.0));
+    double angles[3] = {random_rotation(eng), random_rotation(eng), 0.0};
+    Pt translations(random_translation(eng), random_translation(eng),
+                    random_translation(eng));
+    aligned_paraboloid.a() = random_coeffs_a(eng);
+    aligned_paraboloid.b() = random_coeffs_b(eng);
+
+    aligned_paraboloid.a() = 2000.0;
+    aligned_paraboloid.b() = 0.0;
+    // angles[0] = 0.0;
+    // angles[1] = 0.0;
+    // angles[2] = 0.0;
+    translations[0] = 0.0;
+    translations[1] = 0.0;
+    translations[2] = -10.0;
+
+    auto frame0 = orig_frame;
+    UnitQuaternion x_rotation0(angles[0], frame0[0]);
+    UnitQuaternion y_rotation0(angles[1], frame0[1]);
+    UnitQuaternion z_rotation0(angles[2], frame0[2]);
+    frame0 = x_rotation0 * y_rotation0 * z_rotation0 * frame0;
+    for (auto& vertex : cube) {
+      Pt tmp_pt = vertex;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        vertex[d] = frame0[d] * tmp_pt;
+      }
+    }
+
+    angles[0] = 0.0;
+    angles[1] = 0.0;
+    angles[2] = 0.0;
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Case setup." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.a() = " << aligned_paraboloid.a() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "aligned_paraboloid.b() = " << aligned_paraboloid.b() << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[0] = " << angles[0] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[1] = " << angles[1] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20) << "angles[2] = " << angles[2] << ";"
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[0] = " << translations[0] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[1] = " << translations[1] << ";" << std::endl;
+    std::cout << std::setprecision(20)
+              << "translations[2] = " << translations[2] << ";" << std::endl;
+
+    if (first_vertex_on_surface) translations[2] = 0.0;
+
+    auto frame = orig_frame;
+    UnitQuaternion x_rotation(angles[0], frame[0]);
+    UnitQuaternion y_rotation(angles[1], frame[1]);
+    UnitQuaternion z_rotation(angles[2], frame[2]);
+    frame = x_rotation * y_rotation * z_rotation * frame;
+    for (auto& vertex : cube) {
+      Pt tmp_pt = vertex + translations;
+      for (UnsignedIndex_t d = 0; d < 3; ++d) {
+        vertex[d] = frame[d] * tmp_pt;
+      }
+    }
+
+    double local_space_translation = 0.0;
+    if (first_vertex_on_surface) {
+      for (auto& vertex : cube) {
+        Pt tmp_pt = vertex;
+        local_space_translation =
+            -aligned_paraboloid.a() * vertex[0] * vertex[0] -
+            aligned_paraboloid.b() * vertex[1] * vertex[1] - vertex[2];
+        break;
+      }
+      for (auto& vertex : cube) {
+        vertex[2] += local_space_translation;
+      }
+    }
+    translations += local_space_translation * frame[2];
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "IRL volume computation." << std::endl;
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::string poly_filename = "cell_" + std::to_string(i);
+    std::string surf_filename = "surface_" + std::to_string(i);
+    cube.setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    auto poly_vol = seg_half_edge.calculateVolume();
+
+    for (auto& face : seg_half_edge) {
+      auto normal = Normal(0.0, 0.0, 0.0);
+      const auto starting_half_edge = face->getStartingHalfEdge();
+      auto current_half_edge = starting_half_edge;
+      auto next_half_edge = starting_half_edge->getNextHalfEdge();
+      const auto& start_location =
+          starting_half_edge->getPreviousVertex()->getLocation();
+      do {
+        normal += crossProduct(
+            current_half_edge->getVertex()->getLocation() - start_location,
+            next_half_edge->getVertex()->getLocation() - start_location);
+        current_half_edge = next_half_edge;
+        next_half_edge = next_half_edge->getNextHalfEdge();
+      } while (next_half_edge != starting_half_edge);
+      normal.normalize();
+      face->setPlane(Plane(normal, normal * start_location));
+    }
+
+    Paraboloid paraboloid(-translations, frame, aligned_paraboloid.a(),
+                          aligned_paraboloid.b());
+
+    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+        poly_filename);  // This prints the AMR triangles
+    auto amr_moments = intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 17);
+    // Move centroid to global reference frame
+    auto centroid = IRL::Pt(0.0, 0.0, 0.0);
+    for (std::size_t d = 0; d < 3; ++d) {
+      for (std::size_t n = 0; n < 3; ++n) {
+        centroid[n] += frame[d][n] * amr_moments.centroid()[d];
+      }
+    }
+    centroid -= amr_moments.volume() * translations;
+    amr_moments.centroid() = centroid;
+
+    ParametrizedSurfaceOutput surface(
+        Paraboloid(Pt(0.0, 0.0, 0.0),
+                   ReferenceFrame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+                                  Normal(0.0, 0.0, 1.0)),
+                   aligned_paraboloid.a(), aligned_paraboloid.b()));
+    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+    // auto volume_and_surface = getVolumeMoments<
+    //     AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
+    //     HalfEdgeCutting>(dodeca_unrotated, paraboloid);
+    // auto& our_moments = volume_and_surface.getMoments();
+    // auto& surface = volume_and_surface.getSurface();
+    const double length_scale = 0.0025;
+    TriangulatedSurfaceOutput triangulated_surface =
+        surface.triangulate(length_scale);
+    triangulated_surface.write(surf_filename);
+
+    std::cout << seg_half_edge;
+    VTKOutput vtk_io("cube_out", "viz", BasicMesh(1, 1, 1, 0));
+    std::vector<ParametrizedSurfaceOutput> surfaces;
+    surface.setLengthScale(length_scale);
+    surfaces.push_back(surface);
+    vtk_io.writeVTKInterface(0.0, surfaces, true);
+
+    // auto our_moments = getVolumeMoments<VolumeMoments, HalfEdgeCutting>(
+    //     dodeca_unrotated, paraboloid);
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+    // error = fabs(our_moments - moments[0]);
+    if (aligned_paraboloid.a() * aligned_paraboloid.b() > 0.0)
+      std::cout << "ELLIPTIC" << std::endl;
+    else if (aligned_paraboloid.a() * aligned_paraboloid.b() < 0.0)
+      std::cout << "HYPERBOLIC" << std::endl;
+    else
+      std::cout << "PARABOLIC" << std::endl;
+    // std::cout << std::setprecision(20) << "Volume polyhedron = " << poly_vol
+    //           << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped IRL = " << our_moments.volume() / poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20)
+              << "Vfrac unclipped AMR = " << amr_moments.volume() / poly_vol
+              << std::endl;
+    std::cout << "Diff AMR/IRL = "
+              << fabs(our_moments.volume() - amr_moments.volume()) / poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20) << "Centroid unclipped AMR = "
+              << amr_moments.centroid() / safelyEpsilon(amr_moments.volume())
+              << std::endl;
+    std::cout << std::setprecision(20) << "Centroid unclipped IRL = "
+              << our_moments.centroid() / safelyEpsilon(our_moments.volume())
+              << std::endl;
+    std::cout << std::setprecision(20) << "Diff centroid AMR/IRL = "
+              << Pt(fabs(our_moments.centroid()[0] - amr_moments.centroid()[0]),
+                    fabs(our_moments.centroid()[1] - amr_moments.centroid()[1]),
+                    fabs(our_moments.centroid()[2] - amr_moments.centroid()[2]))
+              << std::endl;
+
+    std::cout << "-------------------------------------------------------------"
+                 "---------------------------------------------------------"
+              << std::endl;
+
+    max_error =
+        max_error > fabs(our_moments.volume() - amr_moments.volume()) / poly_vol
+            ? max_error
+            : fabs(our_moments.volume() - amr_moments.volume()) / poly_vol;
+    rms_error += fabs(our_moments.volume() - amr_moments.volume()) *
+                 fabs(our_moments.volume() - amr_moments.volume()) / poly_vol /
+                 poly_vol;
+
+    if (fabs(our_moments.volume() - amr_moments.volume()) / poly_vol > 1.0e-10)
+      exit(-1);
+    if (magnitude(
+            Pt(fabs(our_moments.centroid()[0] - amr_moments.centroid()[0]),
+               fabs(our_moments.centroid()[1] - amr_moments.centroid()[1]),
+               fabs(our_moments.centroid()[2] - amr_moments.centroid()[2]))) >
+        1.0e-12)
+      exit(-1);
+  }
+  rms_error = sqrt(rms_error / static_cast<double>(Ntests));
+
+  std::cout << "Max error = " << max_error << std::endl;
+  std::cout << "RMS error = " << rms_error << std::endl;
+  std::cout << "-------------------------------------------------------------"
+               "---------------------------------------------------------"
+            << std::endl;
+
+  EXPECT_NEAR(max_error, 0.0, 1.0e-12);
+}
+
 }  // namespace

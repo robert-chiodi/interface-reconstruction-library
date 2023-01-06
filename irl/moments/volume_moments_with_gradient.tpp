@@ -108,8 +108,8 @@ template <class GradientType>
 inline VolumeMomentsWithGradient<GradientType>&
 VolumeMomentsWithGradient<GradientType>::operator*=(const double a_rhs) {
   volume_m *= a_rhs;
-  volume_gradient_m *= a_rhs;
-  centroid_m *= a_rhs;
+  volume_gradient_m = volume_gradient_m * a_rhs;
+  centroid_m = centroid_m * a_rhs;
   return (*this);
 }
 
@@ -117,8 +117,8 @@ template <class GradientType>
 inline VolumeMomentsWithGradient<GradientType>&
 VolumeMomentsWithGradient<GradientType>::operator/=(const double a_rhs) {
   volume_m /= a_rhs;
-  volume_gradient_m /= a_rhs;
-  centroid_m /= a_rhs;
+  volume_gradient_m = volume_gradient_m / a_rhs;
+  centroid_m = centroid_m / a_rhs;
   return (*this);
 }
 

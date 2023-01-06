@@ -21,249 +21,33 @@
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/reference_frame.h"
 #include "irl/geometry/general/rotations.h"
+#include "irl/geometry/general/scalar_with_gradient.h"
 #include "irl/geometry/general/unit_quaternion.h"
 #include "irl/helpers/mymath.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 
 namespace IRL {
 
-template <class GradientType>
-class ScalarWithGradient {
- public:
-  using gradient_type = GradientType;
-  ScalarWithGradient(void) {
-    scalar_m = 0.0;
-    gradient_m = GradientType(0.0);
-  }
-  constexpr ScalarWithGradient(const double a_value) {
-    scalar_m = a_value;
-    gradient_m = GradientType(0.0);
-  }
-  constexpr ScalarWithGradient(const double a_value,
-                               const GradientType& a_gradient) {
-    scalar_m = a_value;
-    gradient_m = a_gradient;
-  }
-  constexpr ScalarWithGradient(
-      const ScalarWithGradient<GradientType>& a_scalar) {
-    scalar_m = a_scalar.value();
-    gradient_m = a_scalar.gradient();
-  }
-  double& value(void) { return scalar_m; }
-  const double& value(void) const { return scalar_m; }
-  GradientType& gradient(void) { return gradient_m; }
-  const GradientType& gradient(void) const { return gradient_m; }
-  // operator double() const { return scalar_m; }
-  ScalarWithGradient<GradientType>& operator+=(
-      const ScalarWithGradient<GradientType>& a_rhs) {
-    scalar_m += a_rhs.scalar_m;
-    gradient_m = gradient_m + a_rhs.gradient_m;
-    return (*this);
-  }
-  ScalarWithGradient<GradientType>& operator*=(
-      const ScalarWithGradient<GradientType>& a_rhs) {
-    scalar_m *= a_rhs.scalar_m;
-    gradient_m = gradient_m * a_rhs.scalar_m + scalar_m * a_rhs.gradient_m;
-    return (*this);
-  }
-  ScalarWithGradient<GradientType>& operator*=(const double a_rhs) {
-    scalar_m *= a_rhs;
-    gradient_m = gradient_m * a_rhs;
-    return (*this);
-  }
-  ~ScalarWithGradient(void) = default;
-
- private:
-  double scalar_m;
-  GradientType gradient_m;
-};
-
-template <class GradientType>
-struct has_embedded_gradient<ScalarWithGradient<GradientType>>
-    : std::true_type {};
-
-template <class GradientType>
-ScalarWithGradient<GradientType> operator*(
-    const ScalarWithGradient<GradientType>& a_scalar, const double a_rhs) {
-  ScalarWithGradient<GradientType> new_scalar(a_scalar);
-  new_scalar.value() *= a_rhs;
-  new_scalar.gradient() = new_scalar.gradient() * a_rhs;
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator*(
-    const ScalarWithGradient<GradientType>& a_scalar1,
-    const ScalarWithGradient<GradientType>& a_scalar2) {
-  ScalarWithGradient<GradientType> new_scalar(0.0);
-  new_scalar.value() = a_scalar1.value() * a_scalar2.value();
-  new_scalar.gradient() = a_scalar1.value() * a_scalar2.gradient() +
-                          a_scalar1.gradient() * a_scalar2.value();
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator*(
-    const double a_rhs, const ScalarWithGradient<GradientType>& a_scalar) {
-  return ScalarWithGradient<GradientType>(a_scalar * a_rhs);
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator/(
-    const ScalarWithGradient<GradientType>& a_scalar, const double a_rhs) {
-  ScalarWithGradient<GradientType> new_scalar(a_scalar);
-  new_scalar.value() /= a_rhs;
-  new_scalar.gradient() = new_scalar.gradient() / a_rhs;
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator/(
-    const ScalarWithGradient<GradientType>& a_scalar1,
-    const ScalarWithGradient<GradientType>& a_scalar2) {
-  ScalarWithGradient<GradientType> new_scalar(0.0);
-  new_scalar.value() = a_scalar1.value() / a_scalar2.value();
-  new_scalar.gradient() = a_scalar1.gradient() / a_scalar2.value() -
-                          a_scalar1.value() * a_scalar2.gradient() /
-                              (a_scalar2.value() * a_scalar2.value());
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator+(
-    const ScalarWithGradient<GradientType>& a_scalar1,
-    const ScalarWithGradient<GradientType>& a_scalar2) {
-  ScalarWithGradient<GradientType> new_scalar(0.0);
-  new_scalar.value() = a_scalar1.value() + a_scalar2.value();
-  new_scalar.gradient() = a_scalar1.gradient() + a_scalar2.gradient();
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator-(
-    const ScalarWithGradient<GradientType>& a_scalar1,
-    const ScalarWithGradient<GradientType>& a_scalar2) {
-  ScalarWithGradient<GradientType> new_scalar(0.0);
-  new_scalar.value() = a_scalar1.value() - a_scalar2.value();
-  new_scalar.gradient() = a_scalar1.gradient() - a_scalar2.gradient();
-  return new_scalar;
-}
-template <class GradientType>
-ScalarWithGradient<GradientType> operator-(
-    const ScalarWithGradient<GradientType>& a_scalar) {
-  ScalarWithGradient<GradientType> new_scalar(0.0);
-  new_scalar.value() = -a_scalar.value();
-  new_scalar.gradient() = -a_scalar.gradient();
-  return new_scalar;
-}
-template <class GradientType>
-bool operator>=(const ScalarWithGradient<GradientType>& a_scalar1,
-                const ScalarWithGradient<GradientType>& a_scalar2) {
-  return a_scalar1.value() >= a_scalar2.value();
-}
-template <class GradientType>
-bool operator>(const ScalarWithGradient<GradientType>& a_scalar1,
-               const ScalarWithGradient<GradientType>& a_scalar2) {
-  return a_scalar1.value() > a_scalar2.value();
-}
-template <class GradientType>
-bool operator<=(const ScalarWithGradient<GradientType>& a_scalar1,
-                const ScalarWithGradient<GradientType>& a_scalar2) {
-  return a_scalar1.value() <= a_scalar2.value();
-}
-template <class GradientType>
-bool operator<(const ScalarWithGradient<GradientType>& a_scalar1,
-               const ScalarWithGradient<GradientType>& a_scalar2) {
-  return a_scalar1.value() < a_scalar2.value();
-}
-template <class ScalarType>
-enable_if_t<!has_embedded_gradient<ScalarType>::value, ScalarType> SqrtMoments(
-    const ScalarType& a_scalar);
-template <class ScalarType>
-enable_if_t<!has_embedded_gradient<ScalarType>::value, ScalarType> LogMoments(
-    const ScalarType& a_scalar);
-template <class ScalarType>
-enable_if_t<!has_embedded_gradient<ScalarType>::value, ScalarType>
-ArctanMoments(const ScalarType& a_scalar);
-template <class ScalarType>
-enable_if_t<!has_embedded_gradient<ScalarType>::value, ScalarType>
-ArctanhMoments(const ScalarType& a_scalar);
-template <class ScalarType>
-enable_if_t<!has_embedded_gradient<ScalarType>::value, ScalarType> PowMoments(
-    const ScalarType& a_scalar, const double a_power);
-template <class ScalarType>
-inline enable_if_t<has_embedded_gradient<ScalarType>::value, ScalarType>
-SqrtMoments(const ScalarType& a_scalar) {
-  ScalarType new_scalar(0.0);
-  new_scalar.value() = std::sqrt(a_scalar.value());
-  new_scalar.gradient() = a_scalar.gradient() / (2.0 * new_scalar.value());
-  return new_scalar;
-}
-template <>
-inline enable_if_t<!has_embedded_gradient<double>::value, double> SqrtMoments(
-    const double& a_scalar) {
-  return std::sqrt(a_scalar);
-}
-template <class ScalarType>
-inline enable_if_t<has_embedded_gradient<ScalarType>::value, ScalarType>
-LogMoments(const ScalarType& a_scalar) {
-  ScalarType new_scalar(0.0);
-  new_scalar.value() = std::log(a_scalar.value());
-  new_scalar.gradient() = a_scalar.gradient() / a_scalar.value();
-  return new_scalar;
-}
-template <>
-inline enable_if_t<!has_embedded_gradient<double>::value, double> LogMoments(
-    const double& a_scalar) {
-  return std::log(a_scalar);
-}
-template <class ScalarType>
-inline enable_if_t<has_embedded_gradient<ScalarType>::value, ScalarType>
-ArctanMoments(const ScalarType& a_scalar) {
-  ScalarType new_scalar(0.0);
-  new_scalar.value() = std::atan(a_scalar.value());
-  new_scalar.gradient() =
-      a_scalar.gradient() / (1.0 + a_scalar.value() * a_scalar.value());
-  return new_scalar;
-}
-template <>
-inline enable_if_t<!has_embedded_gradient<double>::value, double> ArctanMoments(
-    const double& a_scalar) {
-  return std::atan(a_scalar);
-}
-template <class ScalarType>
-inline enable_if_t<has_embedded_gradient<ScalarType>::value, ScalarType>
-ArctanhMoments(const ScalarType& a_scalar) {
-  ScalarType new_scalar(0.0);
-  new_scalar.value() = std::atanh(a_scalar.value());
-  new_scalar.gradient() =
-      a_scalar.gradient() / (1.0 - a_scalar.value() * a_scalar.value());
-  return new_scalar;
-}
-template <>
-inline enable_if_t<!has_embedded_gradient<double>::value, double>
-ArctanhMoments(const double& a_scalar) {
-  return std::atanh(a_scalar);
-}
-template <class ScalarType>
-inline enable_if_t<has_embedded_gradient<ScalarType>::value, ScalarType>
-PowMoments(const ScalarType& a_scalar, const double a_power) {
-  ScalarType new_scalar(0.0);
-  new_scalar.value() = std::pow(a_scalar.value(), a_power);
-  new_scalar.gradient() =
-      a_power * a_scalar.gradient() * std::pow(a_scalar.value(), a_power - 1.0);
-  return new_scalar;
-}
-template <>
-inline enable_if_t<!has_embedded_gradient<double>::value, double> PowMoments(
-    const double& a_scalar, const double a_power) {
-  return std::pow(a_scalar, a_power);
-}
-
+/* This returns the algebraic signed distance to a paraboloid
+ * returns < 0 number if a_pt is below the paraboloid
+ * returns > 0 number if a_pt is above the paraboloid */
 inline double signedDistance(const Pt& a_pt,
                              const AlignedParaboloid& a_paraboloid) {
   return a_paraboloid.a() * a_pt[0] * a_pt[0] +
          a_paraboloid.b() * a_pt[1] * a_pt[1] + a_pt[2];
 }
 
+/******************************************************************************/
+/*********************** First moment contribution ****************************/
+/******************************************************************************/
+/* This compute the first contribution to the moments (arising from the
+ * integration of the face plane primitives on the poligonized clipped faces) */
 template <class ReturnType, class PtType>
 ReturnType computeType1Contribution(const PtType& a_ref_pt,
                                     const PtType& a_pt_0, const PtType& a_pt_1);
 
+/* This is the version of computeType1Contribution for returning the zeroth
+ * moment only without its gradient */
 template <>
 inline enable_if_t<!has_embedded_gradient<Volume>::value, Volume>
 computeType1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
@@ -273,6 +57,8 @@ computeType1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
           (a_pt_1[0] - a_ref_pt[0]) * (a_pt_0[1] - a_ref_pt[1]));
 }
 
+/* This is the version of computeType1Contribution for returning the zeroth
+ * moment only or the zeroth and first moments with their gradient */
 template <class ReturnType>
 inline enable_if_t<has_embedded_gradient<ReturnType>::value, ReturnType>
 computeType1Contribution(
@@ -323,6 +109,8 @@ computeType1Contribution(
   return moments_with_gradient;
 }
 
+/* This is the version of computeType1Contribution for returning the zeroth and
+ * first moments without their gradient */
 template <>
 inline enable_if_t<!has_embedded_gradient<VolumeMoments>::value, VolumeMoments>
 computeType1Contribution(const Pt& a_ref_pt, const Pt& a_pt_0,
@@ -1058,6 +846,9 @@ computeType3Contribution(const AlignedParaboloid& a_paraboloid,
   moments.centroid()[0] *= area_proj_triangle;
   moments.centroid()[1] *= area_proj_triangle;
   moments.centroid()[2] *= area_proj_triangle;
+  // std::cout << "M3 contribution = " << moments.volume()
+  //           << " ------- ARC = " << pt_0 << " -- " << cp << " -- " << pt_1
+  //           << " -- w = " << weight << std::endl;
   return moments;
 }  // namespace IRL
 
@@ -1151,15 +942,15 @@ computeFaceOnlyContribution(
   const double a_value = -face_normal[0] / safelyEpsilon(face_normal[2]);
   const double b_value = -face_normal[1] / safelyEpsilon(face_normal[2]);
   const double c_value = face_distance / safelyEpsilon(face_normal[2]);
-  const auto a_grad =
-      -face_normal_grad[0] / safelyEpsilon(face_normal[2]) +
-      face_normal[0] / safelyEpsilon(face_normal[2] * face_normal[2]);
-  const auto b_grad =
-      -face_normal_grad[1] / safelyEpsilon(face_normal[2]) +
-      face_normal[1] / safelyEpsilon(face_normal[2] * face_normal[2]);
-  const auto c_grad =
-      face_distance_grad / safelyEpsilon(face_normal[2]) -
-      face_distance / safelyEpsilon(face_normal[2] * face_normal[2]);
+  const auto a_grad = -face_normal_grad[0] / safelyEpsilon(face_normal[2]) +
+                      face_normal[0] * face_normal_grad[2] /
+                          safelyEpsilon(face_normal[2] * face_normal[2]);
+  const auto b_grad = -face_normal_grad[1] / safelyEpsilon(face_normal[2]) +
+                      face_normal[1] * face_normal_grad[2] /
+                          safelyEpsilon(face_normal[2] * face_normal[2]);
+  const auto c_grad = face_distance_grad / safelyEpsilon(face_normal[2]) -
+                      face_distance * face_normal_grad[2] /
+                          safelyEpsilon(face_normal[2] * face_normal[2]);
   const auto a = scalar_type(a_value, a_grad);
   const auto b = scalar_type(b_value, b_grad);
   const auto c = scalar_type(c_value, c_grad);

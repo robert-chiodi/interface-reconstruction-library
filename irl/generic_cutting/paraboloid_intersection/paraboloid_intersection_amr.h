@@ -13,6 +13,7 @@
 #include <float.h>
 #include "irl/data_structures/small_vector.h"
 #include "irl/data_structures/stack_vector.h"
+#include "irl/generic_cutting/paraboloid_intersection/moment_contributions.h"
 #include "irl/geometry/general/geometry_type_traits.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/paraboloid_reconstruction/ellipse.h"

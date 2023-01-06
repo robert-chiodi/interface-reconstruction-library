@@ -56,6 +56,11 @@ class Volume {
   /// \brief Allow implicit conversion to double.
   operator double() const;
 
+  /// \brief Return value of stored volume.
+  double& volume(void);
+  /// \brief Return const reference to stored volume.
+  const double& volume(void) const;
+
   /// \brief Overload assignment to assign constant value to moments.
   Volume& operator=(const double a_value);
 

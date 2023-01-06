@@ -41,7 +41,7 @@ void setVolumeFractionTolerance(const double a_tolerance) {
 
 namespace global_constants {
 
-double VF_LOW = 1.0e-8;
+double VF_LOW = 1.0e-12;
 
 double VF_HIGH = 1.0 - VF_LOW;
 

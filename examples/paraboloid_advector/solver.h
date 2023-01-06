@@ -57,7 +57,8 @@ void writeOutDiagnostics(const int a_iteration, const double a_dt,
                          const Data<double>& a_liquid_volume_fraction,
                          const Data<IRL::Paraboloid>& a_interface,
                          std::chrono::duration<double> a_VOF_duration,
-                         std::chrono::duration<double> a_recon_duration);
+                         std::chrono::duration<double> a_recon_duration,
+                         std::chrono::duration<double> a_write_duration);
 
 /// \brief Generates triangulated surface and writes to provided VTK file
 void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
@@ -105,17 +106,29 @@ int runSimulation(const std::string& a_advection_method,
 
   VTKOutput vtk_io("viz_out", "viz", cc_mesh);
   vtk_io.addData("VOF", liquid_volume_fraction);
-
+  vtk_io.addData("VelocityX", velU);
+  vtk_io.addData("VelocityY", velV);
+  vtk_io.addData("VelocityZ", velW);
   double simulation_time = 0.0;
   int iteration = 0;
+
+  vtk_io.writeVTKFile(simulation_time);
+  getReconstruction(a_reconstruction_method, liquid_volume_fraction,
+                    liquid_centroid, gas_centroid, link_localized_paraboloids,
+                    0.0, velU, velV, velW, &interface);
+
+  writeInterfaceToFile(liquid_volume_fraction, interface, simulation_time,
+                       &vtk_io);
+
   writeDiagnosticsHeader();
   std::string output_folder = "viz";
   const int dir_err = mkdir(output_folder.c_str(), 0777);
   std::chrono::duration<double> advect_VOF_time(0.0);
   std::chrono::duration<double> recon_time(0.0);
+  std::chrono::duration<double> write_time(0.0);
   writeOutDiagnostics(iteration, a_dt, simulation_time, velU, velV, velW,
                       liquid_volume_fraction, interface, advect_VOF_time,
-                      recon_time);
+                      recon_time, write_time);
   while (simulation_time < a_end_time) {
     const double time_step_to_use =
         std::fmin(a_dt, a_end_time - simulation_time);
@@ -123,9 +136,10 @@ int runSimulation(const std::string& a_advection_method,
                                 &velV, &velW);
 
     auto start = std::chrono::system_clock::now();
-    advectVOF(a_advection_method, time_step_to_use, velU, velV, velW,
-              &link_localized_paraboloids, &liquid_volume_fraction,
-              &liquid_centroid, &gas_centroid);
+    advectVOF(a_advection_method, a_reconstruction_method, time_step_to_use,
+              velU, velV, velW, &link_localized_paraboloids,
+              &liquid_volume_fraction, &liquid_centroid, &gas_centroid,
+              &interface);
     auto advect_end = std::chrono::system_clock::now();
     advect_VOF_time = advect_end - start;
     getReconstruction(a_reconstruction_method, liquid_volume_fraction,
@@ -134,17 +148,31 @@ int runSimulation(const std::string& a_advection_method,
     auto recon_end = std::chrono::system_clock::now();
     recon_time = recon_end - advect_end;
 
-    simulation_time += time_step_to_use;
-    writeOutDiagnostics(iteration + 1, time_step_to_use, simulation_time, velU,
-                        velV, velW, liquid_volume_fraction, interface,
-                        advect_VOF_time, recon_time);
-
     if (a_visualization_frequency > 0 &&
         iteration % a_visualization_frequency == 0) {
       vtk_io.writeVTKFile(simulation_time);
+      if (a_reconstruction_method == "PLIC") {
+        getReconstruction("Jibben", liquid_volume_fraction, liquid_centroid,
+                          gas_centroid, link_localized_paraboloids,
+                          time_step_to_use, velU, velV, velW, &interface);
+      }
       writeInterfaceToFile(liquid_volume_fraction, interface, simulation_time,
                            &vtk_io);
+      if (a_reconstruction_method == "PLIC") {
+        getReconstruction(a_reconstruction_method, liquid_volume_fraction,
+                          liquid_centroid, gas_centroid,
+                          link_localized_paraboloids, time_step_to_use, velU,
+                          velV, velW, &interface);
+      }
     }
+    auto write_end = std::chrono::system_clock::now();
+    write_time = write_end - recon_end;
+
+    simulation_time += time_step_to_use;
+    writeOutDiagnostics(iteration + 1, time_step_to_use, simulation_time, velU,
+                        velV, velW, liquid_volume_fraction, interface,
+                        advect_VOF_time, recon_time, write_time);
+
     ++iteration;
   }
 

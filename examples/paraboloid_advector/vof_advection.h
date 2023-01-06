@@ -28,17 +28,28 @@ void connectMesh(
     const BasicMesh& a_mesh,
     Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid);
 
-void advectVOF(const std::string& a_advection_method, const double a_dt,
+void advectVOF(const std::string& a_advection_method,
+               const std::string& a_reconstruction_method, const double a_dt,
                const Data<double>& a_U, const Data<double>& a_V,
                const Data<double>& a_W,
                Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
                Data<double>* a_liquid_volume_fraction,
-               Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid);
+               Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid,
+               Data<IRL::Paraboloid>* a_interface);
+
+struct Split {
+  static void advectVOF(
+      const std::string& a_reconstruction_method, const double a_dt,
+      const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
+      Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+      Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
+      Data<IRL::Pt>* a_gas_centroid, Data<IRL::Paraboloid>* a_interface);
+};
 
 struct FullLagrangian {
   static void advectVOF(
-      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
-      const Data<double>& a_W,
+      const std::string& a_reconstruction_method, const double a_dt,
+      const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
       Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);
@@ -46,8 +57,8 @@ struct FullLagrangian {
 
 struct SemiLagrangian {
   static void advectVOF(
-      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
-      const Data<double>& a_W,
+      const std::string& a_reconstruction_method, const double a_dt,
+      const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
       Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);
@@ -55,8 +66,8 @@ struct SemiLagrangian {
 
 struct SemiLagrangianCorrected {
   static void advectVOF(
-      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
-      const Data<double>& a_W,
+      const std::string& a_reconstruction_method, const double a_dt,
+      const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
       Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);

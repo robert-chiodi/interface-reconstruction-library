@@ -100,6 +100,7 @@ class ParametrizedSurfaceOutput {
   inline double getMeanCurvatureIntegral(void);
   inline double getGaussianCurvatureIntegral(void);
   inline Normal getAverageNormal(void);
+  inline Normal getAverageNormalNonAligned(void);
   inline double getAverageMeanCurvature(void);
   inline double getAverageGaussianCurvature(void);
 

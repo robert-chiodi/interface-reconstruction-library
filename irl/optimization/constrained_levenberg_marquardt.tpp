@@ -291,14 +291,14 @@ void ConstrainedLevenbergMarquardt<OptimizingClass, kMeasures, kParameters,
       old_constraints_error = error_m;
       error_m = constraints_m.squaredNorm();
 
-      std::cout << "  Iter : " << iteration_m
-                << "  Sub-Iter : " << sub_iteration_m
-                << " -- Penalty = " << penalty_m
-                << " -- Multiplier 0 = " << multipliers_m(0)
-                << " -- Multiplier 1 = " << multipliers_m(1)
-                << " -- Multiplier 2 = " << multipliers_m(2)
-                << " -- Multiplier 3 = " << multipliers_m(3)
-                << " -- Error = " << std::sqrt(error_m) << std::endl;
+      // std::cout << "  Iter : " << iteration_m
+      //           << "  Sub-Iter : " << sub_iteration_m
+      //           << " -- Penalty = " << penalty_m
+      //           << " -- Multiplier 0 = " << multipliers_m(0)
+      //           << " -- Multiplier 1 = " << multipliers_m(1)
+      //           << " -- Multiplier 2 = " << multipliers_m(2)
+      //           << " -- Multiplier 3 = " << multipliers_m(3)
+      //           << " -- Error = " << std::sqrt(error_m) << std::endl;
 
       // std::cout << "   Final delta = " << std::endl << final_delta <<
       // std::endl; If exiting because error low enough, give number of

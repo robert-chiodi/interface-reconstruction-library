@@ -55,6 +55,15 @@ class RationalBezierArc {
   /// \brief Return const reference to stored end point address.
   std::uintptr_t end_point_id(void) const;
 
+  /// \brief Return const weight.
+  double& weight(void);
+  /// \brief Return const reference to stored start point.
+  Pt& start_point(void);
+  /// \brief Return const reference to stored control point.
+  Pt& control_point(void);
+  /// \brief Return const reference to stored end point.
+  Pt& end_point(void);
+
   /// \brief Overload += operator to update moments.
   RationalBezierArc& operator+=(const Pt& a_rhs);
   // \brief Unary minus operator
@@ -64,14 +73,6 @@ class RationalBezierArc {
   ~RationalBezierArc(void) = default;
 
  private:
-  /// \brief Return const weight.
-  double& weight(void);
-  /// \brief Return const reference to stored start point.
-  Pt& start_point(void);
-  /// \brief Return const reference to stored control point.
-  Pt& control_point(void);
-  /// \brief Return const reference to stored end point.
-  Pt& end_point(void);
   /// \brief Return reference to stored start point address.
   std::uintptr_t start_point_id(void);
   /// \brief Return reference to stored end point address.
