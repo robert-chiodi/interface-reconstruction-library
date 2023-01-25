@@ -27,7 +27,7 @@
 
 #include "examples/paraboloid_advector/data.h"
 #include "examples/paraboloid_advector/reconstruction_types.h"
-#include "examples/paraboloid_advector/solver.h"
+// #include "examples/paraboloid_advector/solver.h"
 #include "examples/paraboloid_advector/vof_advection.h"
 
 constexpr int NX = 50;

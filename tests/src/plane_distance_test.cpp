@@ -9,9 +9,9 @@
 
 #include "irl/interface_reconstruction_methods/plane_distance.h"
 
+#include <float.h>
 #include <algorithm>
 #include <cmath>
-#include <float.h>
 #include <random>
 
 #include "gtest/gtest.h"
@@ -29,9 +29,9 @@ using namespace IRL;
 
 TEST(PlaneDistance, findDistanceOnePlane) {
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_VF(
@@ -57,9 +57,9 @@ TEST(PlaneDistance, findDistanceOnePlane) {
 
 TEST(PlaneDistance, findDistanceOnePlaneHex) {
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_VF(
@@ -91,9 +91,9 @@ TEST(PlaneDistance, findDistanceOnePlaneHex) {
 
 TEST(PlaneDistance, findDistanceOnePlaneTet) {
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_VF(
@@ -101,7 +101,7 @@ TEST(PlaneDistance, findDistanceOnePlaneTet) {
       global_constants::VF_HIGH - DBL_EPSILON);
   Tet tet({Pt(1.0, 0.0, -0.5), Pt(1.0, 1.0, 0.0), Pt(1.0, 0.0, 0.5),
            Pt(0.0, 0.0, 0.0)});
-  for (auto &vertex : tet) {
+  for (auto& vertex : tet) {
     vertex += Pt(-10.0, 5.0, 1.5);
   }
   const auto tet_volume = tet.calculateVolume();
@@ -126,9 +126,9 @@ TEST(PlaneDistance, findDistanceOnePlaneTet) {
 
 TEST(PlaneDistance, findDistanceTwoPlane) {
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_beta(0.0, 2.0 * M_PI);
@@ -262,4 +262,4 @@ TEST(PlaneDistance, findDistanceThreePlane) {
               global_constants::TWO_PLANE_DISTANCE_VOLUME_FRACTION_TOLERANCE);
 }
 
-} // namespace
+}  // namespace

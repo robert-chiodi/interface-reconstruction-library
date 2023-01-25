@@ -137,6 +137,7 @@ bool SegmentedHalfEdgePolyhedronCommon<
   for (auto& face : (*this)) {
     bool valid_face = face->checkValidFace();
     if (!valid_face) {
+      std::cout << "Face not valid. \n" << std::endl;
       return false;
     }
     this->markFacesTouchedByOpposite(face, &face_found_through_opposite);

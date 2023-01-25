@@ -7,6 +7,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+#include <mpi.h>
 #include <iostream>
 
 #include "examples/paraboloid_advector/reconstruction_types.h"
@@ -16,9 +17,10 @@
 #include "irl/generic_cutting/paraboloid_intersection/paraboloid_intersection_amr.h"
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 
-void resetCentroids(
-    const Data<IRL::LocalizedParaboloidLink>& a_link_localized_paraboloid,
-    Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid) {
+void resetCentroids(const Data<IRL::LocalizedParaboloidLink<double>>&
+                        a_link_localized_paraboloid,
+                    Data<IRL::Pt>* a_liquid_centroid,
+                    Data<IRL::Pt>* a_gas_centroid) {
   const BasicMesh& mesh = a_link_localized_paraboloid.getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -38,8 +40,8 @@ void resetCentroids(
 
 void connectMesh(
     const BasicMesh& a_mesh,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid) {
-  IRL::LocalizedParaboloidLink* neighbor_ptr;
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid) {
+  IRL::LocalizedParaboloidLink<double>* neighbor_ptr;
   // Provide mesh connectivity information.
   IRL::UnsignedIndex_t unique_id = 0;
 
@@ -99,14 +101,13 @@ std::array<int, 3> getIndexFromTag(const BasicMesh& a_mesh,
           indices[2] + a_mesh.kmino()};
 }
 
-void advectVOF(const std::string& a_advection_method,
-               const std::string& a_reconstruction_method, const double a_dt,
-               const Data<double>& a_U, const Data<double>& a_V,
-               const Data<double>& a_W,
-               Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
-               Data<double>* a_liquid_volume_fraction,
-               Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid,
-               Data<IRL::Paraboloid>* a_interface) {
+void advectVOF(
+    const std::string& a_advection_method,
+    const std::string& a_reconstruction_method, const double a_dt,
+    const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
+    Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
+    Data<IRL::Pt>* a_gas_centroid, Data<IRL::Paraboloid>* a_interface) {
   if (a_advection_method == "FullLagrangian") {
     FullLagrangian::advectVOF(a_reconstruction_method, a_dt, a_U, a_V, a_W,
                               a_link_localized_paraboloid,
@@ -137,7 +138,7 @@ void advectVOF(const std::string& a_advection_method,
 void Split::advectVOF(
     const std::string& a_reconstruction_method, const double a_dt,
     const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
     Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
     Data<IRL::Pt>* a_gas_centroid, Data<IRL::Paraboloid>* a_interface) {
   const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
@@ -433,7 +434,7 @@ void Split::advectVOF(
 void FullLagrangian::advectVOF(
     const std::string& a_reconstruction_method, const double a_dt,
     const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
     Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
     Data<IRL::Pt>* a_gas_centroid) {
   const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
@@ -494,7 +495,7 @@ void FullLagrangian::advectVOF(
 void SemiLagrangian::advectVOF(
     const std::string& a_reconstruction_method, const double a_dt,
     const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
     Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
     Data<IRL::Pt>* a_gas_centroid) {
   const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
@@ -708,7 +709,7 @@ void SemiLagrangian::advectVOF(
 void SemiLagrangianCorrected::advectVOF(
     const std::string& a_reconstruction_method, const double a_dt,
     const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
     Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
     Data<IRL::Pt>* a_gas_centroid) {
   const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
@@ -716,12 +717,51 @@ void SemiLagrangianCorrected::advectVOF(
   resetCentroids(*a_link_localized_paraboloid, a_liquid_centroid,
                  a_gas_centroid);
 
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  int split_proc = static_cast<int>(std::cbrt(static_cast<double>(size)));
+  int imin, nx, jmin, ny, kmin, nz;
+  const int NX = mesh.getNx(), NY = mesh.getNy(), NZ = mesh.getNz();
+
+  if (size > 1) {
+    if (size == split_proc * split_proc * split_proc) {
+      for (int i = 0; i < split_proc; i++) {
+        for (int j = 0; j < split_proc; j++) {
+          for (int k = 0; k < split_proc; k++) {
+            if (i + split_proc * j + split_proc * split_proc * k == rank) {
+              imin = i * (NX / split_proc);
+              nx = std::min((i + 1) * (NX / split_proc), NX) - imin;
+              jmin = j * (NY / split_proc);
+              ny = std::min((j + 1) * (NY / split_proc), NY) - jmin;
+              kmin = k * (NZ / split_proc);
+              nz = std::min((k + 1) * (NZ / split_proc), NZ) - kmin;
+            }
+          }
+        }
+      }
+    } else {
+      imin = rank * (NX / size);
+      nx = std::min((rank + 1) * (NX / size), NX) - imin;
+      jmin = 0;
+      ny = NZ;
+      kmin = 0;
+      nz = NZ;
+    }
+  } else {
+    imin = 0, nx = NX, jmin = 0, ny = NY, kmin = 0, nz = NZ;
+  }
+
   Data<double> U_face(&mesh);
   Data<double> V_face(&mesh);
   Data<double> W_face(&mesh);
-  for (int i = mesh.imin(); i <= mesh.imax() + 1; ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax() + 1; ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax() + 1; ++k) {
+  // for (int i = mesh.imin(); i <= mesh.imax() + 1; ++i) {
+  //   for (int j = mesh.jmin(); j <= mesh.jmax() + 1; ++j) {
+  //     for (int k = mesh.kmin(); k <= mesh.kmax() + 1; ++k) {
+  for (int i = imin; i < imin + nx + 1; ++i) {
+    for (int j = jmin; j < jmin + ny + 1; ++j) {
+      for (int k = kmin; k < kmin + nz + 1; ++k) {
         U_face(i, j, k) = 0.5 * (a_U(i, j, k) + a_U(i - 1, j, k));
         V_face(i, j, k) = 0.5 * (a_V(i, j, k) + a_V(i, j - 1, k));
         W_face(i, j, k) = 0.5 * (a_W(i, j, k) + a_W(i, j, k - 1));
@@ -730,15 +770,18 @@ void SemiLagrangianCorrected::advectVOF(
   }
 
   // Allocate storage for face fluxes
-  Data<IRL::SeparatedMoments<IRL::VolumeMoments>> face_flux[3] = {
-      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh),
-      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh),
-      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh)};
+  Data<IRL::SeparatedMoments<IRL::Volume>> face_flux[3] = {
+      Data<IRL::SeparatedMoments<IRL::Volume>>(&mesh),
+      Data<IRL::SeparatedMoments<IRL::Volume>>(&mesh),
+      Data<IRL::SeparatedMoments<IRL::Volume>>(&mesh)};
 
   // For now, naively advect everywhere in domain
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+  //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+  //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -789,7 +832,7 @@ void SemiLagrangianCorrected::advectVOF(
         for (int dim = 0; dim < 3; ++dim) {
           // Store face flux
           (face_flux[dim])(i, j, k) =
-              IRL::getVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(
+              IRL::getVolumeMoments<IRL::SeparatedMoments<IRL::Volume>>(
                   face_cell[dim], (*a_link_localized_paraboloid)(i, j, k));
         }
         // if (std::fabs(U_face(i, j, k)) > 1.0e-12) {
@@ -810,9 +853,58 @@ void SemiLagrangianCorrected::advectVOF(
       }
     }
   }
+
+  int vector_size = mesh.size();
+  std::vector<double> face_flux_x_local, face_flux_y_local, face_flux_z_local;
+  std::vector<double> face_flux_x, face_flux_y, face_flux_z;
+  face_flux_x_local.resize(vector_size);
+  face_flux_y_local.resize(vector_size);
+  face_flux_z_local.resize(vector_size);
+  face_flux_x.resize(vector_size);
+  face_flux_y.resize(vector_size);
+  face_flux_z.resize(vector_size);
+  std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
+  std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
+  std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
+  std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
+  std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
+  std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
+
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        face_flux_x_local[address] = (face_flux[0](i, j, k))[0].volume();
+        face_flux_y_local[address] = (face_flux[1](i, j, k))[0].volume();
+        face_flux_z_local[address] = (face_flux[2](i, j, k))[0].volume();
+      }
+    }
+  }
+
+  MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        (face_flux[0](i, j, k))[0].volume() = face_flux_x[address];
+        (face_flux[1](i, j, k))[0].volume() = face_flux_y[address];
+        (face_flux[2](i, j, k))[0].volume() = face_flux_z[address];
+      }
+    }
+  }
+
   face_flux[0].updateBorder();
   face_flux[1].updateBorder();
   face_flux[2].updateBorder();
+
   // Now calculate VOF from the face fluxes.
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
@@ -833,18 +925,19 @@ void SemiLagrangianCorrected::advectVOF(
              (face_flux[1])(i, j + 1, k)[0].volume() +
              (face_flux[2])(i, j, k)[0].volume() -
              (face_flux[2])(i, j, k + 1)[0].volume()) /
-            (cell_volume + (face_flux[0])(i, j, k)[0].volume() -
-             (face_flux[0])(i + 1, j, k)[0].volume() +
-             (face_flux[1])(i, j, k)[0].volume() -
-             (face_flux[1])(i, j + 1, k)[0].volume() +
-             (face_flux[2])(i, j, k)[0].volume() -
-             (face_flux[2])(i, j, k + 1)[0].volume() +
-             (face_flux[0])(i, j, k)[1].volume() -
-             (face_flux[0])(i + 1, j, k)[1].volume() +
-             (face_flux[1])(i, j, k)[1].volume() -
-             (face_flux[1])(i, j + 1, k)[1].volume() +
-             (face_flux[2])(i, j, k)[1].volume() -
-             (face_flux[2])(i, j, k + 1)[1].volume());
+            (cell_volume);
+        //  + (face_flux[0])(i, j, k)[0].volume() -
+        //  (face_flux[0])(i + 1, j, k)[0].volume() +
+        //  (face_flux[1])(i, j, k)[0].volume() -
+        //  (face_flux[1])(i, j + 1, k)[0].volume() +
+        //  (face_flux[2])(i, j, k)[0].volume() -
+        //  (face_flux[2])(i, j, k + 1)[0].volume() +
+        //  (face_flux[0])(i, j, k)[1].volume() -
+        //  (face_flux[0])(i + 1, j, k)[1].volume() +
+        //  (face_flux[1])(i, j, k)[1].volume() -
+        //  (face_flux[1])(i, j + 1, k)[1].volume() +
+        //  (face_flux[2])(i, j, k)[1].volume() -
+        //  (face_flux[2])(i, j, k + 1)[1].volume());
         // if ((*a_liquid_volume_fraction)(i, j, k) <
         //     IRL::global_constants::VF_LOW) {
         //   (*a_liquid_volume_fraction)(i, j, k) = 0.0;
@@ -876,7 +969,8 @@ void SemiLagrangianCorrected::advectVOF(
 
         //   // Update gas centroid, .centroid() is un-normalized
         //   (*a_gas_centroid)(i, j, k) =
-        //       IRL::Pt((1.0 - previous_liquid_volume_fraction) * cell_volume *
+        //       IRL::Pt((1.0 - previous_liquid_volume_fraction) * cell_volume
+        //       *
         //                   (*a_gas_centroid)(i, j, k) +
         //               (face_flux[0])(i, j, k)[1].centroid() -
         //               (face_flux[0])(i + 1, j, k)[1].centroid() +

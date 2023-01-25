@@ -12,53 +12,59 @@
 
 namespace IRL {
 
-template <class Derived, class AttachedDataType>
-Derived& PtWithDataCommon<Derived, AttachedDataType>::getDerived(void) {
+template <class Derived, class AttachedDataType, class ScalarType>
+Derived& PtWithDataCommon<Derived, AttachedDataType, ScalarType>::getDerived(
+    void) {
   return static_cast<Derived&>(*this);
 }
-template <class Derived, class AttachedDataType>
-const Derived& PtWithDataCommon<Derived, AttachedDataType>::getDerived(
-    void) const {
+template <class Derived, class AttachedDataType, class ScalarType>
+const Derived& PtWithDataCommon<Derived, AttachedDataType,
+                                ScalarType>::getDerived(void) const {
   return static_cast<const Derived&>(*this);
 }
 
-template <class Derived, class AttachedDataType>
-PtWithDataCommon<Derived, AttachedDataType>::PtWithDataCommon(
-    const Pt& a_pt, const AttachedDataType& a_data)
+template <class Derived, class AttachedDataType, class ScalarType>
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::PtWithDataCommon(
+    const PtBase<ScalarType>& a_pt, const AttachedDataType& a_data)
     : base_pt_m(a_pt), data_m(a_data) {}
 
-template <class Derived, class AttachedDataType>
-PtWithDataCommon<Derived, AttachedDataType>::PtWithDataCommon(const Pt& a_pt)
+template <class Derived, class AttachedDataType, class ScalarType>
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::PtWithDataCommon(
+    const PtBase<ScalarType>& a_pt)
     : base_pt_m(a_pt) {}
 
-template <class Derived, class AttachedDataType>
-double& PtWithDataCommon<Derived, AttachedDataType>::operator[](
+template <class Derived, class AttachedDataType, class ScalarType>
+ScalarType& PtWithDataCommon<Derived, AttachedDataType, ScalarType>::operator[](
     const UnsignedIndex_t a_index) {
   return base_pt_m[a_index];
 }
-template <class Derived, class AttachedDataType>
-const double& PtWithDataCommon<Derived, AttachedDataType>::operator[](
+template <class Derived, class AttachedDataType, class ScalarType>
+const ScalarType&
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::operator[](
     const UnsignedIndex_t a_index) const {
   return base_pt_m[a_index];
 }
 
-template <class Derived, class AttachedDataType>
-Pt& PtWithDataCommon<Derived, AttachedDataType>::getPt(void) {
+template <class Derived, class AttachedDataType, class ScalarType>
+PtBase<ScalarType>&
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::getPt(void) {
   return base_pt_m;
 }
 
-template <class Derived, class AttachedDataType>
-const Pt& PtWithDataCommon<Derived, AttachedDataType>::getPt(void) const {
+template <class Derived, class AttachedDataType, class ScalarType>
+const PtBase<ScalarType>&
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::getPt(void) const {
   return base_pt_m;
 }
 
-template <class Derived, class AttachedDataType>
-AttachedDataType& PtWithDataCommon<Derived, AttachedDataType>::getData(void) {
+template <class Derived, class AttachedDataType, class ScalarType>
+AttachedDataType&
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::getData(void) {
   return data_m;
 }
-template <class Derived, class AttachedDataType>
-const AttachedDataType& PtWithDataCommon<Derived, AttachedDataType>::getData(
-    void) const {
+template <class Derived, class AttachedDataType, class ScalarType>
+const AttachedDataType&
+PtWithDataCommon<Derived, AttachedDataType, ScalarType>::getData(void) const {
   return data_m;
 }
 
@@ -66,7 +72,7 @@ template <class FunctorType, UnsignedIndex_t kArrayLength>
 PtWithDoublesStatelessFunctor<
     FunctorType, kArrayLength>::PtWithDoublesStatelessFunctor(const Pt& a_pt)
     : PtWithDataCommon<PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>,
-                       std::array<double, kArrayLength>>(a_pt) {
+                       std::array<double, kArrayLength>, double>(a_pt) {
   this->getData().fill(0.0);
 }
 
@@ -112,25 +118,26 @@ PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>::operator/=(
   return (*this);
 }
 
-template <class GradientDataType>
-PtWithGradient<GradientDataType>::PtWithGradient(void) {
-  this->getPt() = Pt::fromScalarConstant(0.0);
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>::PtWithGradientBase(void) {
+  this->getPt() = Pt::fromScalarConstant(static_cast<ScalarType>(0));
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    this->getData()[d] = GradientDataType(0.0);
+    this->getData()[d] = GradientDataType(static_cast<ScalarType>(0));
   }
 }
-template <class GradientDataType>
-PtWithGradient<GradientDataType>::PtWithGradient(const Pt& a_pt)
-    : PtWithDataCommon<PtWithGradient<GradientDataType>,
-                       std::array<GradientDataType, 3>>(a_pt) {
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>::PtWithGradientBase(
+    const PtBase<ScalarType>& a_pt)
+    : PtWithDataCommon<PtWithGradientBase<GradientDataType, ScalarType>,
+                       std::array<GradientDataType, 3>, ScalarType>(a_pt) {
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    this->getData()[d] = GradientDataType(0.0);
+    this->getData()[d] = GradientDataType(static_cast<ScalarType>(0));
   }
 }
 
-template <class GradientDataType>
-PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator-(
-    void) {
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>&
+PtWithGradientBase<GradientDataType, ScalarType>::operator-(void) {
   this->getPt() = -this->getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     this->getData()[d] = -this->getData()[d];
@@ -138,19 +145,21 @@ PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator-(
   return (*this);
 }
 
-template <class GradientDataType>
-PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
-    const Pt& a_pt) {
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>&
+PtWithGradientBase<GradientDataType, ScalarType>::operator=(
+    const PtBase<ScalarType>& a_pt) {
   this->getPt() = a_pt;
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    this->getData()[d] = GradientDataType(0.0);
+    this->getData()[d] = GradientDataType(static_cast<ScalarType>(0));
   }
   return (*this);
 }
 
-template <class GradientDataType>
-PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
-    const PtWithGradient<GradientDataType>& a_pt) {
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>&
+PtWithGradientBase<GradientDataType, ScalarType>::operator=(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt) {
   this->getPt() = a_pt.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     this->getData()[d] = a_pt.getData()[d];
@@ -158,9 +167,10 @@ PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator=(
   return (*this);
 }
 
-template <class GradientDataType>
-PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator+=(
-    const PtWithGradient<GradientDataType>& a_other_pt) {
+template <class GradientDataType, class ScalarType>
+PtWithGradientBase<GradientDataType, ScalarType>&
+PtWithGradientBase<GradientDataType, ScalarType>::operator+=(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_other_pt) {
   this->getPt() += a_other_pt.getPt();
   const auto& other_data = a_other_pt.getData();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
@@ -169,10 +179,11 @@ PtWithGradient<GradientDataType>& PtWithGradient<GradientDataType>::operator+=(
   return (*this);
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator*(
-    const double a_rhs, const PtWithGradient<GradientDataType>& a_pt) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator*(
+    const ScalarType a_rhs,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = a_rhs * a_pt.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = a_rhs * a_pt.getData()[d];
@@ -180,10 +191,11 @@ const PtWithGradient<GradientDataType> operator*(
   return pt_with_grad;
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator*(
-    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator*(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt,
+    const ScalarType a_rhs) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = a_rhs * a_pt.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = a_rhs * a_pt.getData()[d];
@@ -191,10 +203,11 @@ const PtWithGradient<GradientDataType> operator*(
   return pt_with_grad;
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator/(
-    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator/(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt,
+    const ScalarType a_rhs) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = a_pt.getPt() / a_rhs;
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = a_pt.getData()[d] / a_rhs;
@@ -202,11 +215,11 @@ const PtWithGradient<GradientDataType> operator/(
   return pt_with_grad;
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator+(
-    const PtWithGradient<GradientDataType>& a_pt1,
-    const PtWithGradient<GradientDataType>& a_pt2) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator+(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt1,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt2) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = a_pt1.getPt() + a_pt2.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = a_pt1.getData()[d] + a_pt2.getData()[d];
@@ -214,11 +227,11 @@ const PtWithGradient<GradientDataType> operator+(
   return pt_with_grad;
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator-(
-    const PtWithGradient<GradientDataType>& a_pt1,
-    const PtWithGradient<GradientDataType>& a_pt2) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator-(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt1,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt2) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = a_pt1.getPt() - a_pt2.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = a_pt1.getData()[d] - a_pt2.getData()[d];
@@ -226,10 +239,10 @@ const PtWithGradient<GradientDataType> operator-(
   return pt_with_grad;
 }
 
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator-(
-    const PtWithGradient<GradientDataType>& a_pt) {
-  auto pt_with_grad = PtWithGradient<GradientDataType>();
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator-(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt) {
+  auto pt_with_grad = PtWithGradientBase<GradientDataType, ScalarType>();
   pt_with_grad.getPt() = -a_pt.getPt();
   for (UnsignedIndex_t d = 0; d < 3; ++d) {
     pt_with_grad.getData()[d] = -a_pt.getData()[d];

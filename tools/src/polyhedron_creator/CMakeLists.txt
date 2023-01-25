@@ -5,7 +5,7 @@ set_target_properties(polyhedron_creator
     RUNTIME_OUTPUT_DIRECTORY "${IRL_TOOLS_DIR}/bin"
     COMPILE_FLAGS "${IRL_CXX_FLAGS}"
     CXX_STANDARD 14)
-set_property(TARGET irl_c PROPERTY CXX_STANDARD 14)
+set_property(TARGET irl_c PROPERTY CXX_STANDARD 17)
 target_include_directories(polyhedron_creator PRIVATE "${PROJECT_SOURCE_DIR}")
 target_link_libraries(polyhedron_creator irl)
 

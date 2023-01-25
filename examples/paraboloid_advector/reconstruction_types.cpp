@@ -539,13 +539,15 @@ void updatePolygon(const Data<double>& a_liquid_volume_fraction,
   }
 }
 
-void getReconstruction(
-    const std::string& a_reconstruction_method,
-    const Data<double>& a_liquid_volume_fraction,
-    const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
-    const Data<IRL::LocalizedParaboloidLink>& a_localized_paraboloid_link,
-    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
-    const Data<double>& a_W, Data<IRL::Paraboloid>* a_interface) {
+void getReconstruction(const std::string& a_reconstruction_method,
+                       const Data<double>& a_liquid_volume_fraction,
+                       const Data<IRL::Pt>& a_liquid_centroid,
+                       const Data<IRL::Pt>& a_gas_centroid,
+                       const Data<IRL::LocalizedParaboloidLink<double>>&
+                           a_localized_paraboloid_link,
+                       const double a_dt, const Data<double>& a_U,
+                       const Data<double>& a_V, const Data<double>& a_W,
+                       Data<IRL::Paraboloid>* a_interface) {
   if (a_reconstruction_method == "KnownCircle") {
     KnownCircle::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V,
                                    a_W, a_interface);
@@ -690,10 +692,11 @@ std::array<double, 6> fitParaboloidToPLICHeights(
 
         // Get weighting
         const double gaussianweight =  // 1.0;
-            a_width <= 0.0 ? 1.0
-                           : wgauss(std::sqrt(static_cast<IRL::Vec3>(ploc) *
-                                              static_cast<IRL::Vec3>(ploc)),
-                                    a_width);
+            a_width <= 0.0
+                ? 1.0
+                : wgauss(std::sqrt(static_cast<IRL::Vec3<double>>(ploc) *
+                                   static_cast<IRL::Vec3<double>>(ploc)),
+                         a_width);
         const double vfrac = a_volume_fraction(i, j, k);
         double vfrac_weight = 1.0;
         const double limit_vfrac = 0.1;
@@ -763,10 +766,11 @@ std::array<double, 6> fitParaboloidToCentroids(
         }
         const double gaussianweight =
             // 1.0;
-            a_width <= 0.0 ? 1.0
-                           : wgauss(std::sqrt(static_cast<IRL::Vec3>(ploc) *
-                                              static_cast<IRL::Vec3>(ploc)),
-                                    a_width);
+            a_width <= 0.0
+                ? 1.0
+                : wgauss(std::sqrt(static_cast<IRL::Vec3<double>>(ploc) *
+                                   static_cast<IRL::Vec3<double>>(ploc)),
+                         a_width);
 
         const double vfrac = a_volume_fraction(i, j, k);
         double vfrac_weight = 1.0;
@@ -1004,6 +1008,12 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
             //       IRL::Paraboloid(datum, new_frame, a_coeff, b_coeff);
             // }
           } else {
+            if (fabs(a_coeff) < 1.0e-3) {
+              a_coeff = std::copysign(1.0e-3, a_coeff);
+            }
+            if (fabs(b_coeff) < 1.0e-3) {
+              b_coeff = std::copysign(1.0e-3, b_coeff);
+            }
             paraboloid = IRL::Paraboloid(datum, new_frame, a_coeff, b_coeff);
           }
           // } else {

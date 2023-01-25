@@ -12,60 +12,76 @@
 
 namespace IRL {
 
-inline ReferenceFrame::ReferenceFrame(const Normal& a_axis_0,
-                                      const Normal& a_axis_1,
-                                      const Normal& a_axis_2)
+template <class ScalarType>
+inline ReferenceFrameBase<ScalarType>::ReferenceFrameBase(
+    const NormalBase<ScalarType>& a_axis_0,
+    const NormalBase<ScalarType>& a_axis_1,
+    const NormalBase<ScalarType>& a_axis_2)
     : axis_m{a_axis_0, a_axis_1, a_axis_2} {}
 
-inline Normal& ReferenceFrame::operator[](const UnsignedIndex_t a_axis) {
+template <class ScalarType>
+inline NormalBase<ScalarType>& ReferenceFrameBase<ScalarType>::operator[](
+    const UnsignedIndex_t a_axis) {
   assert(a_axis < 3);
   return axis_m[a_axis];
 }
 
-inline const Normal& ReferenceFrame::operator[](
+template <class ScalarType>
+inline const NormalBase<ScalarType>& ReferenceFrameBase<ScalarType>::operator[](
     const UnsignedIndex_t a_axis) const {
   assert(a_axis < 3);
   return axis_m[a_axis];
 }
 
-inline bool ReferenceFrame::isOrthonormalBasis(void) const {
-  static constexpr double TOLERANCE = 10.0 * DBL_EPSILON;
-  if (std::fabs(axis_m[0] * axis_m[1]) > TOLERANCE) {
+template <class ScalarType>
+inline bool ReferenceFrameBase<ScalarType>::isOrthonormalBasis(void) const {
+  static constexpr ScalarType TOLERANCE =
+      static_cast<ScalarType>(10.0 * DBL_EPSILON);
+  if (fabs(axis_m[0] * axis_m[1]) > TOLERANCE) {
     return false;
   }
-  if (std::fabs(axis_m[0] * axis_m[2]) > TOLERANCE) {
+  if (fabs(axis_m[0] * axis_m[2]) > TOLERANCE) {
     return false;
   }
-  if (std::fabs(axis_m[1] * axis_m[2]) > TOLERANCE) {
+  if (fabs(axis_m[1] * axis_m[2]) > TOLERANCE) {
     return false;
   }
   return true;
 }
 
-inline ReferenceFrame::iterator ReferenceFrame::begin(void) noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::iterator
+ReferenceFrameBase<ScalarType>::begin(void) noexcept {
   return axis_m.begin();
 }
 
-inline ReferenceFrame::const_iterator ReferenceFrame::begin(
-    void) const noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::const_iterator
+ReferenceFrameBase<ScalarType>::begin(void) const noexcept {
   return this->cbegin();
 }
 
-inline ReferenceFrame::const_iterator ReferenceFrame::cbegin(
-    void) const noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::const_iterator
+ReferenceFrameBase<ScalarType>::cbegin(void) const noexcept {
   return axis_m.cbegin();
 }
 
-inline ReferenceFrame::iterator ReferenceFrame::end(void) noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::iterator
+ReferenceFrameBase<ScalarType>::end(void) noexcept {
   return axis_m.end();
 }
 
-inline ReferenceFrame::const_iterator ReferenceFrame::end(void) const noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::const_iterator
+ReferenceFrameBase<ScalarType>::end(void) const noexcept {
   return this->cend();
 }
 
-inline ReferenceFrame::const_iterator ReferenceFrame::cend(
-    void) const noexcept {
+template <class ScalarType>
+inline typename ReferenceFrameBase<ScalarType>::const_iterator
+ReferenceFrameBase<ScalarType>::cend(void) const noexcept {
   return axis_m.cend();
 }
 

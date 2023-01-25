@@ -49,6 +49,7 @@ template <class VertexType>
 class HalfEdgeParaboloid {
  public:
   using vertex_type = VertexType;
+  using value_type = typename vertex_type::value_type;
 
   HalfEdgeParaboloid(void);
 
@@ -96,6 +97,7 @@ template <class PtType>
 class VertexParaboloid {
  public:
   using pt_type = PtType;
+  using value_type = typename pt_type::value_type;
 
   VertexParaboloid(void);
 
@@ -109,9 +111,9 @@ class VertexParaboloid {
   const pt_type& getLocation(void) const;
   void setLocation(const PtType& a_location);
 
-  void calculateDistanceToPlane(const Plane& a_plane);
-  double getDistance(void) const;
-  double setDistance(void) const;
+  void calculateDistanceToPlane(const PlaneBase<value_type>& a_plane);
+  value_type getDistance(void) const;
+  value_type setDistance(void) const;
 
   void markToBeClipped(void);
   void markToBeNotClipped(void);
@@ -135,7 +137,7 @@ class VertexParaboloid {
   PtType vertex_location_m;
   HalfEdgeParaboloid<VertexParaboloid>*
       half_edge_m;  // HalfEdgeParaboloid that ends at this vertex
-  double distance_m;
+  value_type distance_m;
   bool is_clipped_m;
   bool needs_to_seek_m;
   bool is_entry_m;
@@ -145,13 +147,14 @@ template <class HalfEdgeType>
 class FaceParaboloid : public Face<HalfEdgeType> {
  public:
   using half_edge_type = HalfEdgeType;
+  using value_type = typename half_edge_type::value_type;
 
   FaceParaboloid(void);
 
   explicit FaceParaboloid(HalfEdgeType* a_starting_half_edge);
 
-  void setPlane(const Plane& a_plane);
-  const Plane& getPlane(void) const;
+  void setPlane(const PlaneBase<value_type>& a_plane);
+  const PlaneBase<value_type>& getPlane(void) const;
 
   void clearIntersections(void);
   void addIntersection(void);
@@ -165,7 +168,7 @@ class FaceParaboloid : public Face<HalfEdgeType> {
   UnsignedIndex_t getNumberOfEdgeParallelIntersections(void) const;
 
  private:
-  Plane face_plane_m;
+  PlaneBase<value_type> face_plane_m;
   UnsignedIndex_t intersections_m;
   UnsignedIndex_t edge_parallel_intersections_m;
 };

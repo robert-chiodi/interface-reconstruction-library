@@ -19,23 +19,26 @@ namespace IRL {
 
 /// \brief A reference frame with three normals (1 for each direction in 3D
 /// space).
-class ReferenceFrame {
-  using iterator = typename std::array<Normal, 3>::iterator;
-  using const_iterator = typename std::array<Normal, 3>::const_iterator;
+template <class ScalarType>
+class ReferenceFrameBase {
+  using iterator = typename std::array<NormalBase<ScalarType>, 3>::iterator;
+  using const_iterator =
+      typename std::array<NormalBase<ScalarType>, 3>::const_iterator;
 
  public:
   /// \brief Default constructor.
-  ReferenceFrame(void) = default;
+  ReferenceFrameBase(void) = default;
 
   /// \brief Construct given 3 normals
-  ReferenceFrame(const Normal& a_axis_0, const Normal& a_axis_1,
-                 const Normal& a_axis_2);
+  ReferenceFrameBase(const NormalBase<ScalarType>& a_axis_0,
+                     const NormalBase<ScalarType>& a_axis_1,
+                     const NormalBase<ScalarType>& a_axis_2);
 
   /// \brief Overload `operator[]` for access.
-  Normal& operator[](const UnsignedIndex_t a_axis);
+  NormalBase<ScalarType>& operator[](const UnsignedIndex_t a_axis);
 
   /// \brief Const version of verload `operator[]` for access.
-  const Normal& operator[](const UnsignedIndex_t a_axis) const;
+  const NormalBase<ScalarType>& operator[](const UnsignedIndex_t a_axis) const;
 
   bool isOrthonormalBasis(void) const;
 
@@ -47,12 +50,14 @@ class ReferenceFrame {
   const_iterator cend(void) const noexcept;
 
   /// \brief Default destructor.
-  ~ReferenceFrame(void) = default;
+  ~ReferenceFrameBase(void) = default;
 
  private:
   /// \brief Three orthonormal vectors making up the reference frame.
-  std::array<Normal, 3> axis_m;
+  std::array<NormalBase<ScalarType>, 3> axis_m;
 };
+
+using ReferenceFrame = ReferenceFrameBase<double>;
 
 }  // namespace IRL
 

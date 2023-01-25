@@ -43,14 +43,15 @@ void initializeLocalizers(Data<IRL::PlanarLocalizer>* a_localizers) {
 void initializeLocalizedParaboloids(
     const Data<IRL::PlanarLocalizer>& a_cell_localizers,
     const Data<IRL::Paraboloid>& a_interface,
-    Data<IRL::LocalizedParaboloidLink>* a_linked_localized_paraboloids) {
+    Data<IRL::LocalizedParaboloidLink<double>>*
+        a_linked_localized_paraboloids) {
   const BasicMesh& mesh = a_interface.getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
         (*a_linked_localized_paraboloids)(i, j, k) =
-            IRL::LocalizedParaboloidLink(&a_cell_localizers(i, j, k),
-                                         &a_interface(i, j, k));
+            IRL::LocalizedParaboloidLink<double>(&a_cell_localizers(i, j, k),
+                                                 &a_interface(i, j, k));
       }
     }
   }
@@ -157,9 +158,50 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
   double exact_curv = 2.0 / radius;
   double max_mean_curv_error = 0.0;
   double l2_mean_curv_error = 0.0, l2_counter = 0.0;
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  int split_proc = static_cast<int>(std::cbrt(static_cast<double>(size)));
+  int imin = 0, nx = mesh.getNx(), jmin = 0, ny = mesh.getNy(), kmin = 0,
+      nz = mesh.getNz();
+
+  if (size > 1) {
+    if (size == split_proc * split_proc * split_proc) {
+      for (int i = 0; i < split_proc; i++) {
+        for (int j = 0; j < split_proc; j++) {
+          for (int k = 0; k < split_proc; k++) {
+            if (i + split_proc * j + split_proc * split_proc * k == rank) {
+              imin = i * (mesh.getNx() / split_proc);
+              nx = std::min((i + 1) * (mesh.getNx() / split_proc),
+                            mesh.getNx()) -
+                   imin;
+              jmin = j * (mesh.getNy() / split_proc);
+              ny = std::min((j + 1) * (mesh.getNy() / split_proc),
+                            mesh.getNy()) -
+                   jmin;
+              kmin = k * (mesh.getNz() / split_proc);
+              nz = std::min((k + 1) * (mesh.getNz() / split_proc),
+                            mesh.getNz()) -
+                   kmin;
+            }
+          }
+        }
+      }
+    } else {
+      imin = rank * (mesh.getNx() / size);
+      nx = std::min((rank + 1) * (mesh.getNx() / size), mesh.getNx()) - imin;
+      jmin = 0;
+      ny = mesh.getNy();
+      kmin = 0;
+      nz = mesh.getNz();
+    }
+  }
+
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
         if (a_liquid_volume_fraction(i, j, k) >=
                 IRL::global_constants::VF_LOW &&
             a_liquid_volume_fraction(i, j, k) <=
@@ -172,7 +214,6 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
           auto volume_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<
               IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
               cell, a_liquid_gas_interface(i, j, k));
-
           if (volume_and_surface.getMoments() < -999.0) {
             // std::cout << "Surface failed" << std::endl;
             // std::cout << "Paraboloid = \n"
@@ -182,7 +223,7 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
             // double length_scale =
             //     std::pow(cell.calculateVolume(), 1.0 / 3.0) / 4.0;
             double length_scale = std::min(
-                std::pow(cell.calculateVolume(), 1.0 / 3.0) / 4.0, 5.0e-3);
+                std::pow(cell.calculateVolume(), 1.0 / 3.0) / 3.0, 1.0e-2);
             surface.setLengthScale(length_scale);
             if (surface.getSurfaceArea() >
                 1.0e-6 * length_scale * length_scale) {
@@ -223,9 +264,10 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
   //           << std::fabs(avg_mean_curv - 2.0 / radius) / (2.0 / radius) <<
   //           ")"
   //           << std::endl;
-  std::cout << "L2 mean curvature error = "
-            << l2_mean_curv_error / (2.0 / radius) << std::endl;
-  std::cout << "Linf mean curvature error = "
-            << max_mean_curv_error / (2.0 / radius) << std::endl;
-  a_output->writeVTKInterface(a_time, surfaces, true);
+  // std::cout << "L2 mean curvature error = "
+  //           << l2_mean_curv_error / (2.0 / radius) << std::endl;
+  // std::cout << "Linf mean curvature error = "
+  //           << max_mean_curv_error / (2.0 / radius) << std::endl;
+  // a_output->writeVTKInterface(a_time, surfaces, false);
+  a_output->writeParametrizedInterface(a_time, surfaces);
 }

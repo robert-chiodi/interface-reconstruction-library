@@ -304,7 +304,7 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
                                          bounding_values[1]);
     // std::cout << "Caculating volume... " << std::endl;
     const double volume_fraction_cut =
-        intersectPolyhedronWithParaboloid<Volume>(
+        intersectPolyhedronWithAlignedParaboloid<Volume>(
             &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
         initial_cell_volume_m;
     if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
@@ -331,7 +331,7 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   }
 
   const double volume_fraction_cut =
-      intersectPolyhedronWithParaboloid<Volume>(
+      intersectPolyhedronWithAlignedParaboloid<Volume>(
           &half_edge_polytope, &complete_polytope, aligned_paraboloid) /
       initial_cell_volume_m;
   if (volume_fraction_cut * initial_cell_volume_m < -999.0) {
@@ -368,7 +368,7 @@ void shiftSegmentedPolytopeAndUpdateFaces(
   // Shift along Z
   const UnsignedIndex_t number_of_vertices =
       a_seg_half_edge->getNumberOfVertices();
-  assert(a_original_vert_Z.size() == number_of_vertices);
+  // assert(a_original_vert_Z.size() == number_of_vertices);
   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
     // const Pt pt = a_seg_half_edge->getVertex(v)->getLocation().getPt();
     typename SegmentedHalfEdgePolytopeType::pt_type new_location;

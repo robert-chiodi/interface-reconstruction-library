@@ -115,13 +115,15 @@ struct getVolumeMoments<ReturnType, CuttingMethod, EncompassingType,
       const PlanarSeparator& a_separating_reconstruction);
 };
 
-template <class ReturnType, class CuttingMethod, class EncompassingType>
-struct getVolumeMoments<ReturnType, CuttingMethod, EncompassingType, Paraboloid,
+template <class ReturnType, class CuttingMethod, class EncompassingType,
+          class ScalarType>
+struct getVolumeMoments<ReturnType, CuttingMethod, EncompassingType,
+                        ParaboloidBase<ScalarType>,
                         enable_if_t<is_separated_moments<ReturnType>::value>> {
   __attribute__((pure)) __attribute__((hot)) inline static ReturnType
   getVolumeMomentsImplementation(
       const EncompassingType& a_encompassing_polyhedron,
-      const Paraboloid& a_separating_reconstruction);
+      const ParaboloidBase<ScalarType>& a_separating_reconstruction);
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
@@ -142,16 +144,16 @@ struct getVolumeMomentsProvidedStorage<
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
-    enable_if_t<IsParaboloidReconstruction<Paraboloid>::value &&
+    ParaboloidBase<ScalarType>,
+    enable_if_t<IsParaboloidReconstruction<ParaboloidBase<ScalarType>>::value &&
                 !is_separated_moments<ReturnType>::value>> {
   inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
-      const Paraboloid& a_reconstruction);
+      const ParaboloidBase<ScalarType>& a_reconstruction);
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
@@ -200,16 +202,16 @@ struct getVolumeMomentsProvidedStorage<
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
+    ParaboloidBase<ScalarType>,
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 is_separated_moments<ReturnType>::value>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
-      const Paraboloid& a_reconstruction);
+      const ParaboloidBase<ScalarType>& a_reconstruction);
 };
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
@@ -246,16 +248,16 @@ struct getVolumeMomentsProvidedStorage<
 
 // Cut polyhedron for SeparatedMoments<VolumeMoments>
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 struct getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
+    ParaboloidBase<ScalarType>,
     enable_if_t<isSimplexCutting<CuttingMethod>::value &&
                 is_separated_moments<ReturnType>::value>> {
   __attribute__((hot)) inline static ReturnType getVolumeMomentsImplementation(
       SegmentedPolytopeType* a_polytope,
       HalfEdgePolytopeType* a_complete_polytope,
-      const Paraboloid& a_reconstruction);
+      const ParaboloidBase<ScalarType>& a_reconstruction);
 };
 
 }  // namespace generic_cutting_details

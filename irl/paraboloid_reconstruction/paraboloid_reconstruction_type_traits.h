@@ -24,8 +24,9 @@ template <class C>
 struct is_paraboloid_reconstruction<const C> : is_paraboloid_reconstruction<C> {
 };
 
-template <>
-struct is_paraboloid_reconstruction<Paraboloid> : std::true_type {};
+template <class ScalarType>
+struct is_paraboloid_reconstruction<ParaboloidBase<ScalarType>>
+    : std::true_type {};
 
 //******************************************************************* //
 //   Contains a Paraboloid based reconstruction                       //
@@ -37,31 +38,34 @@ template <class C>
 struct has_paraboloid_reconstruction<const C>
     : has_paraboloid_reconstruction<C> {};
 
-template <>
-struct has_paraboloid_reconstruction<Paraboloid> : std::true_type {};
+template <class ScalarType>
+struct has_paraboloid_reconstruction<ParaboloidBase<ScalarType>>
+    : std::true_type {};
 
-template <>
-struct has_paraboloid_reconstruction<LocalizedParaboloid> : std::true_type {};
+template <class ScalarType>
+struct has_paraboloid_reconstruction<LocalizedParaboloid<ScalarType>>
+    : std::true_type {};
 
-template <>
-struct has_paraboloid_reconstruction<LocalizedParaboloidLink> : std::true_type {
-};
+template <class ScalarType>
+struct has_paraboloid_reconstruction<LocalizedParaboloidLink<ScalarType>>
+    : std::true_type {};
 
 //********************************************************************* //
 //  Contains a localizer, base from planar_reconstruction_type_traits.h //
 //********************************************************************* //
-template <>
-struct has_localizer<LocalizedParaboloid> : std::true_type {};
+template <class ScalarType>
+struct has_localizer<LocalizedParaboloid<ScalarType>> : std::true_type {};
 
-template <>
-struct has_localizer<LocalizedParaboloidLink> : std::true_type {};
+template <class ScalarType>
+struct has_localizer<LocalizedParaboloidLink<ScalarType>> : std::true_type {};
 
 //******************************************************************* //
 //        Linked Planar Reconstructions
 //        True for anything that inherits from UnDirectedGraphNode<Self>
 //******************************************************************* //
-template <>
-struct is_reconstruction_link<LocalizedParaboloidLink> : std::true_type {};
+template <class ScalarType>
+struct is_reconstruction_link<LocalizedParaboloidLink<ScalarType>>
+    : std::true_type {};
 
 }  // namespace IRL
 

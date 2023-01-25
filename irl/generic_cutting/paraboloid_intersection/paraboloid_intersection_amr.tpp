@@ -446,7 +446,8 @@ void computeMomentContributionMixedTriangle(
         const double nx2 = a_normal * tris[ids[2]];
         if (std::fabs(nx0 - nx1) < DBL_EPSILON ||
             std::fabs(nx0 - nx2) < DBL_EPSILON) {
-          const Pt center = (tris[ids[0]] + tris[ids[1]] + tris[ids[1]]) / 3.0;
+          Pt center = (tris[ids[0]] + tris[ids[1]] + tris[ids[2]]);
+          center /= 3.0;
           if (vertexBelow(center, a_aligned_paraboloid)) {
             a_moments_to_add[0] =
                 computeMomentContributionUnclippedTriangle<ReturnType, 0>(

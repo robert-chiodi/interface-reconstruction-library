@@ -17,13 +17,15 @@
 
 #include "examples/paraboloid_advector/data.h"
 
-void getReconstruction(
-    const std::string& a_reconstruction_method,
-    const Data<double>& a_liquid_volume_fraction,
-    const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
-    const Data<IRL::LocalizedParaboloidLink>& a_localized_paraboloid_link,
-    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
-    const Data<double>& a_W, Data<IRL::Paraboloid>* a_interface);
+void getReconstruction(const std::string& a_reconstruction_method,
+                       const Data<double>& a_liquid_volume_fraction,
+                       const Data<IRL::Pt>& a_liquid_centroid,
+                       const Data<IRL::Pt>& a_gas_centroid,
+                       const Data<IRL::LocalizedParaboloidLink<double>>&
+                           a_localized_paraboloid_link,
+                       const double a_dt, const Data<double>& a_U,
+                       const Data<double>& a_V, const Data<double>& a_W,
+                       Data<IRL::Paraboloid>* a_interface);
 
 struct KnownCircle {
   static void getReconstruction(const Data<double>& a_liquid_volume_fraction,

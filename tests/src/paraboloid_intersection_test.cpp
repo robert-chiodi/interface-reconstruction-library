@@ -8,6 +8,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "irl/geometry/general/new_pt_calculation_functors.h"
+#include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/pt_with_data.h"
 #include "irl/geometry/general/rotations.h"
 #include "irl/moments/volume_with_gradient.h"
@@ -321,7 +322,7 @@ TEST(ParaboloidIntersection, NonConvexW) {
 
   std::cout << "ORIGINAL\n" << segmented_half_edge << std::endl;
 
-  auto volume = intersectPolyhedronWithParaboloid<VolumeMoments>(
+  auto volume = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 
   std::cout << "CUT\n" << segmented_half_edge << std::endl;
@@ -337,7 +338,7 @@ TEST(ParaboloidIntersection, FaceIntegration) {
   aligned_paraboloid.b() = -8.0;
   aligned_paraboloid[2] = 1.0;
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  auto volume = intersectPolyhedronWithParaboloid<VolumeMoments>(
+  auto volume = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
   std::cout << "VolumeMoments " << volume << std::endl;
   auto face_plane = Plane(Normal(0.0, 0.0, 1.0), 0.5);
@@ -360,7 +361,7 @@ TEST(ParaboloidIntersection, FaceIntegration) {
   }
   cube.setHalfEdgeVersion(&half_edge);
   segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  volume = intersectPolyhedronWithParaboloid<VolumeMoments>(
+  volume = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
   face_plane = Plane(Normal(0.0, 0.0, -1.0), -0.5);
   a = -face_plane.normal()[0] / face_plane.normal()[2];
@@ -402,7 +403,7 @@ TEST(ParaboloidIntersection, EllipticDoubleIntercept) {
   aligned_paraboloid.b() = -16.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -425,7 +426,7 @@ TEST(ParaboloidIntersection, AlignedSingleIntersection) {
                (std::pow(cube[2][1], 3) - std::pow(cube[4][1], 3.0)));
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 
   EXPECT_NEAR(volume, expected_volume, 1.0e-15);
@@ -446,7 +447,7 @@ TEST(ParaboloidIntersection, Hang) {
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   cube.setHalfEdgeVersion(&half_edge);
   auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-  auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+  auto our_volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &seg_half_edge, &half_edge, aligned_paraboloid);
   EXPECT_NEAR(our_volume, expected_volume, 1.0e-15);
 }
@@ -466,7 +467,7 @@ TEST(ParaboloidIntersection, CornerIntersection) {
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   cube.setHalfEdgeVersion(&half_edge);
   auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-  auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+  auto our_volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &seg_half_edge, &half_edge, aligned_paraboloid);
   EXPECT_NEAR(our_volume, expected_volume, 1.0e-15);
 }
@@ -486,7 +487,7 @@ TEST(ParaboloidIntersection, EdgeIntersection) {
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   cube.setHalfEdgeVersion(&half_edge);
   auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-  auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+  auto our_volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &seg_half_edge, &half_edge, aligned_paraboloid);
   EXPECT_NEAR(our_volume, expected_volume, 1.0e-15);
 }
@@ -506,7 +507,7 @@ TEST(ParaboloidIntersection, EllipticUsedToSegFaultTriangulation) {
   aligned_paraboloid.b() = -1.79756604529141;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -542,7 +543,7 @@ TEST(ParaboloidIntersection, AvoidFaceOnlyIntegrationForImaginaryEllipse) {
   aligned_paraboloid.b() = -0.740918023473226;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
   const double expected_volume = 1.920666789120243e-01;
   EXPECT_NEAR(volume, expected_volume, 1.0e-15);
@@ -562,7 +563,7 @@ TEST(ParaboloidIntersection, HyperbolicDoubleIntersect) {
   aligned_paraboloid.b() = 1.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -597,7 +598,7 @@ TEST(ParaboloidIntersection, OppositeArcIntersectionNoDoubleIntersect) {
   aligned_paraboloid.b() = 24.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }  // namespace
 
@@ -632,7 +633,7 @@ TEST(ParaboloidIntersection, OppositeArcIntersectionNoAboveVertex) {
   aligned_paraboloid.b() = 24.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -668,7 +669,7 @@ TEST(ParaboloidIntersection,
   aligned_paraboloid.b() = 100.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -686,7 +687,7 @@ TEST(ParaboloidIntersection, ZeroLengthDoubleIntersection) {
   aligned_paraboloid.b() = 1.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -703,7 +704,7 @@ TEST(ParaboloidIntersection, ZeroLengthDoubleIntersection) {
 //   aligned_paraboloid.b() = 1.0;
 
 //   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-//   Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+//   Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
 //       &segmented_half_edge, &half_edge, aligned_paraboloid);
 // }
 
@@ -747,7 +748,7 @@ TEST(ParaboloidIntersection, HyperbolicDoublePositiveIntersectionOnFaceOnly) {
   aligned_paraboloid.b() = 1.767768544145609e+00;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -781,7 +782,7 @@ TEST(ParaboloidIntersection, HyperbolicEdgeWithOutsideArc) {
   aligned_paraboloid.b() = 3.682416737481792e+00;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 
   // Answer from AMR integration
@@ -819,7 +820,7 @@ TEST(ParaboloidIntersection, HyperbolicSplitIntoTwoPoly) {
   aligned_paraboloid.b() = 4.873164333373181e+00;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 
   // Answer from AMR integration
@@ -857,7 +858,7 @@ TEST(ParaboloidIntersection, HyperbolicOppositeNappeEdge) {
   aligned_paraboloid.b() = 8.299887711888987e-01;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -890,7 +891,7 @@ TEST(ParaboloidIntersection, HyperbolicDoublePositiveIntersect) {
   aligned_paraboloid.b() = 4.0;
 
   auto segmented_half_edge = half_edge.generateSegmentedPolyhedron();
-  Volume volume = intersectPolyhedronWithParaboloid<Volume>(
+  Volume volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &segmented_half_edge, &half_edge, aligned_paraboloid);
 }
 
@@ -923,7 +924,7 @@ TEST(ParaboloidIntersection, HyperbolicFailure) {
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   cube.setHalfEdgeVersion(&half_edge);
   auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-  auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+  auto our_volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
       &seg_half_edge, &half_edge, aligned_paraboloid);
 
   const double expected_volume = 5.280775350506421e-01;
@@ -932,7 +933,7 @@ TEST(ParaboloidIntersection, HyperbolicFailure) {
 
 TEST(ParaboloidIntersection, Dodecahedron) {
   double tau = (sqrt(5.0) + 1.0) / 2.0;
-  Pt M[12] = {Pt(0, tau, 1),       Pt(0.0, -tau, 1.0),  Pt(0.0, tau, -1.0),
+  Pt M[12] = {Pt(0.0, tau, 1.0),   Pt(0.0, -tau, 1.0),  Pt(0.0, tau, -1.0),
               Pt(0.0, -tau, -1.0), Pt(1.0, 0.0, tau),   Pt(-1.0, 0.0, tau),
               Pt(1.0, 0.0, -tau),  Pt(-1.0, 0.0, -tau), Pt(tau, 1.0, 0.0),
               Pt(-tau, 1.0, 0.0),  Pt(tau, -1.0, 0.0),  Pt(-tau, -1.0, 0.0)};
@@ -1101,7 +1102,7 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     auto poly_vol = seg_half_edge.calculateVolume();
     auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid, 17);
-    auto our_volume = intersectPolyhedronWithParaboloid<Volume>(
+    auto our_volume = intersectPolyhedronWithAlignedParaboloid<Volume>(
         &seg_half_edge, &half_edge, aligned_paraboloid);
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
@@ -1417,7 +1418,7 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
                    ReferenceFrame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
                                   Normal(0.0, 0.0, 1.0)),
                    aligned_paraboloid.a(), aligned_paraboloid.b()));
-    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+    auto our_moments = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     // auto volume_and_surface = getVolumeMoments<
     //     AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
@@ -1508,7 +1509,7 @@ TEST(ParaboloidIntersection, DodecahedronWithSurface) {
 TEST(ParaboloidIntersection, getVolumeMomentsUse) {
   double tau = (std::sqrt(5.0) + 1.0) / 2.0;
   std::array<Pt, 12> M{
-      {Pt(0, tau, 1), Pt(0.0, -tau, 1.0), Pt(0.0, tau, -1.0),
+      {Pt(0.0, tau, 1.0), Pt(0.0, -tau, 1.0), Pt(0.0, tau, -1.0),
        Pt(0.0, -tau, -1.0), Pt(1.0, 0.0, tau), Pt(-1.0, 0.0, tau),
        Pt(1.0, 0.0, -tau), Pt(-1.0, 0.0, -tau), Pt(tau, 1.0, 0.0),
        Pt(-tau, 1.0, 0.0), Pt(tau, -1.0, 0.0), Pt(-tau, -1.0, 0.0)}};
@@ -1801,13 +1802,14 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     //     &seg_half_edge, &half_edge, aligned_paraboloid, 17);
     auto amr_moments = VolumeMoments::fromScalarConstant(0.0);
     ParametrizedSurfaceOutput surface(paraboloid);
-    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+    auto our_moments = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     auto our_surface_area = surface.getSurfaceArea();
     auto our_avg_normal = surface.getAverageNormal();
     auto our_avg_mean_curvature = surface.getAverageMeanCurvature();
     auto our_avg_gaussian_curvature = surface.getAverageGaussianCurvature();
-    const double length_scale = pow(poly_vol, 1.0 / 3.0) * 0.01;
+    const double length_scale =
+        pow(static_cast<double>(poly_vol), 1.0 / 3.0) * 0.01;
     TriangulatedSurfaceOutput triangulated_surface =
         surface.triangulate(length_scale);
     triangulated_surface.write(surf_filename);
@@ -2066,11 +2068,11 @@ TEST(ParaboloidIntersection, TranslatingCube) {
               << std::endl;
     std::cout << "Diff centroid EX/AMR   = "
               << Pt(exact_centroid - amr_centroid) /
-                     std::pow(poly_vol, 1.0 / 3.0)
+                     std::pow(static_cast<double>(poly_vol), 1.0 / 3.0)
               << std::endl;
     std::cout << "Diff centroid EX/IRL   = "
               << Pt(exact_centroid - our_centroid) /
-                     std::pow(poly_vol, 1.0 / 3.0)
+                     std::pow(static_cast<double>(poly_vol), 1.0 / 3.0)
               << std::endl;
 
     std::cout << "-------------------------------------------------------------"
@@ -2245,7 +2247,7 @@ TEST(ParaboloidIntersection, LocalizedParaboloid) {
     Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
                           aligned_paraboloid.b());
 
-    LocalizedParaboloid localized_paraboloid(&localizer, &paraboloid);
+    LocalizedParaboloid<double> localized_paraboloid(&localizer, &paraboloid);
     // auto volume_and_surface =
     //     getVolumeMoments<AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>,
     //                      HalfEdgeCutting>(bigger_cube, localized_paraboloid);
@@ -2310,7 +2312,7 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
   Paraboloid paraboloid;
   std::array<std::array<std::array<RectangularCuboid, 3>, 3>, 3> grid;
   std::array<std::array<std::array<PlanarLocalizer, 3>, 3>, 3> localizers;
-  std::array<std::array<std::array<LocalizedParaboloidLink, 3>, 3>, 3>
+  std::array<std::array<std::array<LocalizedParaboloidLink<double>, 3>, 3>, 3>
       locpar_link;
   const double dx = 1.0 / 3.0;
   for (UnsignedIndex_t i = 0; i < 3; ++i) {
@@ -2322,8 +2324,8 @@ TEST(ParaboloidIntersection, LocalizedParaboloidLink) {
         Pt upper = lower + Pt(dx, dx, dx);
         grid[i][j][k] = RectangularCuboid::fromBoundingPts(lower, upper);
         localizers[i][j][k] = grid[i][j][k].getLocalizer();
-        locpar_link[i][j][k] =
-            LocalizedParaboloidLink(&(localizers[i][j][k]), &paraboloid);
+        locpar_link[i][j][k] = LocalizedParaboloidLink<double>(
+            &(localizers[i][j][k]), &paraboloid);
 
         locpar_link[i][j][k].setId(k + j * 3 + i * 9);
         locpar_link[i][j][k].setEdgeConnectivity(
@@ -2672,7 +2674,7 @@ TEST(ParaboloidIntersection, InfiniteSplit) {
 TEST(ParaboloidIntersection, SortTimeComp) {
   double tau = (std::sqrt(5.0) + 1.0) / 2.0;
   std::array<Pt, 12> M{
-      {Pt(0, tau, 1), Pt(0.0, -tau, 1.0), Pt(0.0, tau, -1.0),
+      {Pt(0.0, tau, 1.0), Pt(0.0, -tau, 1.0), Pt(0.0, tau, -1.0),
        Pt(0.0, -tau, -1.0), Pt(1.0, 0.0, tau), Pt(-1.0, 0.0, tau),
        Pt(1.0, 0.0, -tau), Pt(-1.0, 0.0, -tau), Pt(tau, 1.0, 0.0),
        Pt(-tau, 1.0, 0.0), Pt(tau, -1.0, 0.0), Pt(-tau, -1.0, 0.0)}};
@@ -2908,9 +2910,9 @@ TEST(ParaboloidIntersection, Gradient) {
       face->setPlane(Plane(normal, normal * start_location));
     }
 
-    auto volume_with_gradients =
-        intersectPolyhedronWithParaboloid<VolumeWithGradient<MyGradientType>>(
-            &seg_half_edge, &half_edge, paraboloid.getAlignedParaboloid());
+    auto volume_with_gradients = intersectPolyhedronWithAlignedParaboloid<
+        VolumeWithGradient<MyGradientType>>(&seg_half_edge, &half_edge,
+                                            paraboloid.getAlignedParaboloid());
 
     HalfEdgePolyhedronParaboloid<Pt> half_edge_pt;
     pt_unit_cell.setHalfEdgeVersion(&half_edge_pt);
@@ -3074,14 +3076,15 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
     // auto end = std::chrono::system_clock::now();
     // std::chrono::duration<double> runtime = end - start;
     // printf("Total run time: %20f \n\n", runtime.count());
-    auto our_moments =
-        intersectPolyhedronWithParaboloid<VolumeWithGradient<MyGradientType>>(
-            &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
+    auto our_moments = intersectPolyhedronWithAlignedParaboloid<
+        VolumeWithGradient<MyGradientType>>(&seg_half_edge, &half_edge,
+                                            aligned_paraboloid, &surface);
     auto our_surface_area = surface.getSurfaceArea();
     auto our_avg_normal = surface.getAverageNormal();
     auto our_avg_mean_curvature = surface.getAverageMeanCurvature();
     auto our_avg_gaussian_curvature = surface.getAverageGaussianCurvature();
-    const double length_scale = pow(poly_vol, 1.0 / 3.0) * 0.01;
+    const double length_scale =
+        pow(static_cast<double>(poly_vol), 1.0 / 3.0) * 0.01;
     TriangulatedSurfaceOutput triangulated_surface =
         surface.triangulate(length_scale);
     triangulated_surface.write(surf_filename);
@@ -3621,7 +3624,7 @@ TEST(ParaboloidIntersection, Armadillo) {
                    aligned_paraboloid.a(), aligned_paraboloid.b()));
 
     auto start = std::chrono::system_clock::now();
-    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+    auto our_moments = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> runtime = end - start;
@@ -3815,7 +3818,7 @@ TEST(ParaboloidIntersection, Subgrid) {
                    ReferenceFrame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
                                   Normal(0.0, 0.0, 1.0)),
                    aligned_paraboloid.a(), aligned_paraboloid.b()));
-    auto our_moments = intersectPolyhedronWithParaboloid<VolumeMoments>(
+    auto our_moments = intersectPolyhedronWithAlignedParaboloid<VolumeMoments>(
         &seg_half_edge, &half_edge, aligned_paraboloid, &surface);
     // auto volume_and_surface = getVolumeMoments<
     //     AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>,
@@ -3901,6 +3904,105 @@ TEST(ParaboloidIntersection, Subgrid) {
             << std::endl;
 
   EXPECT_NEAR(max_error, 0.0, 1.0e-12);
+}
+
+TEST(ParaboloidIntersection, PtQuad) {
+  auto pt_double = PtBase<double>(1.0, 1.0, 1.0);
+  pt_double += PtBase<double>(1.0e-18, 1.0e-18, 1.0e-18);
+  auto pt_quad = PtBase<Quad_t>(1.0q, 1.0q, 1.0q);
+  pt_quad += PtBase<Quad_t>(1.0e-18q, 1.0e-18q, 1.0e-18q);
+  auto pt_quad_conv = PtBase<Quad_t>(static_cast<Quad_t>(pt_double[0]),
+                                     static_cast<Quad_t>(pt_double[1]),
+                                     static_cast<Quad_t>(pt_double[2]));
+
+  auto testsum0 = pt_double + Pt(1.0, 1.0, 1.0);
+
+  std::cout << "        Pt double = " << pt_double << std::endl;
+  std::cout << "          Pt quad = " << pt_quad << std::endl;
+  std::cout << "Pt quad converted = " << pt_quad_conv << std::endl;
+
+  auto test1 = pow(10.0q, 1.0q / 3.0q);
+  auto test2 = pow(10.0q, 1.0 / 3.0);
+  auto test3 = pow(10.0, 1.0 / 3.0);
+
+  std::cout << std::setprecision(15);
+  std::cout << "      10^1/3 quad/quad = " << test1 << std::endl;
+  std::cout << "    10^1/3 quad/double = " << test2 << std::endl;
+  std::cout << "  10^1/3 double/double = " << test3 << std::endl;
+
+  const Quad_t alpha = 1.0q, beta = 1.0q;
+  const Quad_t exact_volume = 1.0q / 2.0q - (alpha + beta) / 12.0q;
+  const auto exact_m1 = PtBase<Quad_t>(
+      0.0q, 0.0q,
+      (9.0q * alpha * alpha + 9.0q * beta * beta + 10.0q * alpha * beta) /
+              1440.0q -
+          1.0q / 8.0q);
+  std::cout << "   Volume exact = " << exact_volume << std::endl;
+  std::cout << " Centroid exact = " << exact_m1 << std::endl;
+
+  {
+    // Create unit cube
+    const auto bottom_corner = Pt(-0.5, -0.5, -0.5);
+    const auto top_corner = Pt(0.5, 0.5, 0.5);
+    const auto cell =
+        StoredRectangularCuboid<Pt>::fromBoundingPts(bottom_corner, top_corner);
+    // Reference frame and coefficients of paraboloid
+    const auto origin = Pt(0.0, 0.0, 0.0);
+    const auto frame = ReferenceFrame(
+        Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0), Normal(0.0, 0.0, 1.0));
+    // Create paraboloid object
+    const auto paraboloid = Paraboloid(
+        origin, frame, static_cast<double>(alpha), static_cast<double>(beta));
+    // Compute moments of cell clipped by paraboloid
+    const auto first_moments = getVolumeMoments<
+        AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>>(cell,
+                                                                    paraboloid);
+
+    const double length_scale = 0.05;
+    TriangulatedSurfaceOutput triangulated_surface =
+        first_moments.getSurface().triangulate(length_scale);
+    triangulated_surface.write("test_surface");
+
+    std::cout << std::setprecision(20) << std::scientific
+              << "   Volume double = " << first_moments.getMoments().volume()
+              << std::endl;
+    std::cout << " Centroid double = " << first_moments.getMoments().centroid()
+              << std::endl;
+    std::cout << "           Error = "
+              << fabs(static_cast<Quad_t>(first_moments.getMoments().volume()) -
+                      exact_volume)
+              << "   "
+              << PtBase<Quad_t>(
+                     PtBase<Quad_t>(first_moments.getMoments().centroid()) -
+                     exact_m1)
+              << std::endl;
+  }
+  {  // Create unit cube
+    const auto bottom_corner = PtBase<Quad_t>(-0.5q, -0.5q, -0.5q);
+    const auto top_corner = PtBase<Quad_t>(0.5q, 0.5q, 0.5q);
+    const auto cell = StoredRectangularCuboid<PtBase<Quad_t>>::fromBoundingPts(
+        bottom_corner, top_corner);
+    // Reference frame and coefficients of paraboloid
+    const auto origin = PtBase<Quad_t>(0, 0, 0);
+    const auto frame = ReferenceFrameBase<Quad_t>(NormalBase<Quad_t>(1, 0, 0),
+                                                  NormalBase<Quad_t>(0, 1, 0),
+                                                  NormalBase<Quad_t>(0, 0, 1));
+    // Create paraboloid object
+    const auto paraboloid = ParaboloidBase<Quad_t>(origin, frame, alpha, beta);
+    // Compute moments of cell clipped by paraboloid
+    const auto volume = getVolumeMoments<VolumeBase<Quad_t>>(cell, paraboloid);
+    std::cout << "   Volume quad = " << static_cast<Quad_t>(volume)
+              << std::endl;
+    std::cout << "         Error = "
+              << fabs(static_cast<Quad_t>(volume) - exact_volume) << std::endl;
+    const auto first_moments =
+        getVolumeMoments<VolumeMomentsBase<Quad_t>>(cell, paraboloid);
+    std::cout << "     Volume quad = " << first_moments.volume() << std::endl;
+    std::cout << "   Centroid quad = " << first_moments.centroid() << std::endl;
+    std::cout << "           Error = "
+              << PtBase<Quad_t>(first_moments.centroid() - exact_m1)
+              << std::endl;
+  }
 }
 
 }  // namespace

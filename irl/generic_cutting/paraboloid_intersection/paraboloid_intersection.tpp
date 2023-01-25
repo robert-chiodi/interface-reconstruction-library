@@ -13,53 +13,98 @@
 #include <float.h>
 #include <cassert>
 #include <cmath>
+#include <random>
 #include "irl/data_structures/small_vector.h"
 #include "irl/data_structures/stack_vector.h"
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_helpers.h"
+#include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_initializer.tpp"
 #include "irl/generic_cutting/paraboloid_intersection/moment_contributions.h"
 #include "irl/geometry/general/normal.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/reference_frame.h"
 #include "irl/geometry/general/rotations.h"
 #include "irl/geometry/general/unit_quaternion.h"
+#include "irl/geometry/half_edge_structures/brep_to_half_edge.h"
 #include "irl/helpers/mymath.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/rational_bezier_arc.h"
 
 namespace IRL {
 
-inline Normal computeTangentVectorAtPoint(const AlignedParaboloid& a_paraboloid,
-                                          const Normal& a_plane_normal,
-                                          const Pt& a_pt) {
-  Normal surface_normal = getParaboloidSurfaceNormal(a_paraboloid, a_pt);
+template <class ScalarType>
+inline const ScalarType distance_epsilon(void);
+
+template <>
+inline const double distance_epsilon(void) {
+  return 1.0e2 * DBL_EPSILON;
+}
+
+template <>
+inline const Quad_t distance_epsilon(void) {
+  return 1.0e6q * FLT128_EPSILON;
+}
+
+template <class ScalarType>
+inline const ScalarType angle_epsilon(void);
+
+template <>
+inline const double angle_epsilon(void) {
+  return 1.0e4 * DBL_EPSILON;
+}
+
+template <>
+inline const Quad_t angle_epsilon(void) {
+  return 1.0e10q * FLT128_EPSILON;
+}
+
+/******************** Tangent to surface at given point ********************/
+template <class ScalarType>
+inline NormalBase<ScalarType> computeTangentVectorAtPoint(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal,
+    const PtBase<ScalarType>& a_pt) {
+  /* Defining constants */
+  const ScalarType EPSILON = distance_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+
+  /* Function */
+  NormalBase<ScalarType> surface_normal =
+      getParaboloidSurfaceNormal(a_paraboloid, a_pt);
   surface_normal.normalize();
-  Normal tangent_at_pt = crossProduct(a_plane_normal, surface_normal);
-  if (squaredMagnitude(tangent_at_pt) < DBL_EPSILON * DBL_EPSILON) {
-    return Normal(0.0, 0.0, 0.0);
+  NormalBase<ScalarType> tangent_at_pt =
+      crossProduct(a_plane_normal, surface_normal);
+  if (squaredMagnitude(tangent_at_pt) < EPSILON * EPSILON) {
+    return NormalBase<ScalarType>(ZERO, ZERO, ZERO);
   }
-  const double normal_correction = tangent_at_pt * a_plane_normal;
+  const ScalarType normal_correction = tangent_at_pt * a_plane_normal;
   tangent_at_pt = tangent_at_pt - normal_correction * a_plane_normal;
   tangent_at_pt.normalize();
   return tangent_at_pt;
 }
 
-template <class PtWithGradientType>
+/************** Tangent to surface + gradient at given point **************/
+template <class ScalarType, class PtWithGradientType>
 inline PtWithGradientType computeTangentVectorAndGradientAtPoint(
-    const AlignedParaboloid& a_paraboloid,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtWithGradientType& a_plane_normal, const PtWithGradientType& a_pt) {
+  /* Defining constants and types */
   using gradient_type = typename PtWithGradientType::gradient_type;
+  const ScalarType EPSILON = distance_epsilon<ScalarType>();
+
+  /* Function */
   const auto surface_normal_withgrad =
       getParaboloidSurfaceNormalWithGradient<PtWithGradientType>(a_paraboloid,
                                                                  a_pt);
-  const Normal surface_normal = Normal::fromPt(surface_normal_withgrad.getPt());
+  const NormalBase<ScalarType> surface_normal =
+      NormalBase<ScalarType>::fromPt(surface_normal_withgrad.getPt());
   const auto& surface_normal_grad = surface_normal_withgrad.getData();
   const auto& a_plane_normal_grad = a_plane_normal.getData();
-  const double tangent_at_pt_x = a_plane_normal[1] * surface_normal[2] -
-                                 a_plane_normal[2] * surface_normal[1];
-  const double tangent_at_pt_y = a_plane_normal[2] * surface_normal[0] -
-                                 a_plane_normal[0] * surface_normal[2];
-  const double tangent_at_pt_z = a_plane_normal[0] * surface_normal[1] -
-                                 a_plane_normal[1] * surface_normal[0];
+  const ScalarType tangent_at_pt_x = a_plane_normal[1] * surface_normal[2] -
+                                     a_plane_normal[2] * surface_normal[1];
+  const ScalarType tangent_at_pt_y = a_plane_normal[2] * surface_normal[0] -
+                                     a_plane_normal[0] * surface_normal[2];
+  const ScalarType tangent_at_pt_z = a_plane_normal[0] * surface_normal[1] -
+                                     a_plane_normal[1] * surface_normal[0];
   const auto tangent_at_pt_gradx = a_plane_normal_grad[1] * surface_normal[2] +
                                    a_plane_normal[1] * surface_normal_grad[2] -
                                    a_plane_normal_grad[2] * surface_normal[1] -
@@ -72,14 +117,14 @@ inline PtWithGradientType computeTangentVectorAndGradientAtPoint(
                                    a_plane_normal[0] * surface_normal_grad[1] -
                                    a_plane_normal_grad[1] * surface_normal[0] -
                                    a_plane_normal[1] * surface_normal_grad[0];
-  const double norm_tangent = std::sqrt(tangent_at_pt_x * tangent_at_pt_x +
-                                        tangent_at_pt_y * tangent_at_pt_y +
-                                        tangent_at_pt_z * tangent_at_pt_z);
+  const ScalarType norm_tangent = sqrt(tangent_at_pt_x * tangent_at_pt_x +
+                                       tangent_at_pt_y * tangent_at_pt_y +
+                                       tangent_at_pt_z * tangent_at_pt_z);
   const auto norm_tangent_grad = (tangent_at_pt_gradx * tangent_at_pt_x +
                                   tangent_at_pt_grady * tangent_at_pt_y +
                                   tangent_at_pt_gradz * tangent_at_pt_z) /
                                  safelyEpsilon(norm_tangent);
-  assert(norm_tangent > DBL_EPSILON);
+  assert(norm_tangent > EPSILON);
   const auto tangent_at_pt = Pt(tangent_at_pt_x / safelyEpsilon(norm_tangent),
                                 tangent_at_pt_y / safelyEpsilon(norm_tangent),
                                 tangent_at_pt_z / safelyEpsilon(norm_tangent));
@@ -97,210 +142,288 @@ inline PtWithGradientType computeTangentVectorAndGradientAtPoint(
   return tangent_at_pt_withgrad;
 }
 
-inline Normal computeAndCorrectTangentVectorAtPt(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_plane_normal,
-    const Pt& a_origin_pt, const Pt& a_end_pt, const Normal& a_end_tangent,
-    const Pt& a_intersection_pt) {
-  Normal tangent = computeTangentVectorAtPoint(a_paraboloid, a_plane_normal,
-                                               a_intersection_pt);
-  const Normal edge_normal =
+/************** Tangent to surface + orient at given point **************/
+template <class ScalarType>
+inline NormalBase<ScalarType> computeAndCorrectTangentVectorAtPt(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal,
+    const PtBase<ScalarType>& a_origin_pt, const PtBase<ScalarType>& a_end_pt,
+    const NormalBase<ScalarType>& a_end_tangent,
+    const PtBase<ScalarType>& a_intersection_pt) {
+  /* Defining constants and types */
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+
+  /* Function */
+  NormalBase<ScalarType> tangent = computeTangentVectorAtPoint<ScalarType>(
+      a_paraboloid, a_plane_normal, a_intersection_pt);
+  const NormalBase<ScalarType> edge_normal =
       crossProduct(a_plane_normal, a_end_pt - a_intersection_pt);
-  if ((a_end_tangent * edge_normal > 0.0) == (tangent * edge_normal > 0.0)) {
+  if ((a_end_tangent * edge_normal > ZERO) == (tangent * edge_normal > ZERO)) {
     tangent = -tangent;
   }
-
-  // const Normal correct_sign =
-  //     crossProduct(a_plane_normal, a_end_pt - a_origin_pt);
-  // if ((a_end_tangent * correct_sign > 0.0) !=
-  //     (tangent * Normal(crossProduct(a_plane_normal,
-  //                                    a_intersection_pt - a_origin_pt)) >
-  //      0.0)) {
-  //   tangent = -tangent;
-  // }
   return tangent;
 }
 
-template <class PtTypeWithGradient>
+/********** Tangent to surface + orient + gradient at given point **********/
+template <class ScalarType, class PtTypeWithGradient>
 inline PtTypeWithGradient computeAndCorrectTangentVectorAndGradientAtPt(
-    const AlignedParaboloid& a_paraboloid,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtTypeWithGradient& a_plane_normal,
     const PtTypeWithGradient& a_origin_pt, const PtTypeWithGradient& a_end_pt,
     const PtTypeWithGradient& a_end_tangent,
     const PtTypeWithGradient& a_intersection_pt) {
-  PtTypeWithGradient tangent_withgrad = computeTangentVectorAndGradientAtPoint(
-      a_paraboloid, a_plane_normal, a_intersection_pt);
-  const Normal tangent = Normal::fromPt(tangent_withgrad.getPt());
-  const Normal plane_normal = Normal::fromPt(a_plane_normal.getPt());
-  const Normal edge_vector1 =
-      Normal::fromPt(a_end_pt.getPt() - a_origin_pt.getPt());
-  const Normal edge_vector2 =
-      Normal::fromPt(a_intersection_pt.getPt() - a_origin_pt.getPt());
-  const Normal end_tangent = Normal::fromPt(a_end_tangent.getPt());
-  const Normal correct_sign = crossProduct(plane_normal, edge_vector1);
-  if ((end_tangent * correct_sign > 0.0) !=
-      (tangent * Normal(crossProduct(plane_normal, edge_vector2)) > 0.0)) {
+  /* Defining constants and types */
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+
+  /* Function */
+  PtTypeWithGradient tangent_withgrad =
+      computeTangentVectorAndGradientAtPoint<ScalarType, PtTypeWithGradient>(
+          a_paraboloid, a_plane_normal, a_intersection_pt);
+  const NormalBase<ScalarType> tangent =
+      NormalBase<ScalarType>::fromPt(tangent_withgrad.getPt());
+  const NormalBase<ScalarType> plane_normal =
+      NormalBase<ScalarType>::fromPt(a_plane_normal.getPt());
+  const NormalBase<ScalarType> edge_vector1 =
+      NormalBase<ScalarType>::fromPt(a_end_pt.getPt() - a_origin_pt.getPt());
+  const NormalBase<ScalarType> edge_vector2 = NormalBase<ScalarType>::fromPt(
+      a_intersection_pt.getPt() - a_origin_pt.getPt());
+  const NormalBase<ScalarType> end_tangent =
+      NormalBase<ScalarType>::fromPt(a_end_tangent.getPt());
+  const NormalBase<ScalarType> correct_sign =
+      crossProduct(plane_normal, edge_vector1);
+  if ((end_tangent * correct_sign > ZERO) !=
+      (tangent * Normal(crossProduct(plane_normal, edge_vector2)) > ZERO)) {
     tangent_withgrad = -tangent_withgrad;
   }
   return tangent_withgrad;
 }
 
-template <class ReturnType, class SurfaceOutputType, class PtType>
+/***************** Calculate arc contribution (with split) *******************/
+template <class ReturnType, class ScalarType, class SurfaceOutputType,
+          class PtType>
 ReturnType computeType3ContributionWithSplit(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_plane_normal,
-    const PtType& a_pt_ref, const PtType& a_pt_0, const PtType& a_pt_1,
-    const Normal& a_tangent_0, const Normal& a_tangent_1,
-    SurfaceOutputType* a_surface, bool* a_requires_nudge,
-    Normal& a_nudge_direction, UnsignedIndex_t* a_split_counter) {
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal, const PtType& a_pt_ref,
+    const PtType& a_pt_0, const PtType& a_pt_1,
+    const NormalBase<ScalarType>& a_tangent_0,
+    const NormalBase<ScalarType>& a_tangent_1, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction, UnsignedIndex_t* a_split_counter,
+    SurfaceOutputType* a_surface) {
+  /* Defining constants and types */
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+  const ScalarType MACHINE_EPSILON = machine_epsilon<ScalarType>();
+  const ScalarType DISTANCE_EPSILON = distance_epsilon<ScalarType>();
+  const ScalarType ANGLE_EPSILON = angle_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType NINETENTH = static_cast<ScalarType>(0.9);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType FOUR = static_cast<ScalarType>(4);
+  const ScalarType HALF = ONE / TWO;
+  const ScalarType ONEQUARTER = ONE / FOUR;
+  const ScalarType THREEQUARTERS = HALF + ONEQUARTER;
+  const ScalarType ONE_HUNDRED = static_cast<ScalarType>(100);
+
+  /* Function */
   const Pt& pt_ref = a_pt_ref.getPt();
   const Pt& pt_0 = a_pt_0.getPt();
   const Pt& pt_1 = a_pt_1.getPt();
-  // if (squaredMagnitude(pt_1 - pt_0) < 30.0 * 30.0 * DBL_EPSILON *
-  // DBL_EPSILON) {
-  //   if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value)
-  //   {
-  //     a_surface->addArc(
-  //         RationalBezierArc(pt_0, 0.5 * (pt_0 + pt_1), pt_1, 0.0));
-  //   }
-  //   return ReturnType::fromScalarConstant(0.0);
-  // } else {
-
-  if (squaredMagnitude(pt_1 - pt_0) < 100.0 * DBL_EPSILON * DBL_EPSILON &&
-      (a_tangent_0 * a_tangent_1) < -0.9) {
-    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-      a_surface->addArc(
-          RationalBezierArc(pt_0, 0.5 * (pt_0 + pt_1), pt_1, 0.0));
-    }
-    return ReturnType::fromScalarConstant(0.0);
-  }
 
   const Normal edge_vector = pt_1 - pt_0;
-  bool split =
-      ((a_tangent_0 * edge_vector) < 0.0 || (a_tangent_1 * edge_vector) > 0.0 ||
-       (a_tangent_0 * a_tangent_1) > 0.9);
+  Normal edge_vector_normalized = edge_vector;
+  edge_vector_normalized.normalize();
+  edge_vector_normalized.normalize();
+
+  if (squaredMagnitude(edge_vector) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
+      fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
+      fabs(ONE + a_tangent_1 * edge_vector_normalized) < ANGLE_EPSILON) {
+    if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      auto surface_arc = RationalBezierArc(
+          pt_0.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+          pt_1.toDoublePt(), 0.0);
+      surface_arc.reset_start_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+      surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_1));
+      a_surface->addArc(surface_arc);
+    }
+    return ReturnType::fromScalarConstant(ZERO);
+  }
+
+  bool split = ((a_tangent_0 * edge_vector_normalized) < ZERO ||
+                (a_tangent_1 * edge_vector_normalized) > ZERO ||
+                (a_tangent_0 * a_tangent_1) > NINETENTH);
   if (split) {
     (*a_split_counter)++;
-    const Pt average_pt = 0.5 * (pt_0 + pt_1);
-    auto average_tangent = Normal(0.5 * (a_tangent_0 + a_tangent_1));
-    if (squaredMagnitude(average_tangent) < 100.0 * DBL_EPSILON) {
-      average_tangent = Normal(0.25 * a_tangent_0 + 0.75 * a_tangent_1);
+    const Pt average_pt = HALF * (pt_0 + pt_1);
+    auto average_tangent = Normal(HALF * (a_tangent_0 + a_tangent_1));
+    if (squaredMagnitude(average_tangent) < DISTANCE_EPSILON) {
+      average_tangent =
+          Normal(ONEQUARTER * a_tangent_0 + THREEQUARTERS * a_tangent_1);
     }
     average_tangent.normalize();
-    const double avg_tgt_dot_face_normal = average_tangent * a_plane_normal;
+    const ScalarType avg_tgt_dot_face_normal = average_tangent * a_plane_normal;
     average_tangent =
         average_tangent - avg_tgt_dot_face_normal * a_plane_normal;
-    Pt projected_pt = projectPtAlongHalfLineOntoParaboloid(
+    Pt projected_pt = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
         a_paraboloid, average_tangent, average_pt);
-    if (projected_pt[0] == DBL_MAX || *a_split_counter > 10) {
+    if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX) ||
+        *a_split_counter > 10) {
       if (*a_requires_nudge == false) {
-        a_nudge_direction = Normal(2.0 * a_paraboloid.a() * average_pt[0],
-                                   2.0 * a_paraboloid.b() * average_pt[1], 1.0);
-        if (a_nudge_direction * a_plane_normal > 0.0) a_nudge_direction *= -1.0;
+        a_nudge_direction = Normal(TWO * a_paraboloid.a() * average_pt[0],
+                                   TWO * a_paraboloid.b() * average_pt[1], ONE);
+        if (a_nudge_direction * a_plane_normal > ZERO)
+          a_nudge_direction *= -ONE;
         a_nudge_direction.normalize();
         *a_requires_nudge = true;
       }
-      return ReturnType::fromScalarConstant(0.0);
+      return ReturnType::fromScalarConstant(ZERO);
     }
-    const Normal tangent_projected_pt = computeAndCorrectTangentVectorAtPt(
-        a_paraboloid, a_plane_normal, pt_0, pt_1, a_tangent_1, projected_pt);
+    const Normal tangent_projected_pt =
+        computeAndCorrectTangentVectorAtPt<ScalarType>(
+            a_paraboloid, a_plane_normal, pt_0, pt_1, a_tangent_1,
+            projected_pt);
 
     // We need to store this vertex so that its address remains unique over
     // time
-    if ((tangent_projected_pt[0] == 0.0 && tangent_projected_pt[1] == 0.0 &&
-         tangent_projected_pt[2] == 0.0) ||
+    if ((tangent_projected_pt[0] == ZERO && tangent_projected_pt[1] == ZERO &&
+         tangent_projected_pt[2] == ZERO) ||
         squaredMagnitude(projected_pt - average_pt) <
-            1.0e-3 * DBL_EPSILON * DBL_EPSILON) {
-      if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        a_surface->addArc(
-            RationalBezierArc(pt_0, 0.5 * (pt_0 + pt_1), pt_1, 0.0));
+            DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      if constexpr (!std::is_same_v<SurfaceOutputType, NoSurfaceOutput>) {
+        auto surface_arc = RationalBezierArc(
+            pt_0.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+            pt_1.toDoublePt(), 0.0);
+        surface_arc.reset_start_point_id(
+            reinterpret_cast<std::uintptr_t>(&pt_0));
+        surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_1));
+        a_surface->addArc(surface_arc);
       }
-      return ReturnType::fromScalarConstant(0.0);
+      return ReturnType::fromScalarConstant(ZERO);
     }
 
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       Pt* new_point = new Pt(projected_pt);
-      a_surface->addPt(new_point);
-      return computeType3ContributionWithSplit<ReturnType>(
+      PtBase<double>* new_point_double =
+          new PtBase<double>(static_cast<double>(projected_pt[0]),
+                             static_cast<double>(projected_pt[1]),
+                             static_cast<double>(projected_pt[2]));
+      a_surface->addPt(new_point_double);
+      return computeType3ContributionWithSplit<ReturnType, ScalarType>(
                  a_paraboloid, a_plane_normal, a_pt_ref, a_pt_0, *new_point,
-                 a_tangent_0, tangent_projected_pt, a_surface, a_requires_nudge,
-                 a_nudge_direction, a_split_counter) +
-             computeType3ContributionWithSplit<ReturnType>(
+                 a_tangent_0, tangent_projected_pt, a_requires_nudge,
+                 a_nudge_direction, a_split_counter, a_surface) +
+             computeType3ContributionWithSplit<ReturnType, ScalarType>(
                  a_paraboloid, a_plane_normal, a_pt_ref, *new_point, a_pt_1,
-                 -tangent_projected_pt, a_tangent_1, a_surface,
-                 a_requires_nudge, a_nudge_direction, a_split_counter);
+                 -tangent_projected_pt, a_tangent_1, a_requires_nudge,
+                 a_nudge_direction, a_split_counter, a_surface);
     } else {
-      return computeType3ContributionWithSplit<ReturnType>(
+      return computeType3ContributionWithSplit<ReturnType, ScalarType>(
                  a_paraboloid, a_plane_normal, a_pt_ref, a_pt_0,
                  PtType(projected_pt), a_tangent_0, tangent_projected_pt,
-                 a_surface, a_requires_nudge, a_nudge_direction,
-                 a_split_counter) +
-             computeType3ContributionWithSplit<ReturnType>(
+                 a_requires_nudge, a_nudge_direction, a_split_counter,
+                 a_surface) +
+             computeType3ContributionWithSplit<ReturnType, ScalarType>(
                  a_paraboloid, a_plane_normal, a_pt_ref, PtType(projected_pt),
-                 a_pt_1, -tangent_projected_pt, a_tangent_1, a_surface,
-                 a_requires_nudge, a_nudge_direction, a_split_counter);
+                 a_pt_1, -tangent_projected_pt, a_tangent_1, a_requires_nudge,
+                 a_nudge_direction, a_split_counter, a_surface);
     }
   } else {
-    const auto arc = RationalBezierArc(pt_0, a_tangent_0, pt_1, a_tangent_1,
-                                       a_plane_normal, a_paraboloid);
+    const auto arc = RationalBezierArcBase<ScalarType>(
+        pt_0, a_tangent_0, pt_1, a_tangent_1, a_plane_normal, a_paraboloid);
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-      a_surface->addArc(arc);
+      auto surface_arc = RationalBezierArc(
+          pt_0.toDoublePt(), a_tangent_0.toDoubleNormal(), pt_1.toDoublePt(),
+          a_tangent_1.toDoubleNormal(), a_plane_normal.toDoubleNormal(),
+          AlignedParaboloidBase<double>(a_paraboloid));
+      surface_arc.reset_start_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+      surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_1));
+      a_surface->addArc(surface_arc);
     }
-    if (arc.weight() < 0.0) {
+    if (arc.weight() < ZERO) {
       if (*a_requires_nudge == false) {
-        a_nudge_direction = Normal(2.0 * a_paraboloid.a() * pt_0[0],
-                                   2.0 * a_paraboloid.b() * pt_0[1], 1.0);
-        if (a_nudge_direction * a_plane_normal > 0.0) a_nudge_direction *= -1.0;
+        a_nudge_direction = Normal(TWO * a_paraboloid.a() * pt_0[0],
+                                   TWO * a_paraboloid.b() * pt_0[1], ONE);
+        if (a_nudge_direction * a_plane_normal > ZERO)
+          a_nudge_direction *= -ONE;
         a_nudge_direction.normalize();
         *a_requires_nudge = true;
       }
-      return ReturnType::fromScalarConstant(0.0);
+      return ReturnType::fromScalarConstant(ZERO);
     }
-    auto moments = computeType3Contribution<ReturnType>(a_paraboloid, arc);
+    auto moments =
+        computeType3Contribution<ReturnType, ScalarType>(a_paraboloid, arc);
     if (!(&a_pt_ref == &a_pt_0 || &a_pt_ref == &a_pt_1)) {
-      moments += computeTriangleCorrection<ReturnType>(a_paraboloid, pt_0, pt_1,
-                                                       pt_ref);
+      moments += computeTriangleCorrection<ReturnType, ScalarType>(
+          a_paraboloid, pt_0, pt_1, pt_ref);
     }
     return moments;
   }
   // }
 }
 
-template <class ReturnType, class SurfaceOutputType, class PtType>
+/************* Calculate arc contribution + gradient (with split) *************/
+template <class ReturnType, class ScalarType, class SurfaceOutputType,
+          class PtType>
 ReturnType computeType3ContributionWithGradientWithSplit(
-    const AlignedParaboloid& a_paraboloid, const PtType& a_plane_normal,
-    const PtType& a_pt_ref, const PtType& a_pt_0, const PtType& a_pt_1,
-    const PtType& a_tangent_0, const PtType& a_tangent_1,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtType& a_plane_normal, const PtType& a_pt_ref, const PtType& a_pt_0,
+    const PtType& a_pt_1, const PtType& a_tangent_0, const PtType& a_tangent_1,
     SurfaceOutputType* a_surface) {
+  /* Defining constants and types */
   using gradient_type = typename PtType::gradient_type;
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+  const ScalarType EPSILON =
+      maximum(machine_epsilon<ScalarType>(), static_cast<ScalarType>(1.0e-24q));
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType FOUR = static_cast<ScalarType>(4);
+  const ScalarType HALF = ONE / TWO;
+  const ScalarType ONEQUARTER = ONE / FOUR;
+  const ScalarType THREEQUARTERS = HALF + ONEQUARTER;
+  const ScalarType ONE_HUNDRED = static_cast<ScalarType>(100);
+
+  /* Function */
   const Pt& pt_ref = a_pt_ref.getPt();
   const Pt& pt_0 = a_pt_0.getPt();
   const Pt& pt_1 = a_pt_1.getPt();
   const Normal tgt_0 = Normal::fromPt(a_tangent_0.getPt());
   const Normal tgt_1 = Normal::fromPt(a_tangent_1.getPt());
   const Normal arc_normal = crossProduct(a_plane_normal.getPt(), pt_1 - pt_0);
-  if ((tgt_0 * arc_normal > 0.0) != (tgt_1 * arc_normal > 0.0)) {
+  if ((tgt_0 * arc_normal > ZERO) != (tgt_1 * arc_normal > ZERO)) {
     std::cout << "Error: impossible tangent signs!" << std::endl;
-    return ReturnType::fromScalarConstant(0.0);
+    return ReturnType::fromScalarConstant(ZERO);
     // exit(-1);
   }
-  if (squaredMagnitude(pt_1 - pt_0) < 100.0 * DBL_EPSILON * DBL_EPSILON) {
+  if (squaredMagnitude(pt_1 - pt_0) < ONE_HUNDRED * EPSILON * EPSILON) {
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-      a_surface->addArc(
-          RationalBezierArc(pt_0, 0.5 * (pt_0 + pt_1), pt_1, 0.0));
+      auto surface_arc = RationalBezierArc(
+          pt_1.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+          pt_0.toDoublePt(), 0.0);
+      surface_arc.reset_start_point_id(reinterpret_cast<std::uintptr_t>(&pt_1));
+      surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+      a_surface->addArc(surface_arc);
     }
-    return ReturnType::fromScalarConstant(0.0);
+    return ReturnType::fromScalarConstant(ZERO);
   } else {
     const Normal edge_vector = pt_1 - pt_0;
-    bool split = ((tgt_0 * edge_vector) < 0.0 || (tgt_1 * edge_vector) > 0.0);
+    bool split = ((tgt_0 * edge_vector) < ZERO || (tgt_1 * edge_vector) > ZERO);
     if (split) {
-      const auto average_pt_withgrad = 0.5 * (a_pt_0 + a_pt_1);
-      auto avg_tgt_withgrad = 0.5 * (a_tangent_0 + a_tangent_1);
+      const auto average_pt_withgrad = HALF * (a_pt_0 + a_pt_1);
+      auto avg_tgt_withgrad = HALF * (a_tangent_0 + a_tangent_1);
       if (squaredMagnitude(avg_tgt_withgrad.getPt()) <
-          100.0 * DBL_EPSILON * DBL_EPSILON) {
-        avg_tgt_withgrad = 0.25 * a_tangent_0 + 0.75 * a_tangent_1;
+          ONE_HUNDRED * EPSILON * EPSILON) {
+        avg_tgt_withgrad =
+            ONEQUARTER * a_tangent_0 + THREEQUARTERS * a_tangent_1;
       }
-      const Pt avg_tgt = avg_tgt_withgrad.getPt();
+      Pt avg_tgt = avg_tgt_withgrad.getPt();
       const auto avg_tgt_grad = avg_tgt_withgrad.getData();
-      const double norm_avg_tgt = magnitude(avg_tgt);
+      const ScalarType norm_avg_tgt = magnitude(avg_tgt);
       const gradient_type norm_avg_tgt_grad =
           (avg_tgt_grad[0] * avg_tgt[0] + avg_tgt_grad[1] * avg_tgt[1] +
            avg_tgt_grad[2] * avg_tgt[2]) /
@@ -316,7 +439,7 @@ ReturnType computeType3ContributionWithGradientWithSplit(
           projectPtAlongHalfLineOntoParaboloidWithGradient<PtType>(
               a_paraboloid, avg_tgt_withgrad, average_pt_withgrad);
       const auto tangent_projected_pt_withgrad =
-          computeAndCorrectTangentVectorAndGradientAtPt<PtType>(
+          computeAndCorrectTangentVectorAndGradientAtPt<ScalarType, PtType>(
               a_paraboloid, a_plane_normal, a_pt_0, a_pt_1, a_tangent_1,
               projected_pt_withgrad);
       // We need to store this vertex so that its address remains unique over
@@ -326,52 +449,70 @@ ReturnType computeType3ContributionWithGradientWithSplit(
         a_surface->addPt(new_point);
         auto new_proj_pt_withgrad = PtType(*new_point);
         new_proj_pt_withgrad.getData() = projected_pt_withgrad.getData();
-        return computeType3ContributionWithGradientWithSplit<ReturnType>(
+        return computeType3ContributionWithGradientWithSplit<ReturnType,
+                                                             ScalarType>(
                    a_paraboloid, a_plane_normal, a_pt_ref, a_pt_0,
                    new_proj_pt_withgrad, a_tangent_0,
                    tangent_projected_pt_withgrad, a_surface) +
-               computeType3ContributionWithGradientWithSplit<ReturnType>(
+               computeType3ContributionWithGradientWithSplit<ReturnType,
+                                                             ScalarType>(
                    a_paraboloid, a_plane_normal, a_pt_ref, new_proj_pt_withgrad,
                    a_pt_1, -tangent_projected_pt_withgrad, a_tangent_1,
                    a_surface);
       } else {
-        return computeType3ContributionWithGradientWithSplit<ReturnType>(
+        return computeType3ContributionWithGradientWithSplit<ReturnType,
+                                                             ScalarType>(
                    a_paraboloid, a_plane_normal, a_pt_ref, a_pt_0,
                    projected_pt_withgrad, a_tangent_0,
                    tangent_projected_pt_withgrad, a_surface) +
-               computeType3ContributionWithGradientWithSplit<ReturnType>(
+               computeType3ContributionWithGradientWithSplit<ReturnType,
+                                                             ScalarType>(
                    a_paraboloid, a_plane_normal, a_pt_ref,
                    projected_pt_withgrad, a_pt_1,
                    -tangent_projected_pt_withgrad, a_tangent_1, a_surface);
       }
     } else {
-      const auto arc_with_gradient = RationalBezierArcWithGradient<PtType>(
-          a_pt_0, a_tangent_0, a_pt_1, a_tangent_1, a_plane_normal,
-          a_paraboloid);
+      const auto arc_with_gradient =
+          RationalBezierArcWithGradientBase<PtType, ScalarType>(
+              a_pt_0, a_tangent_0, a_pt_1, a_tangent_1, a_plane_normal,
+              a_paraboloid);
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        const auto arc = RationalBezierArc(
-            a_pt_0.getPt(), arc_with_gradient.control_point().getPt(),
-            a_pt_1.getPt(), arc_with_gradient.weight());
-        a_surface->addArc(arc);
+        auto surface_arc = RationalBezierArc(
+            a_pt_0.getPt().toDoublePt(),
+            arc_with_gradient.control_point().getPt().toDoublePt(),
+            a_pt_1.getPt().toDoublePt(),
+            static_cast<double>(arc_with_gradient.weight()));
+        surface_arc.reset_start_point_id(
+            reinterpret_cast<std::uintptr_t>(&(a_pt_0.getPt())));
+        surface_arc.reset_end_point_id(
+            reinterpret_cast<std::uintptr_t>(&(a_pt_1.getPt())));
+        a_surface->addArc(surface_arc);
       }
       auto volume_with_gradient =
-          computeType3Contribution<ReturnType>(a_paraboloid, arc_with_gradient);
+          computeType3ContributionWithGradient<ReturnType, ScalarType>(
+              a_paraboloid, arc_with_gradient);
       if (!(&a_pt_ref == &a_pt_0 || &a_pt_ref == &a_pt_1)) {
-        volume_with_gradient += computeTriangleCorrection<ReturnType>(
-            a_paraboloid, a_pt_0, a_pt_1, a_pt_ref);
+        volume_with_gradient +=
+            computeTriangleCorrectionWithGradient<ReturnType, ScalarType>(
+                a_paraboloid, a_pt_0, a_pt_1, a_pt_ref);
       }
       return volume_with_gradient;
     }
   }
 }
 
+/**************** Calculate line contribution ******************/
 // Starts from an entry, returns the exit that is reached.
-template <class ReturnType, class HalfEdgeType, class PtType>
+template <class ReturnType, class ScalarType, class HalfEdgeType, class PtType>
 ReturnType computeUnclippedSegmentType1Contribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_ref_pt,
-    const HalfEdgeType a_entry_half_edge, HalfEdgeType& a_exit_half_edge,
-    const bool skip_first) {
-  ReturnType full_moments = ReturnType::fromScalarConstant(0.0);
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PtType& a_ref_pt, const HalfEdgeType a_entry_half_edge,
+    HalfEdgeType& a_exit_half_edge, const bool skip_first) {
+  /* Defining constants and types */
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+
+  /* Function */
+  ReturnType full_moments = ReturnType::fromScalarConstant(ZERO);
 
   assert(a_entry_half_edge->getPreviousVertex()->isClipped() ||
          (a_entry_half_edge->getPreviousVertex()->doesNotNeedToSeek() &&
@@ -388,8 +529,14 @@ ReturnType computeUnclippedSegmentType1Contribution(
     while (true) {
       vertex = current_half_edge->getVertex();
       const auto& curr_pt = vertex->getLocation();
-      full_moments +=
-          computeType1Contribution<ReturnType>(a_ref_pt, prev_pt, curr_pt);
+      if constexpr (!has_embedded_gradient<ReturnType>::value) {
+        full_moments += computeType1Contribution<ReturnType, ScalarType>(
+            a_ref_pt, prev_pt, curr_pt);
+      } else {
+        full_moments +=
+            computeType1ContributionWithGradient<ReturnType, ScalarType>(
+                a_ref_pt, prev_pt, curr_pt);
+      }
       if (vertex->needsToSeek()) {
         prev_pt = curr_pt;
         current_half_edge = current_half_edge->getNextHalfEdge();
@@ -407,43 +554,77 @@ ReturnType computeUnclippedSegmentType1Contribution(
   return full_moments;
 }
 
-template <class ReturnType, class HalfEdgeType, class SurfaceOutputType,
-          class PtType>
+/**************** Calculate all arc contributions ******************/
+template <class ReturnType, class ScalarType, class HalfEdgeType,
+          class SurfaceOutputType, class PtType>
 ReturnType computeNewEdgeSegmentContribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_ref_pt,
-    const HalfEdgeType a_entry_half_edge, const HalfEdgeType a_exit_half_edge,
-    const bool skip_first, SurfaceOutputType* a_surface, bool* a_requires_nudge,
-    Normal& a_nudge_direction) {
-  ReturnType full_moments = ReturnType::fromScalarConstant(0.0);
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PtType& a_ref_pt, const HalfEdgeType a_entry_half_edge,
+    const HalfEdgeType a_exit_half_edge, const bool skip_first,
+    const bool a_ignore_type3, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction, SurfaceOutputType* a_surface) {
+  ReturnType full_moments =
+      ReturnType::fromScalarConstant(static_cast<ScalarType>(0.0));
   // Handle new edge on exit->entry
-  if (!skip_first) {
-    full_moments += computeType1Contribution<ReturnType>(
-        a_ref_pt, a_exit_half_edge->getVertex()->getLocation(),
+  if constexpr (!has_embedded_gradient<ReturnType>::value) {
+    if (!skip_first) {
+      full_moments += computeType1Contribution<ReturnType, ScalarType>(
+          a_ref_pt, a_exit_half_edge->getVertex()->getLocation(),
+          a_entry_half_edge->getVertex()->getLocation());
+    }
+    full_moments += computeType2Contribution<ReturnType, ScalarType>(
+        a_aligned_paraboloid, a_exit_half_edge->getVertex()->getLocation(),
         a_entry_half_edge->getVertex()->getLocation());
+  } else {
+    if (!skip_first) {
+      full_moments +=
+          computeType1ContributionWithGradient<ReturnType, ScalarType>(
+              a_ref_pt, a_exit_half_edge->getVertex()->getLocation(),
+              a_entry_half_edge->getVertex()->getLocation());
+    }
+    full_moments +=
+        computeType2ContributionWithGradient<ReturnType, ScalarType>(
+            a_aligned_paraboloid, a_exit_half_edge->getVertex()->getLocation(),
+            a_entry_half_edge->getVertex()->getLocation());
   }
 
-  full_moments += computeType2Contribution<ReturnType>(
-      a_aligned_paraboloid, a_exit_half_edge->getVertex()->getLocation(),
-      a_entry_half_edge->getVertex()->getLocation());
-
-  if constexpr (has_embedded_gradient<ReturnType>::value) {
-    full_moments += orientAndApplyType3CorrectionWithGradients<ReturnType>(
-        a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge, a_surface,
-        a_requires_nudge, a_nudge_direction);
-  } else {
-    full_moments += orientAndApplyType3Correction<ReturnType>(
-        a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge, a_surface,
-        a_requires_nudge, a_nudge_direction);
+  if (!a_ignore_type3) {
+    if constexpr (has_embedded_gradient<ReturnType>::value) {
+      full_moments +=
+          orientAndApplyType3CorrectionWithGradients<ReturnType, ScalarType>(
+              a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
+              a_surface, a_requires_nudge, a_nudge_direction);
+    } else {
+      full_moments += orientAndApplyType3Correction<ReturnType, ScalarType>(
+          a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
+          a_requires_nudge, a_nudge_direction, a_surface);
+    }
   }
   return full_moments;
 }
 
+/************* Calculate moments from non-aligned paraboloid **********/
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ParaboloidType>
 enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
 intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                                   HalfEdgePolytopeType* a_complete_polytope,
-                                  const Paraboloid& a_paraboloid) {
+                                  const ParaboloidType& a_paraboloid) {
+  /* Defining type aliases (needed to ensure precision is consistent)*/
+  using ScalarType = typename ParaboloidType::value_type;
+  using PtType = typename SegmentedHalfEdgePolyhedronType::pt_type;
+  static_assert(std::is_same_v<typename PtType::value_type, ScalarType>);
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+
+  /* Defining constants */
+  const ScalarType DISTANCE_EPSILON = distance_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType THREE = static_cast<ScalarType>(3);
+
   ReturnType moments;
   if (a_paraboloid.isAlwaysAbove()) {
     if constexpr (has_paraboloid_surface<ReturnType>::value) {
@@ -456,10 +637,10 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     return moments;
   } else if (a_paraboloid.isAlwaysBelow()) {
     if constexpr (has_paraboloid_surface<ReturnType>::value) {
-      moments.getMoments() = ReturnType::moment_type::fromScalarConstant(0.0);
+      moments.getMoments() = ReturnType::moment_type::fromScalarConstant(ZERO);
       moments.getSurface().setParaboloid(a_paraboloid);
     } else {
-      moments = ReturnType::fromScalarConstant(0.0);
+      moments = ReturnType::fromScalarConstant(ZERO);
     }
     return moments;
   }
@@ -471,15 +652,16 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   const auto& ref_frame = a_paraboloid.getReferenceFrame();
   // assert(ref_frame.isOrthonormalBasis());
 
-  const auto& start_pt =
-      a_polytope->getVertex(0)->getLocation().getPt() - datum;
-  double max_dist_sq = 0.0;
+  const Pt start_pt = a_polytope->getVertex(0)->getLocation().getPt() - datum;
+  ScalarType max_dist_sq = ZERO;
   for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
     const Pt original_pt =
         a_polytope->getVertex(v)->getLocation().getPt() - datum;
-    max_dist_sq =
-        std::max(max_dist_sq, squaredMagnitude(original_pt - start_pt));
-    typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
+    if (v > 0) {
+      max_dist_sq =
+          maximum(max_dist_sq, squaredMagnitude(original_pt - start_pt));
+    }
+    PtType projected_location;
     auto& pt = projected_location.getPt();
     for (UnsignedIndex_t n = 0; n < 3; ++n) {
       pt[n] = ref_frame[n] * original_pt;
@@ -487,13 +669,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
-  const double inv_scale =
-      std::max(1.0e4 * DBL_EPSILON, std::sqrt(max_dist_sq));
-  const double inv_volume_scale = inv_scale * max_dist_sq;
-  const double scale = 1.0 / inv_scale;
-  const double volume_scale = std::pow(scale, 3.0);
-
-  // std::cout << " \n SCALING POLY" << std::endl;
+  const ScalarType inv_scale = maximum(
+      static_cast<ScalarType>(1.0e6) * DISTANCE_EPSILON, sqrt(max_dist_sq));
+  const ScalarType inv_volume_scale = inv_scale * max_dist_sq;
+  const ScalarType scale = ONE / inv_scale;
+  const ScalarType volume_scale = pow(scale, THREE);
 
   // Normalized polyhedron
   for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
@@ -502,44 +682,68 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
   // Normalized paraboloid
   auto const& scaled_aligned_paraboloid =
-      AlignedParaboloid(std::array<double, 2>{
+      AlignedParaboloid(std::array<ScalarType, 2>{
           a_paraboloid.getAlignedParaboloid().a() * inv_scale,
           a_paraboloid.getAlignedParaboloid().b() * inv_scale});
 
-  // Recalculate in face plane information
-  for (auto& face : (*a_polytope)) {
-    auto normal = Normal(0.0, 0.0, 0.0);
-    const auto starting_half_edge = face->getStartingHalfEdge();
-    auto current_half_edge = starting_half_edge;
-    auto next_half_edge = starting_half_edge->getNextHalfEdge();
-    const auto& start_location =
-        starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    do {
-      normal += crossProduct(
-          current_half_edge->getVertex()->getLocation().getPt() -
-              start_location,
-          next_half_edge->getVertex()->getLocation().getPt() - start_location);
-      current_half_edge = next_half_edge;
-      next_half_edge = next_half_edge->getNextHalfEdge();
-    } while (next_half_edge != starting_half_edge);
-    normal.normalize();
-    if (squaredMagnitude(normal) < 0.99) {
-      normal = Normal(0.3, 0.3, 0.3);
-    }
-    face->setPlane(Plane(normal, normal * start_location));
-  }
+  // // Recalculate in face plane information
+  // for (auto& face : (*a_polytope)) {
+  //   auto normal = Normal(ZERO, ZERO, ZERO);
+  //   const auto starting_half_edge = face->getStartingHalfEdge();
+  //   auto current_half_edge = starting_half_edge;
+  //   auto next_half_edge = starting_half_edge->getNextHalfEdge();
+  //   const auto& start_location =
+  //       starting_half_edge->getPreviousVertex()->getLocation().getPt();
+  //   do {
+  //     normal += crossProduct(
+  //         current_half_edge->getVertex()->getLocation().getPt() -
+  //             start_location,
+  //         next_half_edge->getVertex()->getLocation().getPt() -
+  //         start_location);
+  //     current_half_edge = next_half_edge;
+  //     next_half_edge = next_half_edge->getNextHalfEdge();
+  //   } while (next_half_edge != starting_half_edge);
+  //   normal.normalize();
+  //   if (squaredMagnitude(normal) < static_cast<ScalarType>(0.99)) {
+  //     normal = Normal(ONE / THREE, ONE / THREE, ONE / THREE);
+  //   }
+  //   face->setPlane(Plane(normal, normal * start_location));
+  // }
 
   // Compute intersection
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
     moments.getSurface().setParaboloid(a_paraboloid);
-    moments.getMoments() =
-        intersectPolyhedronWithParaboloid<typename ReturnType::moment_type>(
-            a_polytope, a_complete_polytope, scaled_aligned_paraboloid,
-            &moments.getSurface());
+    moments.getMoments() = intersectPolyhedronWithAlignedParaboloid<
+        typename ReturnType::moment_type>(a_polytope, a_complete_polytope,
+                                          scaled_aligned_paraboloid,
+                                          &moments.getSurface());
   } else {
     NoSurfaceOutput* surf = nullptr;
-    moments = intersectPolyhedronWithParaboloid<ReturnType>(
+    moments = intersectPolyhedronWithAlignedParaboloid<ReturnType>(
         a_polytope, a_complete_polytope, scaled_aligned_paraboloid, surf);
+  }
+
+  bool error = false;
+  if constexpr (!has_paraboloid_surface<ReturnType>::value &&
+                !has_embedded_gradient<ReturnType>::value) {
+    if constexpr ((std::is_same_v<ReturnType, VolumeMomentsBase<double>> ||
+                   std::is_same_v<ReturnType, VolumeMomentsBase<Quad_t>>)) {
+      if (moments.volume() < -999.9) {
+        error = true;
+      }
+    } else {
+      if (moments < -999.9) {
+        error = true;
+      }
+    }
+  }
+
+  if (error) {
+    sleep(1);
+    std::cout << "SCALE = " << inv_scale << std::endl;
+    std::cout << "PARABOLOID = " << scaled_aligned_paraboloid << std::endl;
+    std::cout << (*a_polytope) << std::endl;
+    exit(-1);
   }
 
   // Un-normalized polyhedron
@@ -551,32 +755,34 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   // Un-normalized moments
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
-    if constexpr (std::is_same<ReturnType, VolumeMoments>::value) {
+    if constexpr ((std::is_same_v<typename ReturnType::moment_type,
+                                  VolumeMomentsBase<double>> ||
+                   std::is_same_v<typename ReturnType::moment_type,
+                                  VolumeMomentsBase<Quad_t>>)) {
       moments.getMoments().centroid().getPt() *= inv_volume_scale * inv_scale;
       moments.getMoments().volume() *= inv_volume_scale;
-      // std::cout << " \n UN-SCALING POLY -- volume = "
-      //           << moments.getMoments().volume() << std::endl;
     } else {
       moments.getMoments().volume() *= inv_volume_scale;
     }
     auto& arc_list = moments.getSurface().getArcs();
     for (std::size_t i = 0; i < arc_list.size(); ++i) {
-      arc_list[i].start_point() *= inv_scale;
-      arc_list[i].control_point() *= inv_scale;
-      arc_list[i].end_point() *= inv_scale;
+      arc_list[i].start_point() *= static_cast<double>(inv_scale);
+      arc_list[i].control_point() *= static_cast<double>(inv_scale);
+      arc_list[i].end_point() *= static_cast<double>(inv_scale);
     }
-  } else if constexpr (std::is_same<ReturnType, VolumeMoments>::value) {
+  } else if constexpr ((std::is_same_v<ReturnType, VolumeMomentsBase<double>> ||
+                        std::is_same_v<ReturnType,
+                                       VolumeMomentsBase<Quad_t>>)) {
     moments.centroid().getPt() *= inv_volume_scale * inv_scale;
     moments.volume() *= inv_volume_scale;
-    // std::cout << " \n UN-SCALING POLY -- volume = " << moments.volume()
-    //           << std::endl;
   } else {
     moments.volume() *= inv_volume_scale;
   }
 
   // Un-normalized gradient
   if constexpr (has_embedded_gradient<ReturnType>::value) {
-    if constexpr (std::is_same<ReturnType, VolumeMoments>::value) {
+    if constexpr ((std::is_same_v<ReturnType, VolumeMomentsBase<double>> ||
+                   std::is_same_v<ReturnType, VolumeMomentsBase<Quad_t>>)) {
       const auto normed_grad_m1 = moments.centroid().getData();
       const auto normed_grad_m0 = moments.volume_gradient();
       auto& grad_m1 = moments.centroid().getData();
@@ -606,8 +812,6 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
                        inv_scale);
       grad_m0.setGradB(normed_grad_m0.getGradB() * inv_volume_scale *
                        inv_scale);
-      // std::cout << " \n UN-SCALING POLY -- volume = " << moments.volume()
-      //           << std::endl;
     } else {
       const auto normed_grad_m0 = moments.volume_gradient();
       auto& grad_m0 = moments.volume_gradient();
@@ -629,7 +833,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     const Pt& original_pt = a_polytope->getVertex(v)->getLocation().getPt();
     typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
     auto& pt = projected_location.getPt();
-    pt = Pt(0.0, 0.0, 0.0);
+    pt = Pt(ZERO, ZERO, ZERO);
     for (UnsignedIndex_t d = 0; d < 3; ++d) {
       for (UnsignedIndex_t n = 0; n < 3; ++n) {
         pt[n] += ref_frame[d][n] * original_pt[d];
@@ -641,16 +845,18 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   // Rotate gradient of first moment
   if constexpr (has_embedded_gradient<ReturnType>::value) {
-    if constexpr (std::is_same<typename ReturnType::moment_type,
-                               VolumeMoments>::value) {
+    if constexpr ((std::is_same_v<typename ReturnType::moment_type,
+                                  VolumeMomentsBase<double>> ||
+                   std::is_same_v<typename ReturnType::moment_type,
+                                  VolumeMomentsBase<Quad_t>>)) {
       using gradient_type = typename ReturnType::gradient_type;
       // Compute gradient of ref frame
       std::array<std::array<gradient_type, 3>, 3> frame_grad;
       std::array<gradient_type, 3> datum_grad;
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
-        datum_grad[d] = gradient_type(0.0);
+        datum_grad[d] = gradient_type(ZERO);
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
-          frame_grad[d][n] = gradient_type(0.0);
+          frame_grad[d][n] = gradient_type(ZERO);
         }
       }
       frame_grad[0][0].setGradRy(ref_frame[0][2] * ref_frame[1][1] -
@@ -699,7 +905,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
       datum_grad[2].setGradTy(ref_frame[1][2]);
       datum_grad[2].setGradTz(ref_frame[2][2]);
       auto pt_grad = std::array<gradient_type, 3>(
-          {gradient_type(0.0), gradient_type(0.0), gradient_type(0.0)});
+          {gradient_type(ZERO), gradient_type(ZERO), gradient_type(ZERO)});
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
           pt_grad[n] += ref_frame[d][n] * moments.centroid().getData()[d] +
@@ -713,7 +919,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
       moments.centroid().getData() = pt_grad;
 
       // Move first moment back to original frame of reference
-      auto pt = Pt(0.0, 0.0, 0.0);
+      auto pt = Pt(ZERO, ZERO, ZERO);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
           pt[n] += ref_frame[d][n] * moments.centroid().getPt()[d];
@@ -725,9 +931,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
   // Move first moment back to original frame of reference
   if constexpr (has_paraboloid_surface<ReturnType>::value) {
-    if constexpr (std::is_same<typename ReturnType::moment_type,
-                               VolumeMoments>::value) {
-      auto pt = Pt(0.0, 0.0, 0.0);
+    if constexpr (std::is_same_v<typename ReturnType::moment_type,
+                                 VolumeMomentsBase<double>> ||
+                  std::is_same_v<typename ReturnType::moment_type,
+                                 VolumeMomentsBase<Quad_t>>) {
+      auto pt = Pt(ZERO, ZERO, ZERO);
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         for (UnsignedIndex_t n = 0; n < 3; ++n) {
           pt[n] += ref_frame[d][n] * moments.getMoments().centroid().getPt()[d];
@@ -738,8 +946,9 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
     }
   }
   if constexpr (!has_paraboloid_surface<ReturnType>::value &&
-                std::is_same<ReturnType, VolumeMoments>::value) {
-    auto pt = Pt(0.0, 0.0, 0.0);
+                (std::is_same_v<ReturnType, VolumeMomentsBase<double>> ||
+                 std::is_same_v<ReturnType, VolumeMomentsBase<Quad_t>>)) {
+    auto pt = Pt(ZERO, ZERO, ZERO);
     for (UnsignedIndex_t d = 0; d < 3; ++d) {
       for (UnsignedIndex_t n = 0; n < 3; ++n) {
         pt[n] += ref_frame[d][n] * moments.centroid().getPt()[d];
@@ -752,13 +961,15 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   return moments;
 }
 
+/*********** Calculate moments from aligned paraboloid *************/
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType>
+          class HalfEdgePolytopeType, class AlignedParaboloidType,
+          class SurfaceOutputType>
 enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                  HalfEdgePolytopeType* a_complete_polytope,
-                                  const AlignedParaboloid& a_paraboloid,
-                                  SurfaceOutputType* a_surface) {
+intersectPolyhedronWithAlignedParaboloid(
+    SegmentedHalfEdgePolyhedronType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const AlignedParaboloidType& a_paraboloid, SurfaceOutputType* a_surface) {
   // Assumed a_polytope is already rotated to be in same coordinate system
   // as a_paraboloid.
 
@@ -769,6 +980,7 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   return moments;
 }
 
+/******************* Place one intersection on segment **********************/
 template <class PtType, class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType>
 void placeSingleIntercept(const PtType& a_intersection_location,
@@ -787,13 +999,15 @@ void placeSingleIntercept(const PtType& a_intersection_location,
                                          new_half_edge, a_complete_polytope);
 }
 
+/******************* Place two intersection on segment **********************/
 template <class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType, class VertexType>
-void placeDoubleIntercept(const StackVector<std::pair<VertexType, double>, 2>&
-                              a_intersection_location,
-                          HalfEdgeType* a_half_edge_with_intersection,
-                          SegmentedHalfEdgePolytopeType* a_polytope,
-                          HalfEdgePolytopeType* a_complete_polytope) {
+void placeDoubleIntercept(
+    const StackVector<std::pair<VertexType, typename HalfEdgeType::value_type>,
+                      2>& a_intersection_location,
+    HalfEdgeType* a_half_edge_with_intersection,
+    SegmentedHalfEdgePolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope) {
   assert(a_intersection_location.size() == 2);
 
   // Need to place furthest vertex first so that a_half_edge_with_intersection
@@ -814,97 +1028,113 @@ void placeDoubleIntercept(const StackVector<std::pair<VertexType, double>, 2>&
                        a_complete_polytope);
 }
 
-template <class PtType>
+/******************* Find intersections on segment **********************/
+template <class PtType, class ScalarType>
 void checkAndFindIntercepts(
-    const AlignedParaboloid& a_paraboloid, const PtType& a_pt_0,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid, const PtType& a_pt_0,
     const PtType& a_pt_1,
-    StackVector<std::pair<PtType, double>, 2>* a_intercepts,
-    const double a_nudge_epsilon);
+    StackVector<std::pair<PtType, ScalarType>, 2>* a_intercepts,
+    const ScalarType a_nudge_epsilon);
 
-template <>
-inline enable_if_t<!has_embedded_gradient<Pt>::value, void>
-checkAndFindIntercepts(const AlignedParaboloid& a_paraboloid, const Pt& a_pt_0,
-                       const Pt& a_pt_1,
-                       StackVector<std::pair<Pt, double>, 2>* a_intercepts,
-                       const double a_nudge_epsilon) {
+template <class PtType, class ScalarType>
+inline enable_if_t<!has_embedded_gradient<PtType>::value, void>
+checkAndFindIntercepts(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtBase<ScalarType>& a_pt_0, const PtBase<ScalarType>& a_pt_1,
+    StackVector<std::pair<PtBase<ScalarType>, ScalarType>, 2>* a_intercepts,
+    const ScalarType a_nudge_epsilon) {
+  static_assert(std::is_same_v<PtType, PtBase<ScalarType>>);
   const auto& pt_0 = a_pt_0.getPt();
   const auto& pt_1 = a_pt_1.getPt();
   const auto pt_diff = pt_1 - pt_0;
-  const double a = a_paraboloid.a() * pt_diff[0] * pt_diff[0] +
-                   a_paraboloid.b() * pt_diff[1] * pt_diff[1];
-  const double b = 2.0 * (a_paraboloid.a() * pt_diff[0] * pt_0[0] +
-                          a_paraboloid.b() * pt_diff[1] * pt_0[1]) +
-                   pt_diff[2];
-  const double c = a_paraboloid.a() * pt_0[0] * pt_0[0] +
-                   a_paraboloid.b() * pt_0[1] * pt_0[1] + pt_0[2];
+  const ScalarType a = a_paraboloid.a() * pt_diff[0] * pt_diff[0] +
+                       a_paraboloid.b() * pt_diff[1] * pt_diff[1];
+  const ScalarType b =
+      static_cast<ScalarType>(2) * (a_paraboloid.a() * pt_diff[0] * pt_0[0] +
+                                    a_paraboloid.b() * pt_diff[1] * pt_0[1]) +
+      pt_diff[2];
+  const ScalarType c = a_paraboloid.a() * pt_0[0] * pt_0[0] +
+                       a_paraboloid.b() * pt_0[1] * pt_0[1] + pt_0[2];
 
   a_intercepts->resize(0);
-  const auto solutions = solveQuadratic(a, b, c);
+  const StackVector<ScalarType, 2> solutions =
+      solveQuadratic<ScalarType>(a, b, c);
   for (const auto& solution : solutions) {
-    if (solution >= -a_nudge_epsilon && solution <= 1.0 + a_nudge_epsilon) {
-      a_intercepts->push_back(
-          std::pair<Pt, double>(Pt(pt_0 + solution * pt_diff), solution));
+    if (solution >= -a_nudge_epsilon &&
+        solution <= static_cast<ScalarType>(1) + a_nudge_epsilon) {
+      a_intercepts->push_back(std::pair<PtBase<ScalarType>, ScalarType>(
+          PtBase<ScalarType>(pt_0 + solution * pt_diff), solution));
     }
   }
 }
 
-template <class PtType>
+template <class PtType, class ScalarType>
 inline enable_if_t<has_embedded_gradient<PtType>::value, void>
 checkAndFindIntercepts(
-    const AlignedParaboloid& a_paraboloid,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtWithGradient<typename PtType::gradient_type>& a_pt_0,
     const PtWithGradient<typename PtType::gradient_type>& a_pt_1,
     StackVector<
-        std::pair<PtWithGradient<typename PtType::gradient_type>, double>, 2>*
-        a_intercepts,
-    const double a_nudge_epsilon) {
+        std::pair<PtWithGradient<typename PtType::gradient_type>, ScalarType>,
+        2>* a_intercepts,
+    const ScalarType a_nudge_epsilon) {
+  /* Defining constants and types */
   using gradient_type = typename PtType::gradient_type;
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+
+  /* Function */
   const auto pt_diff_with_grad = a_pt_1 - a_pt_0;
   const auto& pt_0 = a_pt_0.getPt();
   const auto& pt_1 = a_pt_1.getPt();
   const auto& pt_diff = pt_diff_with_grad.getPt();
   const auto& pt_0_grad = a_pt_0.getData();
   const auto& pt_diff_grad = pt_diff_with_grad.getData();
-  const double A = a_paraboloid.a(), B = a_paraboloid.b();
-  auto A_grad = gradient_type(0.0), B_grad = gradient_type(0.0);
-  A_grad.setGradA(1.0);
-  B_grad.setGradB(1.0);
-  const double a = A * pt_diff[0] * pt_diff[0] + B * pt_diff[1] * pt_diff[1];
-  const double b =
-      2.0 * (A * pt_diff[0] * pt_0[0] + B * pt_diff[1] * pt_0[1]) + pt_diff[2];
-  const double c = A * pt_0[0] * pt_0[0] + B * pt_0[1] * pt_0[1] + pt_0[2];
+  const ScalarType A = a_paraboloid.a(), B = a_paraboloid.b();
+  auto A_grad = gradient_type(ZERO), B_grad = gradient_type(ZERO);
+  A_grad.setGradA(ONE);
+  B_grad.setGradB(ONE);
+  const ScalarType a =
+      A * pt_diff[0] * pt_diff[0] + B * pt_diff[1] * pt_diff[1];
+  const ScalarType b =
+      TWO * (A * pt_diff[0] * pt_0[0] + B * pt_diff[1] * pt_0[1]) + pt_diff[2];
+  const ScalarType c = A * pt_0[0] * pt_0[0] + B * pt_0[1] * pt_0[1] + pt_0[2];
   const auto a_grad = A_grad * pt_diff[0] * pt_diff[0] +
                       B_grad * pt_diff[1] * pt_diff[1] +
-                      A * (2.0 * pt_diff_grad[0] * pt_diff[0]) +
-                      B * (2.0 * pt_diff_grad[1] * pt_diff[1]);
+                      A * (TWO * pt_diff_grad[0] * pt_diff[0]) +
+                      B * (TWO * pt_diff_grad[1] * pt_diff[1]);
   const auto b_grad =
-      2.0 * (A_grad * pt_diff[0] * pt_0[0] + B_grad * pt_diff[1] * pt_0[1] +
+      TWO * (A_grad * pt_diff[0] * pt_0[0] + B_grad * pt_diff[1] * pt_0[1] +
              A * (pt_diff_grad[0] * pt_0[0] + pt_diff[0] * pt_0_grad[0]) +
              B * (pt_diff_grad[1] * pt_0[1] + pt_diff[1] * pt_0_grad[1])) +
       pt_diff_grad[2];
   const auto c_grad = A_grad * pt_0[0] * pt_0[0] + B_grad * pt_0[1] * pt_0[1] +
-                      A * 2.0 * pt_0_grad[0] * pt_0[0] +
-                      B * 2.0 * pt_0_grad[1] * pt_0[1] + pt_0_grad[2];
+                      A * TWO * pt_0_grad[0] * pt_0[0] +
+                      B * TWO * pt_0_grad[1] * pt_0[1] + pt_0_grad[2];
   a_intercepts->resize(0);
   const auto solutions = solveQuadraticWithGradient<gradient_type>(
       a, b, c, a_grad, b_grad, c_grad);
   for (const auto& solution : solutions) {
     const auto sol = solution.first;
     const auto sol_grad = solution.second;
-    if (sol >= -a_nudge_epsilon && sol <= 1.0 + a_nudge_epsilon) {
+    if (sol >= -a_nudge_epsilon && sol <= ONE + a_nudge_epsilon) {
       auto intersection = PtType(Pt(pt_0 + sol * pt_diff));
       for (UnsignedIndex_t d = 0; d < 3; ++d) {
         intersection.getData()[d] =
             pt_0_grad[d] + sol_grad * pt_diff[d] + sol * pt_diff_grad[d];
       }
-      a_intercepts->push_back(std::pair<PtType, double>({intersection, sol}));
+      a_intercepts->push_back(
+          std::pair<PtType, ScalarType>({intersection, sol}));
     }
   }
 }
 
+/**************** Flag: is vertex below aligned paraboloid? *****************/
 template <class VertexType>
 bool vertexBelow(const VertexType& a_pt,
-                 const AlignedParaboloid& a_paraboloid) {
+                 const AlignedParaboloidBase<typename VertexType::value_type>&
+                     a_paraboloid) {
   const auto& pt = a_pt.getPt();
   return pt[2] <
          -(a_paraboloid.a() * pt[0] * pt[0] + a_paraboloid.b() * pt[1] * pt[1]);
@@ -913,13 +1143,15 @@ bool vertexBelow(const VertexType& a_pt,
 // This algorithm is based on the method shared from the website below, and
 // from several stackoverflow posts citing that website.
 // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+template <class ScalarType>
 inline bool isPtBeforeIntersectionWithEdge(
-    const std::array<double, 2>& a_test_pt, const Pt& a_vertex_0,
-    const Pt& a_vertex_1) {
+    const std::array<ScalarType, 2>& a_test_pt,
+    const PtBase<ScalarType>& a_vertex_0,
+    const PtBase<ScalarType>& a_vertex_1) {
   if ((a_test_pt[1] > a_vertex_0[1]) == (a_test_pt[1] > a_vertex_1[1])) {
     return false;  // Projected ray never intersects edge.
   }
-  double location_of_intersection_along_ray =
+  const ScalarType location_of_intersection_along_ray =
       (a_vertex_0[0] - a_vertex_1[0]) * (a_test_pt[1] - a_vertex_1[1]) /
           (a_vertex_0[1] - a_vertex_1[1]) +
       a_vertex_1[0];
@@ -931,16 +1163,17 @@ inline bool isPtBeforeIntersectionWithEdge(
 // This algorithm is based on the method shared from the website below, and
 // from several stackoverflow posts citing that website.
 // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+template <class ScalarType>
 inline bool isPtBeforeIntersectionWithEdgeWithComponent(
-    const Pt& a_test_pt, const Pt& a_vertex_0, const Pt& a_vertex_1,
-    const UnsignedIndex_t a_index) {
+    const PtBase<ScalarType>& a_test_pt, const PtBase<ScalarType>& a_vertex_0,
+    const PtBase<ScalarType>& a_vertex_1, const UnsignedIndex_t a_index) {
   const UnsignedIndex_t id0 = a_index;
   const UnsignedIndex_t id1 = (a_index + 1) % 3;
   if ((a_test_pt[id1] > a_vertex_0[id1]) ==
       (a_test_pt[id1] > a_vertex_1[id1])) {
     return false;  // Projected ray never intersects edge.
   }
-  double location_of_intersection_along_ray =
+  const ScalarType location_of_intersection_along_ray =
       (a_vertex_0[id0] - a_vertex_1[id0]) * (a_test_pt[id1] - a_vertex_1[id1]) /
           (a_vertex_0[id1] - a_vertex_1[id1]) +
       a_vertex_1[id0];
@@ -951,19 +1184,25 @@ inline bool isPtBeforeIntersectionWithEdgeWithComponent(
 
 // If centroid is outside of polygon, or any vertex on face
 // is inside the ellipse, then the ellipse is not contained by the face.
-template <class HalfEdgeType>
-bool ellipseContainedInFace(const AlignedParaboloid& a_aligned_paraboloid,
-                            const Plane& a_face_plane,
-                            HalfEdgeType* const a_half_edge) {
+template <class ScalarType, class HalfEdgeType>
+bool ellipseContainedInFace(
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PlaneBase<ScalarType>& a_face_plane,
+    HalfEdgeType* const a_half_edge) {
+  /* Defining constants and types */
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+
+  /* Function */
   const auto& face_normal = a_face_plane.normal();
-  const std::array<double, 2> conic_center{
-      {face_normal[0] / (2.0 * a_aligned_paraboloid.a() * face_normal[2]),
-       face_normal[1] / (2.0 * a_aligned_paraboloid.b() * face_normal[2])}};
-  const double delta_face = a_face_plane.distance() / face_normal[2];
-  const double gamma_face =
+  const std::array<ScalarType, 2> conic_center{
+      {face_normal[0] / (TWO * a_aligned_paraboloid.a() * face_normal[2]),
+       face_normal[1] / (TWO * a_aligned_paraboloid.b() * face_normal[2])}};
+  const ScalarType delta_face = a_face_plane.distance() / face_normal[2];
+  const ScalarType gamma_face =
       a_aligned_paraboloid.a() * conic_center[0] * conic_center[0] +
       a_aligned_paraboloid.b() * conic_center[1] * conic_center[1] - delta_face;
-  if (a_aligned_paraboloid.a() * gamma_face < 0.0) {
+  if (a_aligned_paraboloid.a() * gamma_face < ZERO) {
     return false;
   }
 
@@ -973,13 +1212,16 @@ bool ellipseContainedInFace(const AlignedParaboloid& a_aligned_paraboloid,
   // lives on the x/y plane and project the polygon
   // down to it as well (essentially neglecting the z component).
   auto current_half_edge = a_half_edge;
-  std::array<double, 2> xy_min{{DBL_MAX, DBL_MAX}};
-  std::array<double, 2> xy_max{{-DBL_MAX, -DBL_MAX}};
+  std::array<ScalarType, 2> xy_min{
+      {static_cast<ScalarType>(DBL_MAX), static_cast<ScalarType>(DBL_MAX)}};
+  std::array<ScalarType, 2> xy_max{
+      {-static_cast<ScalarType>(DBL_MAX), -static_cast<ScalarType>(DBL_MAX)}};
   do {
-    const Pt& location = current_half_edge->getVertex()->getLocation().getPt();
+    const PtBase<ScalarType>& location =
+        current_half_edge->getVertex()->getLocation().getPt();
     for (UnsignedIndex_t d = 0; d < 2; ++d) {
-      xy_min[d] = std::min(xy_min[d], location[d]);
-      xy_max[d] = std::max(xy_max[d], location[d]);
+      xy_min[d] = minimum(xy_min[d], location[d]);
+      xy_max[d] = maximum(xy_max[d], location[d]);
     }
     current_half_edge = current_half_edge->getNextHalfEdge();
   } while (current_half_edge != a_half_edge);
@@ -995,11 +1237,12 @@ bool ellipseContainedInFace(const AlignedParaboloid& a_aligned_paraboloid,
   current_half_edge = a_half_edge;
   bool pt_internal_to_polygon = false;
   do {
-    const Pt& location_0 =
+    const PtBase<ScalarType>& location_0 =
         current_half_edge->getPreviousVertex()->getLocation().getPt();
-    const Pt& location_1 =
+    const PtBase<ScalarType>& location_1 =
         current_half_edge->getVertex()->getLocation().getPt();
-    if (isPtBeforeIntersectionWithEdge(conic_center, location_0, location_1)) {
+    if (isPtBeforeIntersectionWithEdge<ScalarType>(conic_center, location_0,
+                                                   location_1)) {
       pt_internal_to_polygon = !pt_internal_to_polygon;
     }
     current_half_edge = current_half_edge->getNextHalfEdge();
@@ -1007,77 +1250,124 @@ bool ellipseContainedInFace(const AlignedParaboloid& a_aligned_paraboloid,
   return pt_internal_to_polygon;
 }
 
-template <class ReturnType, class HalfEdgeType, class SurfaceOutputType>
-ReturnType orientAndApplyType3Correction(const AlignedParaboloid& a_paraboloid,
-                                         HalfEdgeType* a_start,
-                                         HalfEdgeType* a_end,
-                                         SurfaceOutputType* a_surface,
-                                         bool* a_requires_nudge,
-                                         Normal& a_nudge_direction) {
+template <class ReturnType, class ScalarType, class HalfEdgeType,
+          class SurfaceOutputType>
+ReturnType orientAndApplyType3Correction(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    HalfEdgeType* a_start, HalfEdgeType* a_end, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction, SurfaceOutputType* a_surface) {
+  /* Defining constants and types */
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+  const ScalarType MACHINE_EPSILON = machine_epsilon<ScalarType>();
+  const ScalarType DISTANCE_EPSILON = distance_epsilon<ScalarType>();
+  const ScalarType ANGLE_EPSILON = angle_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType HALF = ONE / TWO;
+  const ScalarType TEN = static_cast<ScalarType>(10);
+  const ScalarType ONE_HUNDRED = static_cast<ScalarType>(100);
+
+  /* Function */
   const auto& pt_0 = a_start->getVertex()->getLocation().getPt();
   const auto& pt_1 = a_end->getVertex()->getLocation().getPt();
   const auto edge_vector = Normal(pt_1 - pt_0);
   const auto& face_plane = a_end->getFace()->getPlane();
   const auto& face_normal = face_plane.normal();
-  Normal tgt_0 = computeTangentVectorAtPoint(a_paraboloid, face_normal, pt_0);
-  Normal tgt_1 = computeTangentVectorAtPoint(a_paraboloid, face_normal, pt_1);
-  const bool elliptic_face = a_paraboloid.a() * a_paraboloid.b() > 0.0 &&
-                             std::fabs(face_normal[2]) > DBL_EPSILON;
+  Normal tgt_0 =
+      computeTangentVectorAtPoint<ScalarType>(a_paraboloid, face_normal, pt_0);
+  Normal tgt_1 =
+      computeTangentVectorAtPoint<ScalarType>(a_paraboloid, face_normal, pt_1);
+  const bool elliptic_face = a_paraboloid.a() * a_paraboloid.b() > ZERO &&
+                             fabs(face_normal[2]) > MACHINE_EPSILON;
 
-  if ((tgt_0[0] == 0.0 && tgt_0[1] == 0.0 && tgt_0[2] == 0.0) ||
-      (tgt_1[0] == 0.0 && tgt_1[1] == 0.0 && tgt_1[2] == 0.0)) {
+  if ((tgt_0[0] == ZERO && tgt_0[1] == ZERO && tgt_0[2] == ZERO) ||
+      (tgt_1[0] == ZERO && tgt_1[1] == ZERO && tgt_1[2] == ZERO)) {
     *a_requires_nudge = true;
-    a_nudge_direction = Normal(2.0 * a_paraboloid.a() * pt_0[0],
-                               2.0 * a_paraboloid.b() * pt_0[1], 1.0);
-    if (a_nudge_direction * face_normal > 0.0) a_nudge_direction *= -1.0;
+    a_nudge_direction = Normal(TWO * a_paraboloid.a() * pt_0[0],
+                               TWO * a_paraboloid.b() * pt_0[1], ONE);
+    if (a_nudge_direction * face_normal > ZERO) a_nudge_direction *= -ONE;
     a_nudge_direction.normalize();
-    return ReturnType::fromScalarConstant(0.0);
+    return ReturnType::fromScalarConstant(ZERO);
   }
 
   if (!elliptic_face)  // The arc is from a hyperbola or parabola
   {
-    if (squaredMagnitude(edge_vector) < 1.0e4 * DBL_EPSILON * DBL_EPSILON) {
+    const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
+    if (squaredMagnitude(edge_vector) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        a_surface->addArc(
-            RationalBezierArc(pt_1, 0.5 * (pt_0 + pt_1), pt_0, 0.0));
+        auto surface_arc = RationalBezierArc(
+            pt_1.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+            pt_0.toDoublePt(), 0.0);
+        surface_arc.reset_start_point_id(
+            reinterpret_cast<std::uintptr_t>(&pt_1));
+        surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+        a_surface->addArc(surface_arc);
       }
-      return ReturnType::fromScalarConstant(0.0);
+      if (fabs(n_cross_t0 * tgt_1) < ANGLE_EPSILON &&
+          fabs(ONE - fabs(dotProduct(edge_vector, tgt_0))) < ANGLE_EPSILON) {
+        return ReturnType::fromScalarConstant(ZERO);
+      } else {
+        *a_requires_nudge = true;
+        a_nudge_direction = Normal(TWO * a_paraboloid.a() * pt_0[0],
+                                   TWO * a_paraboloid.b() * pt_0[1], ONE);
+        if (a_nudge_direction * face_normal > ZERO) a_nudge_direction *= -ONE;
+        a_nudge_direction.normalize();
+        return ReturnType::fromScalarConstant(ZERO);
+      }
     } else {
-      const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
-      if (std::fabs(n_cross_t0 * tgt_1) <
-          100.0 * DBL_EPSILON) {  // The tangents are (close to being) parallel
+      if (fabs(n_cross_t0 * tgt_1) <
+          ANGLE_EPSILON) {  // The tangents are (close to being) parallel
         if constexpr (!std::is_same<SurfaceOutputType,
                                     NoSurfaceOutput>::value) {
-          a_surface->addArc(
-              RationalBezierArc(pt_1, 0.5 * (pt_0 + pt_1), pt_0, 0.0));
+          auto surface_arc = RationalBezierArc(
+              pt_1.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+              pt_0.toDoublePt(), 0.0);
+          surface_arc.reset_start_point_id(
+              reinterpret_cast<std::uintptr_t>(&pt_1));
+          surface_arc.reset_end_point_id(
+              reinterpret_cast<std::uintptr_t>(&pt_0));
+          a_surface->addArc(surface_arc);
         }
-        return ReturnType::fromScalarConstant(0.0);
+        return ReturnType::fromScalarConstant(ZERO);
       } else {  // The tangents are NOT parallel
         // Compute control point
-        const double lambda_1 =
+        const ScalarType lambda_1 =
             -(n_cross_t0 * edge_vector) / (n_cross_t0 * tgt_1);
         auto control_pt = Pt(pt_1 + lambda_1 * tgt_1);
-        const double correction_normal =
+        const ScalarType correction_normal =
             Normal(control_pt - pt_0) * face_normal;
         control_pt = control_pt - correction_normal * face_normal;
 
         // Orient tangents to point towards control point
-        tgt_0 = (tgt_0 * Normal(control_pt - pt_0)) < 0.0 ? -tgt_0 : tgt_0;
-        tgt_1 = (tgt_1 * Normal(control_pt - pt_1)) < 0.0 ? -tgt_1 : tgt_1;
+        tgt_0 = (tgt_0 * Normal(control_pt - pt_0)) < ZERO ? -tgt_0 : tgt_0;
+        tgt_1 = (tgt_1 * Normal(control_pt - pt_1)) < ZERO ? -tgt_1 : tgt_1;
 
         // Construct Bezier arc from tangents
-        const auto arc = RationalBezierArc(pt_1, tgt_1, pt_0, tgt_0,
-                                           face_normal, a_paraboloid);
+        const auto arc = RationalBezierArcBase<ScalarType>(
+            pt_1, tgt_1, pt_0, tgt_0, face_normal, a_paraboloid);
         if constexpr (!std::is_same<SurfaceOutputType,
                                     NoSurfaceOutput>::value) {
-          a_surface->addArc(arc);
+          auto surface_arc = RationalBezierArc(
+              pt_1.toDoublePt(), tgt_1.toDoubleNormal(), pt_0.toDoublePt(),
+              tgt_0.toDoubleNormal(), face_normal.toDoubleNormal(),
+              AlignedParaboloidBase<double>(a_paraboloid));
+          surface_arc.reset_start_point_id(
+              reinterpret_cast<std::uintptr_t>(&pt_1));
+          surface_arc.reset_end_point_id(
+              reinterpret_cast<std::uintptr_t>(&pt_0));
+          a_surface->addArc(surface_arc);
         }
-        if (arc.weight() < 0.0) {
+        if (arc.weight() < ZERO) {
           *a_requires_nudge = true;
           a_nudge_direction = face_normal;
-          return ReturnType::fromScalarConstant(0.0);
+          return ReturnType::fromScalarConstant(ZERO);
         }
-        return computeType3Contribution<ReturnType>(a_paraboloid, arc);
+        return computeType3Contribution<ReturnType, ScalarType>(a_paraboloid,
+                                                                arc);
       }
     }
   } else  // The arc is from an ellipse
@@ -1091,6 +1381,11 @@ ReturnType orientAndApplyType3Correction(const AlignedParaboloid& a_paraboloid,
     Normal edge_0 = (squaredMagnitude(edge_00) > squaredMagnitude(edge_01))
                         ? edge_00
                         : edge_01;
+    if (squaredMagnitude(edge_0) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      *a_requires_nudge = true;
+      a_nudge_direction = face_normal;
+      return ReturnType::fromScalarConstant(ZERO);
+    }
     edge_0.normalize();
     Normal edge_10 = a_end->getVertex()->getLocation().getPt() -
                      a_end->getPreviousVertex()->getLocation().getPt();
@@ -1100,112 +1395,93 @@ ReturnType orientAndApplyType3Correction(const AlignedParaboloid& a_paraboloid,
     Normal edge_1 = (squaredMagnitude(edge_10) > squaredMagnitude(edge_11))
                         ? edge_10
                         : edge_11;
+    if (squaredMagnitude(edge_1) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      *a_requires_nudge = true;
+      a_nudge_direction = face_normal;
+      return ReturnType::fromScalarConstant(ZERO);
+    }
     edge_1.normalize();
     bool tgt_0_parallel_edge_0 =
-        std::abs(1.0 - std::fabs(tgt_0 * edge_0)) < 100.0 * DBL_EPSILON;
+        fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
     bool tgt_1_parallel_edge_1 =
-        std::abs(1.0 - std::fabs(tgt_1 * edge_1)) < 100.0 * DBL_EPSILON;
+        fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge normal
     {
       const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
       const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
-      tgt_0 = (edge_normal_0 * tgt_0 < 0.0) ? -tgt_0 : tgt_0;
-      tgt_1 = (edge_normal_1 * tgt_1 < 0.0) ? -tgt_1 : tgt_1;
+      tgt_0 = (edge_normal_0 * tgt_0 < ZERO) ? -tgt_0 : tgt_0;
+      tgt_1 = (edge_normal_1 * tgt_1 < ZERO) ? -tgt_1 : tgt_1;
     } else {
       // Compute ellipse center an orient tangents accordingly
-      const Pt conic_center = conicCenter(face_plane, a_paraboloid);
+      const Pt conic_center = conicCenter<ScalarType>(face_plane, a_paraboloid);
       auto center_to_pt_0 = Normal(pt_0 - conic_center);
       center_to_pt_0.normalize();
       auto center_to_pt_1 = Normal(pt_1 - conic_center);
       center_to_pt_1.normalize();
       Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
       Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
-      assert(std::abs(tgt_0 * dummy_tgt_0) > 10.0 * DBL_EPSILON);
-      assert(std::abs(tgt_1 * dummy_tgt_1) > 10.0 * DBL_EPSILON);
-      tgt_0 = (tgt_0 * dummy_tgt_0) < 0.0 ? -tgt_0 : tgt_0;
-      tgt_1 = (tgt_1 * dummy_tgt_1) > 0.0 ? -tgt_1 : tgt_1;
+      assert(fabs(tgt_0 * dummy_tgt_0) > ANGLE_EPSILON);
+      assert(fabs(tgt_1 * dummy_tgt_1) > ANGLE_EPSILON);
+      tgt_0 = (tgt_0 * dummy_tgt_0) < ZERO ? -tgt_0 : tgt_0;
+      tgt_1 = (tgt_1 * dummy_tgt_1) > ZERO ? -tgt_1 : tgt_1;
       // At this point, the tangents form a valid arc (but they may be
       // oriented in the wrong direction)
       if (!tgt_0_parallel_edge_0) {
         const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
-        if (edge_normal_0 * tgt_0 < 0.0) {
+        if (edge_normal_0 * tgt_0 < ZERO) {
           tgt_0 = -tgt_0;
           tgt_1 = -tgt_1;
         }
       } else if (!tgt_1_parallel_edge_1) {
         const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
-        if (edge_normal_1 * tgt_1 < 0.0) {
+        if (edge_normal_1 * tgt_1 < ZERO) {
           tgt_0 = -tgt_0;
           tgt_1 = -tgt_1;
         }
       } else {
-        if (a_paraboloid.a() < 0.0) {
+        if (a_paraboloid.a() < ZERO) {
           tgt_0 = -tgt_0;
           tgt_1 = -tgt_1;
         }
-        // // The arcs should have been sorted in this case!! This allows to
-        // // project the mid-point onto the arc, and check that it belongs to
-        // // the face
-        // const Pt avg_pt = 0.5 * (pt_0 + pt_1);
-        // auto avg_tgt = Normal(0.5 * (tgt_0 + tgt_1));
-        // if (squaredMagnitude(avg_tgt) < 1.0e6 * DBL_EPSILON * DBL_EPSILON)
-        // {
-        //   avg_tgt = Normal(0.25 * tgt_0 + 0.75 * tgt_1);
-        // }
-        // avg_tgt.normalize();
-        // Pt proj_test =
-        //     projectPtAlongHalfLineOntoParaboloid(a_paraboloid, avg_tgt,
-        //     avg_pt);
-        // // Check if test projected point is inside the face
-        // UnsignedIndex_t best_proj_dir = 0;
-        // if (std::fabs(face_normal[best_proj_dir]) <
-        // std::fabs(face_normal[1]))
-        //   best_proj_dir = 1;
-        // if (std::fabs(face_normal[best_proj_dir]) <
-        // std::fabs(face_normal[2]))
-        //   best_proj_dir = 2;
-        // const UnsignedIndex_t start_id_for_search = (best_proj_dir + 1) %
-        // 3; auto current_half_edge = a_start; bool pt_internal_to_polygon =
-        // false; do {
-        //   const Pt& location_0 =
-        //       current_half_edge->getPreviousVertex()->getLocation().getPt();
-        //   const Pt& location_1 =
-        //       current_half_edge->getVertex()->getLocation().getPt();
-        //   if (isPtBeforeIntersectionWithEdgeWithComponent(
-        //           proj_test, location_0, location_1, start_id_for_search))
-        //           {
-        //     pt_internal_to_polygon = !pt_internal_to_polygon;
-        //   }
-        //   current_half_edge = current_half_edge->getNextHalfEdge();
-        // } while (current_half_edge != a_start);
-
-        // // If test point is not inside face, invert tangents
-        // if (!pt_internal_to_polygon) {
-        //   tgt_0 = -tgt_0;
-        //   tgt_1 = -tgt_1;
-        // }
       }
     }
-    // std::cout << "Arc " << pt_1 << " -- " << pt_0 << " with tangents " <<
-    // tgt_1
-    //           << " -- " << tgt_0 << std::endl;
     UnsignedIndex_t split_counter = 0;
-    return computeType3ContributionWithSplit<ReturnType>(
-        a_paraboloid, face_normal, pt_1, pt_1, pt_0, tgt_1, tgt_0, a_surface,
-        a_requires_nudge, a_nudge_direction, &split_counter);
+    return computeType3ContributionWithSplit<ReturnType, ScalarType>(
+        a_paraboloid, face_normal, pt_1, pt_1, pt_0, tgt_1, tgt_0,
+        a_requires_nudge, a_nudge_direction, &split_counter, a_surface);
   }
 
-  return ReturnType::fromScalarConstant(0.0);
+  return ReturnType::fromScalarConstant(ZERO);
 }  // namespace IRL
 
-template <class ReturnType, class HalfEdgeType, class SurfaceOutputType>
+// TODO
+template <class ReturnType, class ScalarType, class HalfEdgeType,
+          class SurfaceOutputType>
 ReturnType orientAndApplyType3CorrectionWithGradients(
     const AlignedParaboloid& a_paraboloid, HalfEdgeType* a_start,
     HalfEdgeType* a_end, SurfaceOutputType* a_surface, bool* a_requires_nudge,
     Normal& a_nudge_direction) {
+  /* Defining constants and types */
   using gradient_type = typename ReturnType::gradient_type;
   using pt_type = PtWithGradient<gradient_type>;
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+  const ScalarType EPSILON =
+      maximum(machine_epsilon<ScalarType>(), static_cast<ScalarType>(1.0e-24q));
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType FOUR = static_cast<ScalarType>(4);
+  const ScalarType HALF = ONE / TWO;
+  const ScalarType ONEQUARTER = ONE / FOUR;
+  const ScalarType THREEQUARTERS = HALF + ONEQUARTER;
+  const ScalarType TEN = static_cast<ScalarType>(10);
+  const ScalarType ONE_HUNDRED = static_cast<ScalarType>(100);
+
+  /* Function */
   const pt_type& pt_withgrad_0 = a_start->getVertex()->getLocation();
   const pt_type& pt_withgrad_1 = a_end->getVertex()->getLocation();
   const pt_type edge_vector_withgrad = pt_withgrad_1 - pt_withgrad_0;
@@ -1219,62 +1495,74 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
   auto face_normal_withgrad =
       pt_type(Pt(face_normal[0], face_normal[1], face_normal[2]));
   auto& face_normal_grad = face_normal_withgrad.getData();
-  face_normal_grad[0].setGradRx(0.0);
+  face_normal_grad[0].setGradRx(ZERO);
   face_normal_grad[1].setGradRx(face_normal[2]);
   face_normal_grad[2].setGradRx(-face_normal[1]);
   face_normal_grad[0].setGradRy(-face_normal[2]);
-  face_normal_grad[1].setGradRy(0.0);
+  face_normal_grad[1].setGradRy(ZERO);
   face_normal_grad[2].setGradRy(face_normal[0]);
   face_normal_grad[0].setGradRz(face_normal[1]);
   face_normal_grad[1].setGradRz(-face_normal[0]);
-  face_normal_grad[2].setGradRz(0.0);
+  face_normal_grad[2].setGradRz(ZERO);
 
   // Compute tangents and their gradient
-  auto tgt_withgrad_0 = computeTangentVectorAndGradientAtPoint<pt_type>(
-      a_paraboloid, face_normal_withgrad, pt_withgrad_0);
-  auto tgt_withgrad_1 = computeTangentVectorAndGradientAtPoint<pt_type>(
-      a_paraboloid, face_normal_withgrad, pt_withgrad_1);
+  auto tgt_withgrad_0 =
+      computeTangentVectorAndGradientAtPoint<ScalarType, pt_type>(
+          a_paraboloid, face_normal_withgrad, pt_withgrad_0);
+  auto tgt_withgrad_1 =
+      computeTangentVectorAndGradientAtPoint<ScalarType, pt_type>(
+          a_paraboloid, face_normal_withgrad, pt_withgrad_1);
   auto tgt_0 = Normal::fromPt(tgt_withgrad_0.getPt());
   auto tgt_1 = Normal::fromPt(tgt_withgrad_1.getPt());
   const bool elliptic_face =
-      a_paraboloid.a() * a_paraboloid.b() > 0.0 && face_normal[2] != 0.0;
+      a_paraboloid.a() * a_paraboloid.b() > ZERO && face_normal[2] != ZERO;
 
   if (!elliptic_face)  // The arc is from a hyperbola or parabola
   {
     const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
-    if (std::fabs(n_cross_t0 * tgt_1) <
-        100.0 * DBL_EPSILON)  // The tangents are (close to being) parallel
+    if (fabs(n_cross_t0 * tgt_1) <
+        ONE_HUNDRED * EPSILON)  // The tangents are (close to being) parallel
     {
       // We consider an arc with zero contribution
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        a_surface->addArc(
-            RationalBezierArc(pt_1, 0.5 * (pt_0 + pt_1), pt_0, 0.0));
+        auto surface_arc = RationalBezierArc(
+            pt_1.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
+            pt_0.toDoublePt(), 0.0);
+        surface_arc.reset_start_point_id(
+            reinterpret_cast<std::uintptr_t>(&pt_1));
+        surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+        a_surface->addArc(surface_arc);
       }
-      return ReturnType::fromScalarConstant(0.0);
+      return ReturnType::fromScalarConstant(ZERO);
     } else {  // The tangents are NOT parallel
       // Compute control point
-      const double lambda_1 =
+      const ScalarType lambda_1 =
           -(n_cross_t0 * edge_vector) / safelyEpsilon(n_cross_t0 * tgt_1);
       const auto control_pt = Pt(pt_1 + lambda_1 * tgt_1);
       // Orient tangents to point towards control point
-      tgt_withgrad_0 = (tgt_0 * Normal(control_pt - pt_0)) < 0.0
+      tgt_withgrad_0 = (tgt_0 * Normal(control_pt - pt_0)) < ZERO
                            ? -tgt_withgrad_0
                            : tgt_withgrad_0;
-      tgt_withgrad_1 = (tgt_1 * Normal(control_pt - pt_1)) < 0.0
+      tgt_withgrad_1 = (tgt_1 * Normal(control_pt - pt_1)) < ZERO
                            ? -tgt_withgrad_1
                            : tgt_withgrad_1;
       // Construct Bezier arc from tangents
-      const auto arc_with_gradient = RationalBezierArcWithGradient<pt_type>(
-          pt_withgrad_1, tgt_withgrad_1, pt_withgrad_0, tgt_withgrad_0,
-          face_normal_withgrad, a_paraboloid);
+      const auto arc_with_gradient =
+          RationalBezierArcWithGradientBase<pt_type, ScalarType>(
+              pt_withgrad_1, tgt_withgrad_1, pt_withgrad_0, tgt_withgrad_0,
+              face_normal_withgrad, a_paraboloid);
       if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        const auto arc =
-            RationalBezierArc(pt_1, arc_with_gradient.control_point().getPt(),
-                              pt_0, arc_with_gradient.weight());
-        a_surface->addArc(arc);
+        auto surface_arc = RationalBezierArc(
+            pt_1.toDoublePt(),
+            arc_with_gradient.control_point().getPt().toDoublePt(),
+            pt_0.toDoublePt(), static_cast<double>(arc_with_gradient.weight()));
+        surface_arc.reset_start_point_id(
+            reinterpret_cast<std::uintptr_t>(&pt_1));
+        surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
+        a_surface->addArc(surface_arc);
       }
-      return computeType3Contribution<ReturnType>(a_paraboloid,
-                                                  arc_with_gradient);
+      return computeType3ContributionWithGradient<ReturnType, ScalarType>(
+          a_paraboloid, arc_with_gradient);
     }
   } else  // The arc is from an ellipse
   {
@@ -1300,9 +1588,9 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
                         : edge_11;
     edge_1.normalize();
     bool tgt_0_parallel_edge_0 =
-        std::abs(1.0 - std::fabs(tgt_0 * edge_0)) < 100.0 * DBL_EPSILON;
+        fabs(ONE - fabs(tgt_0 * edge_0)) < ONE_HUNDRED * EPSILON;
     bool tgt_1_parallel_edge_1 =
-        std::abs(1.0 - std::fabs(tgt_1 * edge_1)) < 100.0 * DBL_EPSILON;
+        fabs(ONE - fabs(tgt_1 * edge_1)) < ONE_HUNDRED * EPSILON;
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge
                                  // normal
@@ -1310,9 +1598,9 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
       const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
       const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
       tgt_withgrad_0 =
-          (edge_normal_0 * tgt_0 < 0.0) ? -tgt_withgrad_0 : tgt_withgrad_0;
+          (edge_normal_0 * tgt_0 < ZERO) ? -tgt_withgrad_0 : tgt_withgrad_0;
       tgt_withgrad_1 =
-          (edge_normal_1 * tgt_1 < 0.0) ? -tgt_withgrad_1 : tgt_withgrad_1;
+          (edge_normal_1 * tgt_1 < ZERO) ? -tgt_withgrad_1 : tgt_withgrad_1;
     } else {
       // Compute ellipse center an orient tangents accordingly
       const Pt conic_center = conicCenter(face_plane, a_paraboloid);
@@ -1322,45 +1610,46 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
       center_to_pt_1.normalize();
       Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
       Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
-      assert(std::abs(tgt_0 * dummy_tgt_0) > 10.0 * DBL_EPSILON);
-      assert(std::abs(tgt_1 * dummy_tgt_1) > 10.0 * DBL_EPSILON);
-      tgt_0 = (tgt_0 * dummy_tgt_0) < 0.0 ? -tgt_0 : tgt_0;
+      assert(fabs(tgt_0 * dummy_tgt_0) > TEN * EPSILON);
+      assert(fabs(tgt_1 * dummy_tgt_1) > TEN * EPSILON);
+      tgt_0 = (tgt_0 * dummy_tgt_0) < ZERO ? -tgt_0 : tgt_0;
       tgt_withgrad_0 =
-          (tgt_0 * dummy_tgt_0) < 0.0 ? -tgt_withgrad_0 : tgt_withgrad_0;
-      tgt_1 = (tgt_1 * dummy_tgt_1) > 0.0 ? -tgt_1 : tgt_1;
+          (tgt_0 * dummy_tgt_0) < ZERO ? -tgt_withgrad_0 : tgt_withgrad_0;
+      tgt_1 = (tgt_1 * dummy_tgt_1) > ZERO ? -tgt_1 : tgt_1;
       tgt_withgrad_1 =
-          (tgt_1 * dummy_tgt_1) > 0.0 ? -tgt_withgrad_1 : tgt_withgrad_1;
+          (tgt_1 * dummy_tgt_1) > ZERO ? -tgt_withgrad_1 : tgt_withgrad_1;
       // At this point, the tangents form a valid arc (but they may be
       // oriented in the wrong direction)
       if (!tgt_0_parallel_edge_0) {
         const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
-        if (edge_normal_0 * tgt_0 < 0.0) {
+        if (edge_normal_0 * tgt_0 < ZERO) {
           tgt_withgrad_0 = -tgt_withgrad_0;
           tgt_withgrad_1 = -tgt_withgrad_1;
         }
       } else if (!tgt_1_parallel_edge_1) {
         const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
-        if (edge_normal_1 * tgt_1 < 0.0) {
+        if (edge_normal_1 * tgt_1 < ZERO) {
           tgt_withgrad_0 = -tgt_withgrad_0;
           tgt_withgrad_1 = -tgt_withgrad_1;
         }
       } else {
-        // The arcs should have been sorted in this case!! This allows to
-        // project the mid-point onto the arc, and check that it belongs to
-        // the face
-        const Pt avg_pt = 0.5 * (pt_0 + pt_1);
-        auto avg_tgt = Normal(0.5 * (tgt_0 + tgt_1));
-        if (squaredMagnitude(avg_tgt) < 1.0e6 * DBL_EPSILON * DBL_EPSILON) {
-          avg_tgt = Normal(0.25 * tgt_0 + 0.75 * tgt_1);
+        // The arcs should have been sorted in this case!! This allows
+        // to project the mid-point onto the arc, and check that it
+        // belongs to the face
+        const Pt avg_pt = HALF * (pt_0 + pt_1);
+        auto avg_tgt = Normal(HALF * (tgt_0 + tgt_1));
+        if (squaredMagnitude(avg_tgt) <
+            static_cast<ScalarType>(1.0e6) * EPSILON * EPSILON) {
+          avg_tgt = Normal(ONEQUARTER * tgt_0 + THREEQUARTERS * tgt_1);
         }
         avg_tgt.normalize();
-        Pt proj_test =
-            projectPtAlongHalfLineOntoParaboloid(a_paraboloid, avg_tgt, avg_pt);
+        Pt proj_test = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
+            a_paraboloid, avg_tgt, avg_pt);
         // Check if test projected point is inside the face
         UnsignedIndex_t best_proj_dir = 0;
-        if (std::fabs(face_normal[best_proj_dir]) < std::fabs(face_normal[1]))
+        if (fabs(face_normal[best_proj_dir]) < fabs(face_normal[1]))
           best_proj_dir = 1;
-        if (std::fabs(face_normal[best_proj_dir]) < std::fabs(face_normal[2]))
+        if (fabs(face_normal[best_proj_dir]) < fabs(face_normal[2]))
           best_proj_dir = 2;
         const UnsignedIndex_t start_id_for_search = (best_proj_dir + 1) % 3;
         auto current_half_edge = a_start;
@@ -1370,7 +1659,7 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
               current_half_edge->getPreviousVertex()->getLocation().getPt();
           const Pt& location_1 =
               current_half_edge->getVertex()->getLocation().getPt();
-          if (isPtBeforeIntersectionWithEdgeWithComponent(
+          if (isPtBeforeIntersectionWithEdgeWithComponent<ScalarType>(
                   proj_test, location_0, location_1, start_id_for_search)) {
             pt_internal_to_polygon = !pt_internal_to_polygon;
           }
@@ -1384,25 +1673,34 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
         }
       }
     }
-    return computeType3ContributionWithGradientWithSplit<ReturnType>(
+    return computeType3ContributionWithGradientWithSplit<ReturnType,
+                                                         ScalarType>(
         a_paraboloid, face_normal_withgrad, pt_withgrad_1, pt_withgrad_1,
         pt_withgrad_0, tgt_withgrad_1, tgt_withgrad_0, a_surface);
   }
 
-  return ReturnType::fromScalarConstant(0.0);
+  return ReturnType::fromScalarConstant(ZERO);
 }  // namespace IRL
 
-template <class HalfEdgeType, class PtType>
-Normal determineNudgeDirection(const AlignedParaboloid& a_paraboloid,
-                               HalfEdgeType* a_current_edge,
-                               const PtType& a_inter_pt) {
+/********************** Find direction in which nudging poly****************/
+template <class ScalarType, class HalfEdgeType, class PtType>
+Normal determineNudgeDirection(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    HalfEdgeType* a_current_edge, const PtType& a_inter_pt) {
+  /* Defining constants and types */
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+
+  /* Function */
   const auto& inter_pt = a_inter_pt.getPt();
-  Normal nudge_direction = Normal(2.0 * a_paraboloid.a() * inter_pt[0],
-                                  2.0 * a_paraboloid.b() * inter_pt[1], 1.0);
-  Normal avg_face_normal =
+  NormalBase<ScalarType> nudge_direction =
+      NormalBase<ScalarType>(TWO * a_paraboloid.a() * inter_pt[0],
+                             TWO * a_paraboloid.b() * inter_pt[1], ONE);
+  NormalBase<ScalarType> avg_face_normal =
       a_current_edge->getFace()->getPlane().normal() +
       a_current_edge->getOppositeHalfEdge()->getFace()->getPlane().normal();
-  if (nudge_direction * avg_face_normal > 0.0) nudge_direction *= -1.0;
+  if (nudge_direction * avg_face_normal > ZERO) nudge_direction *= -ONE;
   nudge_direction.normalize();
   return nudge_direction;
 }
@@ -1440,35 +1738,59 @@ resetPolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
 }
 
+/********************** Move poly to find stable topology ****************/
 template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType,
           class SurfaceOutputType>
 void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                      HalfEdgePolytopeType* a_complete_polytope,
-                     const Normal a_nudge_direction,
-                     const double a_nudge_epsilon,
+                     const NormalBase<Quad_t> a_nudge_direction,
+                     const Quad_t a_nudge_epsilon,
                      const UnsignedIndex_t a_nudge_iter,
                      SurfaceOutputType* a_surface) {
-  // std::cout << "\nNUDGE = "
-  //           << std::pow(1.1, static_cast<double>(a_nudge_iter)) *
-  //                  a_nudge_epsilon
-  //           << "\n"
-  //           << std::endl;
-
   using pt_type =
       typename SegmentedHalfEdgePolyhedronType::vertex_type::pt_type;
+  static_assert(std::is_same_v<typename pt_type::value_type, Quad_t>);
 
-  const auto nudge_dir = a_nudge_direction + Normal(0.1, 0.1, 0.1);
-  // auto nudge_dir = Normal(((double)rand() / (double)(RAND_MAX)),
-  //                         ((double)rand() / (double)(RAND_MAX)),
-  //                         ((double)rand() / (double)(RAND_MAX)));
-  // auto nudge_dir = Normal(1.0, 1.0, 1.0);
-  // nudge_dir.normalize();
-  for (UnsignedIndex_t n = 0; n < a_polytope->getNumberOfVertices(); ++n) {
-    Pt shifted_location = a_polytope->getVertex(n)->getLocation().getPt() +
-                          // std::pow(1.01, static_cast<double>(a_nudge_iter)) *
-                          std::pow(1.01, static_cast<double>(a_nudge_iter)) *
-                              a_nudge_epsilon * nudge_dir;
-    a_polytope->getVertex(n)->setLocation(pt_type(shifted_location));
+  std::random_device rd;
+  std::mt19937 gen(a_nudge_iter);
+  std::uniform_real_distribution distr(-1.0, 1.0);
+
+  const Quad_t nudge_epsilon = 1.0e6q * distance_epsilon<Quad_t>();
+
+  auto center = a_polytope->calculateCentroid();
+  auto converted_center = PtBase<Quad_t>(static_cast<Quad_t>(center[0]),
+                                         static_cast<Quad_t>(center[1]),
+                                         static_cast<Quad_t>(center[2]));
+  const auto nudge_translation =
+      nudge_epsilon * NormalBase<Quad_t>(static_cast<Quad_t>(distr(gen)),
+                                         static_cast<Quad_t>(distr(gen)),
+                                         static_cast<Quad_t>(distr(gen)));
+  const auto nudge_rotation =
+      2.0q * nudge_epsilon *
+      NormalBase<Quad_t>(static_cast<Quad_t>(distr(gen)),
+                         static_cast<Quad_t>(distr(gen)),
+                         static_cast<Quad_t>(distr(gen)));
+
+  ReferenceFrameBase<Quad_t> frame(NormalBase<Quad_t>(1, 0, 0),
+                                   NormalBase<Quad_t>(0, 1, 0),
+                                   NormalBase<Quad_t>(0, 0, 1));
+  UnitQuaternionBase<Quad_t> x_rotation(nudge_rotation[0], frame[0]);
+  UnitQuaternionBase<Quad_t> y_rotation(nudge_rotation[1], frame[1]);
+  UnitQuaternionBase<Quad_t> z_rotation(nudge_rotation[2], frame[2]);
+  auto total_rotation = x_rotation * y_rotation * z_rotation;
+  total_rotation.normalize();
+  frame = total_rotation * frame;
+
+  for (UnsignedIndex_t v = 0; v < a_polytope->getNumberOfVertices(); ++v) {
+    const PtBase<Quad_t> original_pt =
+        a_polytope->getVertex(v)->getLocation().getPt() - converted_center;
+    PtBase<Quad_t> projected_location(0, 0, 0);
+    auto& pt = projected_location.getPt();
+    for (UnsignedIndex_t n = 0; n < 3; ++n) {
+      pt[n] = frame[n] * original_pt;
+    }
+    pt += converted_center + nudge_translation;
+    a_polytope->getVertex(v)->setLocation(projected_location);
   }
 
   if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
@@ -1476,44 +1798,284 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
 }
 
+template <class DoubleSegmentedHalfEdgePolytopeType,
+          class DoubleHalfEdgePolytopeType, class QuadHalfEdgePolytopeType>
+void convertPolytopeFromDoubleToQuadPrecision(
+    DoubleSegmentedHalfEdgePolytopeType* a_polytope,
+    DoubleHalfEdgePolytopeType* a_complete_polytope,
+    QuadHalfEdgePolytopeType* a_converted_polytope) {
+  /* Convert polytope type */
+  using converted_pt_type = PtBase<Quad_t>;
+  using converted_vertex_type = VertexParaboloid<converted_pt_type>;
+  using converted_halfedge_type = HalfEdgeParaboloid<converted_vertex_type>;
+  using converted_face_type = FaceParaboloid<converted_halfedge_type>;
+  const UnsignedIndex_t converted_kMaxHalfEdges =
+      DoubleHalfEdgePolytopeType::maxHalfEdges;
+  const UnsignedIndex_t converted_kMaxVertices =
+      DoubleHalfEdgePolytopeType::maxVertices;
+  const UnsignedIndex_t converted_kMaxFaces =
+      DoubleHalfEdgePolytopeType::maxFaces;
+
+  // /* First, triangulate faces */
+  // triangulatePolytope(a_polytope, a_complete_polytope);
+
+  /* Calculate number of half edges, vertices and faces*/
+  UnsignedIndex_t number_of_half_edges = 0;
+  for (const auto& face : (*a_polytope)) {
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    do {
+      number_of_half_edges++;
+      current_half_edge = current_half_edge->getNextHalfEdge();
+    } while (current_half_edge != starting_half_edge);
+  }
+  const UnsignedIndex_t number_of_vertices = a_polytope->getNumberOfVertices();
+  const UnsignedIndex_t number_of_faces = a_polytope->getNumberOfFaces();
+
+  /* Convert vertices */
+  std::vector<PtBase<Quad_t>> pt_list;
+  pt_list.resize(number_of_vertices);
+  for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
+    const auto old_pt = a_polytope->getVertex(v)->getLocation();
+    pt_list[v] = PtBase<Quad_t>(static_cast<Quad_t>(old_pt[0]),
+                                static_cast<Quad_t>(old_pt[1]),
+                                static_cast<Quad_t>(old_pt[2]));
+  }
+
+  /* Create face -> halfedge and halfedge -> opposite halfedge mapping */
+  std::vector<std::vector<UnsignedIndex_t>> face_mapping;
+  face_mapping.resize(number_of_faces);
+
+  UnsignedIndex_t f = 0;
+  for (const auto& face : (*a_polytope)) {
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    do {
+      bool found = false;
+      for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
+        if (current_half_edge->getVertex() == a_polytope->getVertex(v)) {
+          face_mapping[f].push_back(v);
+          found = true;
+          break;
+        }
+      }
+      assert(found);
+      current_half_edge = current_half_edge->getNextHalfEdge();
+    } while (current_half_edge != starting_half_edge);
+    f++;
+  }
+
+  /* Create converted polytope */
+  BREPToHalfEdge<converted_pt_type, converted_vertex_type,
+                 converted_halfedge_type, converted_face_type,
+                 converted_kMaxHalfEdges, converted_kMaxVertices,
+                 converted_kMaxFaces>::setHalfEdgeVersion(pt_list, face_mapping,
+                                                          a_converted_polytope);
+}
+
+template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType>
+void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
+                         HalfEdgePolytopeType* a_complete_polytope) {
+  using VertexType = typename HalfEdgePolytopeType::vertex_type;
+  using PtType = typename VertexType::pt_type;
+  using ScalarType = typename PtType::value_type;
+  using HalfEdgeType = typename HalfEdgePolytopeType::half_edge_type;
+  using FaceType = typename HalfEdgePolytopeType::face_type;
+
+  // // Loop over all faces. Completely face independent procedure
+  // const auto nfaces = a_polytope->getNumberOfFaces();
+  // for (UnsignedIndex_t f = 0; f < nfaces; ++f) {
+  //   auto face = (*a_polytope)[f];
+  //   auto starting_half_edge = face->getStartingHalfEdge();
+  //   auto nf_start = starting_half_edge->getNextHalfEdge();  // New face start
+  //   auto next = nf_start->getNextHalfEdge();
+  //   auto next_base_edge = next->getNextHalfEdge();
+  //   while (next->getNextHalfEdge() != starting_half_edge) {
+  //     // Create new triangular face
+  //     auto new_face = a_complete_polytope->getNewFace(FaceType(nf_start));
+  //     a_polytope->addFace(new_face);
+
+  //     // Creating new half-edge to close new triangular face
+  //     auto new_half_edge = a_complete_polytope->getNewHalfEdge(HalfEdgeType(
+  //         starting_half_edge->getVertex(), next, nf_start, new_face));
+  //     nf_start->setPreviousHalfEdge(new_half_edge);
+  //     nf_start->setFace(new_face);
+  //     next->setNextHalfEdge(new_half_edge);
+  //     next->setFace(new_face);
+
+  //     // Creating new opposite half-edge
+  //     // Use of starting_half_edge was wrong here if not a face with 4
+  //     // vertices
+  //     auto new_opposite_half_edge = a_complete_polytope->getNewHalfEdge(
+  //         HalfEdgeType(next->getVertex(), nullptr, next_base_edge, nullptr));
+  //     setMutualOpposites(new_half_edge, new_opposite_half_edge);
+
+  //     // Update for next iteration
+  //     nf_start = new_opposite_half_edge;
+  //     next = next_base_edge;
+  //     next_base_edge = next->getNextHalfEdge();
+  //     assert(starting_half_edge->getVertex()->checkValidHalfEdgeCycle());
+  //     assert(new_half_edge->getVertex()->checkValidHalfEdgeCycle());
+  //   }
+  //   nf_start->setPreviousHalfEdge(starting_half_edge);
+  //   starting_half_edge->setNextHalfEdge(nf_start);
+  //   nf_start->setFace(face);
+  // }
+  // assert(a_polytope->checkValidHalfEdgeStructure());
+
+  // Loop over all faces. Completely face independent procedure
+  const auto nfaces = a_polytope->getNumberOfFaces();
+  UnsignedIndex_t new_faces = 0;
+  for (UnsignedIndex_t f = 0; f < nfaces; ++f) {
+    auto face = (*a_polytope)[f];
+    auto starting_half_edge = face->getStartingHalfEdge();
+    auto half_edge = starting_half_edge->getNextHalfEdge();
+    auto next = half_edge->getNextHalfEdge();
+    if (half_edge == starting_half_edge || next == starting_half_edge) {
+      continue;
+    }
+    auto next_next = next->getNextHalfEdge();
+    while (next_next != starting_half_edge) {
+      // Create new triangular face
+      a_polytope->addFace(a_complete_polytope->getNewFace(FaceType(half_edge)));
+      auto new_face = (*a_polytope)[nfaces + new_faces++];
+      // Creating new half-edge to close new triangular face
+      auto new_half_edge = a_complete_polytope->getNewHalfEdge(HalfEdgeType(
+          starting_half_edge->getVertex(), next, half_edge, new_face));
+      half_edge->setPreviousHalfEdge(new_half_edge);
+      half_edge->setFace(new_face);
+      next->setNextHalfEdge(new_half_edge);
+      next->setFace(new_face);
+
+      // Creating new opposite half-edge
+      auto new_opposite_half_edge = a_complete_polytope->getNewHalfEdge(
+          HalfEdgeType(next->getVertex(), starting_half_edge, next_next, face));
+      setMutualOpposites(new_half_edge, new_opposite_half_edge);
+      starting_half_edge->setNextHalfEdge(new_opposite_half_edge);
+      next_next->setPreviousHalfEdge(new_opposite_half_edge);
+
+      // Closing old face
+      half_edge = new_opposite_half_edge;
+      next = next_next;
+      next_next = next->getNextHalfEdge();
+
+      assert(starting_half_edge->getVertex()->checkValidHalfEdgeCycle());
+      assert(new_half_edge->getVertex()->checkValidHalfEdgeCycle());
+    }
+  }
+
+  if (!a_polytope->checkValidHalfEdgeStructure()) {
+    std::cout << (*a_polytope) << std::endl;
+    // std::cout << (*a_complete_polytope) << std::endl;
+  }
+
+  assert(a_polytope->checkValidHalfEdgeStructure());
+}
+
 // Assumes paraboloid of function 0 = a*x^2 + b*y^2 + z.
 // We will truncate the polyhedron to exist in the region
 // q < a*x^2 + b*y^2 + z
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType>
+          class HalfEdgePolytopeType, class AligneParaboloidType,
+          class SurfaceOutputType>
 enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                HalfEdgePolytopeType* a_complete_polytope,
-                                const AlignedParaboloid& a_aligned_paraboloid,
-                                const UnsignedIndex_t a_nudge_iter,
-                                SurfaceOutputType* a_surface) {
+formParaboloidIntersectionBases(
+    SegmentedHalfEdgePolyhedronType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const AligneParaboloidType& a_aligned_paraboloid,
+    const UnsignedIndex_t a_nudge_iter, SurfaceOutputType* a_surface) {
   using vertex_type = typename SegmentedHalfEdgePolyhedronType::vertex_type;
   using pt_type = typename vertex_type::pt_type;
   using face_type = typename SegmentedHalfEdgePolyhedronType::face_type;
   using half_edge_type = typename HalfEdgePolytopeType::half_edge_type;
 
-  if (a_nudge_iter >= 1000) {
-    std::cout << "Nudged more than 1000 times" << std::endl;
-    // std::string poly_filename = "error_cell";
-    // auto volume_moments = intersectPolyhedronWithParaboloidAMR<Volume>(
-    //     a_polytope, a_complete_polytope, a_aligned_paraboloid, 10,
-    //     poly_filename);
-    return ReturnType::fromScalarConstant(-9999999.9);
-  }
+  /* Defining type aliases (needed to ensure precision is consistent)*/
+  using ScalarType = typename pt_type::value_type;
+  static_assert(std::is_same_v<typename pt_type::value_type, ScalarType>);
+  static_assert(
+      std::is_same_v<typename half_edge_type::value_type, ScalarType>);
+  static_assert(std::is_same_v<typename face_type::value_type, ScalarType>);
+  using Pt = PtBase<ScalarType>;
+  using Normal = NormalBase<ScalarType>;
+  using Plane = PlaneBase<ScalarType>;
+  using AlignedParaboloid = AlignedParaboloidBase<ScalarType>;
+
+  using converted_pt_type = PtBase<Quad_t>;
+  using converted_vertex_type = VertexParaboloid<converted_pt_type>;
+  using converted_halfedge_type = HalfEdgeParaboloid<converted_vertex_type>;
+  using converted_face_type = FaceParaboloid<converted_halfedge_type>;
+  const UnsignedIndex_t converted_kMaxHalfEdges =
+      HalfEdgePolytopeType::maxHalfEdges;
+  const UnsignedIndex_t converted_kMaxVertices =
+      HalfEdgePolytopeType::maxVertices;
+  const UnsignedIndex_t converted_kMaxFaces = HalfEdgePolytopeType::maxFaces;
+  using converted_complete_polytope_type =
+      HalfEdgePolyhedronParaboloid<converted_pt_type, converted_vertex_type,
+                                   converted_halfedge_type, converted_face_type,
+                                   converted_kMaxHalfEdges,
+                                   converted_kMaxVertices, converted_kMaxFaces>;
+
+  /* Defining constants */
+  const ScalarType MACHINE_EPSILON = machine_epsilon<ScalarType>();
+  const ScalarType DISTANCE_EPSILON = distance_epsilon<ScalarType>();
+  const ScalarType ANGLE_EPSILON = angle_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType THREE = static_cast<ScalarType>(3);
+  const ScalarType FIVE = static_cast<ScalarType>(5);
+  const ScalarType TEN = static_cast<ScalarType>(10);
+  const ScalarType ONE_HUNDRED = static_cast<ScalarType>(100);
 
   assert(!(a_surface != nullptr &&
            std::is_same<SurfaceOutputType, NoSurfaceOutput>::value));
 
-  ReturnType full_moments = ReturnType::fromScalarConstant(0.0);
+  ReturnType full_moments = ReturnType::fromScalarConstant(ZERO);
 
   // Initialising variables for handling degenerate cases
   bool requires_nudge = false;
-  const double nudge_epsilon = 1.0e-13;  // 15.0 * DBL_EPSILON;
+  const ScalarType nudge_epsilon = DISTANCE_EPSILON;
   Normal nudge_direction, nudge_direction_tangent;
+
+  if (a_nudge_iter >= 100) {
+    std::cout << "Nudged more than 100 times " << std::endl;
+    return ReturnType::fromScalarConstant(-static_cast<ScalarType>(9999999.9));
+  }
+
+  /* First, triangulate faces */
+  if (a_nudge_iter == 0) {
+    triangulatePolytope(a_polytope, a_complete_polytope);
+  }
+
+  // Recalculate in face plane information
+  for (auto& face : (*a_polytope)) {
+    auto normal = Normal(ZERO, ZERO, ZERO);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto current_half_edge = starting_half_edge;
+    auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    const auto& start_location =
+        starting_half_edge->getPreviousVertex()->getLocation().getPt();
+    do {
+      normal += crossProduct(
+          current_half_edge->getVertex()->getLocation().getPt() -
+              start_location,
+          next_half_edge->getVertex()->getLocation().getPt() - start_location);
+      current_half_edge = next_half_edge;
+      next_half_edge = next_half_edge->getNextHalfEdge();
+    } while (next_half_edge != starting_half_edge);
+    // std::cout << "Face area = " << magnitude(normal) << std::endl;
+    if (squaredMagnitude(normal) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      normal = Normal(ZERO, ZERO, ZERO);
+    } else {
+      normal.normalize();
+    }
+    // std::cout << "Face normal = " << normal << std::endl;
+    face->setPlane(Plane(normal, normal * start_location));
+  }
 
   // Identify elliptic case
   const bool elliptic =
-      a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > 0.0;
+      a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > ZERO;
 
   // Mark vertices as clipped/unclipped
   const auto starting_number_of_vertices = a_polytope->getNumberOfVertices();
@@ -1531,7 +2093,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   }
 
   // Early termination cases, only possible with elliptic
-  if (elliptic && a_aligned_paraboloid.a() > 0.0 &&
+  if (elliptic && a_aligned_paraboloid.a() > ZERO &&
       number_of_vertices_above == 0) {
     // This is needed to that we can reset the polytope after the return
     for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
@@ -1542,7 +2104,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     return ReturnType::calculateMoments(a_polytope);
   }
 
-  if (elliptic && a_aligned_paraboloid.a() < 0.0 &&
+  if (elliptic && a_aligned_paraboloid.a() < ZERO &&
       number_of_vertices_above == starting_number_of_vertices) {
     // This is needed to that we can reset the polytope after the return
     for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
@@ -1576,10 +2138,10 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     }
     const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
     const auto edge_direction = Normal::fromPtNormalized(line);
-    const auto tangent = computeTangentVectorAtPoint(
+    const auto tangent = computeTangentVectorAtPoint<ScalarType>(
         a_aligned_paraboloid, a_plane_normal, a_intersection.getPt());
-    return std::fabs(1.0 - std::fabs(edge_direction * tangent)) <
-                   100.0 * DBL_EPSILON
+    return fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
+                   angle_epsilon<ScalarType>()
                ? 1
                : 0;
   };
@@ -1596,16 +2158,16 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
 
     const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
     const auto edge_direction = Normal::fromPtNormalized(line);
-    auto tangent = computeTangentVectorAtPoint(
+    auto tangent = computeTangentVectorAtPoint<ScalarType>(
         a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
-    if (std::fabs(1.0 - std::fabs(edge_direction * tangent)) <
-        100.0 * DBL_EPSILON) {
+    if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
+        angle_epsilon<ScalarType>()) {
       ++parallel;
     }
-    tangent = computeTangentVectorAtPoint(a_aligned_paraboloid, a_plane_normal,
-                                          a_intersection_1.getPt());
-    if (std::fabs(1.0 - std::fabs(edge_direction * tangent)) <
-        100.0 * DBL_EPSILON) {
+    tangent = computeTangentVectorAtPoint<ScalarType>(
+        a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
+    if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
+        angle_epsilon<ScalarType>()) {
       ++parallel;
     }
     return parallel;
@@ -1616,23 +2178,23 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
       auto& pt = a_polytope->getVertex(v)->getLocation().getPt();
       auto& gradient = a_polytope->getVertex(v)->getLocation().getData();
-      gradient[0].setGradTx(-1.0);
-      gradient[1].setGradTy(-1.0);
-      gradient[2].setGradTz(-1.0);
-      gradient[0].setGradRx(0.0);
+      gradient[0].setGradTx(-ONE);
+      gradient[1].setGradTy(-ONE);
+      gradient[2].setGradTz(-ONE);
+      gradient[0].setGradRx(ZERO);
       gradient[1].setGradRx(pt[2]);
       gradient[2].setGradRx(-pt[1]);
       gradient[0].setGradRy(-pt[2]);
-      gradient[1].setGradRy(0.0);
+      gradient[1].setGradRy(ZERO);
       gradient[2].setGradRy(pt[0]);
       gradient[0].setGradRz(pt[1]);
       gradient[1].setGradRz(-pt[0]);
-      gradient[2].setGradRz(0.0);
+      gradient[2].setGradRz(ZERO);
     }
   }
 
   // Compute intersections
-  StackVector<std::pair<pt_type, double>, 2> edge_intercepts;
+  StackVector<std::pair<pt_type, ScalarType>, 2> edge_intercepts;
   for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
     auto& vertex = *(a_polytope->getVertex(v));
     vertex.setToSeek();
@@ -1650,32 +2212,35 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           continue;
         }
         // If previous vertex is not clipped, single-intercept
-        // If previous vertex is clipped, need to check for double-intercept
-        // Checking for double-intercept and calculating single-intercept
-        // is the same routine, so just always do it.
+        // If previous vertex is clipped, need to check for
+        // double-intercept Checking for double-intercept and
+        // calculating single-intercept is the same routine, so just
+        // always do it.
         const auto& edge_start =
             current_edge->getPreviousVertex()->getLocation();
         const auto& edge_end = current_edge->getVertex()->getLocation();
-        checkAndFindIntercepts<pt_type>(a_aligned_paraboloid, edge_start,
-                                        edge_end, &edge_intercepts,
-                                        nudge_epsilon);
+        checkAndFindIntercepts<pt_type, ScalarType>(
+            a_aligned_paraboloid, edge_start, edge_end, &edge_intercepts,
+            nudge_epsilon);
 
         // assert(current_edge->getPreviousVertex()->isClipped() ||
         //        edge_intercepts.size() == 1);
-        // Size of returned intercepts indicates single or double intercept
-        // (or none)
+        // Size of returned intercepts indicates single or double
+        // intercept (or none)
         if (edge_intercepts.size() == 1) {
           // Check for intersection near end point
-          if (edge_intercepts[0].second < nudge_epsilon ||
-              (1.0 - edge_intercepts[0].second) < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[0].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[0].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[0].first);
             break;
           }
 
-          // Add vertex to half edge structure, resetting connectivity and
-          // creating a new half edge (and new opposite half edge)
+          // Add vertex to half edge structure, resetting connectivity
+          // and creating a new half edge (and new opposite half edge)
           placeSingleIntercept(edge_intercepts[0].first, current_edge,
                                a_polytope, a_complete_polytope);
 
@@ -1705,15 +2270,29 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
 
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
-          if (edge_intercepts[0].second < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[0].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[0].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[0].first);
             break;
           }
-          if ((1.0 - edge_intercepts[1].second) < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[1].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[1].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
+                a_aligned_paraboloid, current_edge, edge_intercepts[1].first);
+            break;
+          }
+          if (squaredMagnitude(edge_intercepts[0].first -
+                               edge_intercepts[1].first) <
+              nudge_epsilon * nudge_epsilon) {
+            requires_nudge = true;
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[1].first);
             break;
           }
@@ -1770,31 +2349,34 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         }
         // If previous vertex is clipped, single-intercept
         // If previous vertex is not clipped, need to check for
-        // double-intercept Checking for double-intercept and calculating
-        // single-intercept is the same routine, so just always do it.
+        // double-intercept Checking for double-intercept and
+        // calculating single-intercept is the same routine, so just
+        // always do it.
         const auto& edge_start =
             current_edge->getPreviousVertex()->getLocation();
         const auto& edge_end = current_edge->getVertex()->getLocation();
-        checkAndFindIntercepts<pt_type>(a_aligned_paraboloid, edge_start,
-                                        edge_end, &edge_intercepts,
-                                        nudge_epsilon);
+        checkAndFindIntercepts<pt_type, ScalarType>(
+            a_aligned_paraboloid, edge_start, edge_end, &edge_intercepts,
+            nudge_epsilon);
 
         // assert(current_edge->getPreviousVertex()->isNotClipped() ||
         //        edge_intercepts.size() == 1);
-        // Size of returned intercepts indicates single or double intercept
-        // (or none)
+        // Size of returned intercepts indicates single or double
+        // intercept (or none)
         if (edge_intercepts.size() == 1) {
           // Check for intersection near end point
-          if (edge_intercepts[0].second < nudge_epsilon ||
-              (1.0 - edge_intercepts[0].second) < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[0].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[0].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[0].first);
             break;
           }
 
-          // Add vertex to half edge structure, resetting connectivity and
-          // creating a new half edge (and new opposite half edge)
+          // Add vertex to half edge structure, resetting connectivity
+          // and creating a new half edge (and new opposite half edge)
           placeSingleIntercept(edge_intercepts[0].first, current_edge,
                                a_polytope, a_complete_polytope);
 
@@ -1825,15 +2407,29 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
 
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
-          if (edge_intercepts[0].second < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[0].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[0].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[0].first);
             break;
           }
-          if ((1.0 - edge_intercepts[1].second) < nudge_epsilon) {
+          if (squaredMagnitude(edge_intercepts[1].first - edge_start) <
+                  nudge_epsilon * nudge_epsilon ||
+              squaredMagnitude(edge_intercepts[1].first - edge_end) <
+                  nudge_epsilon * nudge_epsilon) {
             requires_nudge = true;
-            nudge_direction = determineNudgeDirection(
+            nudge_direction = determineNudgeDirection<ScalarType>(
+                a_aligned_paraboloid, current_edge, edge_intercepts[1].first);
+            break;
+          }
+          if (squaredMagnitude(edge_intercepts[0].first -
+                               edge_intercepts[1].first) <
+              nudge_epsilon * nudge_epsilon) {
+            requires_nudge = true;
+            nudge_direction = determineNudgeDirection<ScalarType>(
                 a_aligned_paraboloid, current_edge, edge_intercepts[1].first);
             break;
           }
@@ -1912,16 +2508,45 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     assert(a_polytope->checkValidHalfEdgeStructure());
     // nudge_direction += Normal(0.0, 0.0, 0.0);
     nudge_direction.normalize();
-    nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
-                    nudge_epsilon, a_nudge_iter + 1, a_surface);
-    return formParaboloidIntersectionBases<ReturnType>(
-        a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter + 1,
-        a_surface);
+
+    if constexpr (!has_embedded_gradient<ReturnType>::value) {
+      if constexpr (std::is_same_v<ScalarType, double>) {
+        converted_complete_polytope_type converted_polytope_paraboloid;
+        convertPolytopeFromDoubleToQuadPrecision(
+            a_polytope, a_complete_polytope, &converted_polytope_paraboloid);
+        auto converted_segmented_paraboloid =
+            converted_polytope_paraboloid.generateSegmentedPolyhedron();
+        assert(converted_segmented_paraboloid.checkValidHalfEdgeStructure());
+
+        /* Nudge polytope */
+        const auto converted_nudge_direction =
+            NormalBase<Quad_t>(static_cast<Quad_t>(nudge_direction[0]),
+                               static_cast<Quad_t>(nudge_direction[1]),
+                               static_cast<Quad_t>(nudge_direction[2]));
+
+        nudgePolyhedron(&converted_segmented_paraboloid,
+                        &converted_polytope_paraboloid,
+                        converted_nudge_direction, nudge_epsilon,
+                        a_nudge_iter + 1, a_surface);
+        return formParaboloidIntersectionBases<ReturnType>(
+            &converted_segmented_paraboloid, &converted_polytope_paraboloid,
+            AlignedParaboloidBase<Quad_t>(a_aligned_paraboloid),
+            a_nudge_iter + 1, a_surface);
+      } else {
+        nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
+                        nudge_epsilon, a_nudge_iter + 1, a_surface);
+        return formParaboloidIntersectionBases<ReturnType>(
+            a_polytope, a_complete_polytope, a_aligned_paraboloid,
+            a_nudge_iter + 1, a_surface);
+      }
+    } else {
+      ///////////////////////////////////////TODO }
+    }
   }
 
   // Check for face-only intersections. Can only happen with elliptic
   if (elliptic) {
-    if (a_aligned_paraboloid.a() > 0.0) {
+    if (a_aligned_paraboloid.a() > ZERO) {
       for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
         auto& face = *(*a_polytope)[f];
         if (face.getNumberOfIntersections() > 0) {
@@ -1940,7 +2565,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
             face_valid = false;
             break;
           }
-          if (vertex.getLocation().getPt()[2] < 0.0) {
+          if (vertex.getLocation().getPt()[2] < ZERO) {
             face_valid = true;
           }
           current_half_edge = current_half_edge->getNextHalfEdge();
@@ -1949,20 +2574,30 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           continue;
         }
 
-        // Made it this far, check if there is a face-only intersection
+        // Made it this far, check if there is a face-only
+        // intersection
         const auto& face_plane = face.getPlane();
-        if (std::fabs(face_plane.normal()[2]) > DBL_EPSILON) {
+        if (fabs(face_plane.normal()[2]) > MACHINE_EPSILON) {
           // Get ellipse on this face
-          if (ellipseContainedInFace(a_aligned_paraboloid, face_plane,
-                                     starting_half_edge)) {
-            full_moments += computeFaceOnlyContribution<ReturnType>(
-                a_aligned_paraboloid, face_plane,
-                starting_half_edge->getVertex()->getLocation());
+          if (ellipseContainedInFace<ScalarType>(
+                  a_aligned_paraboloid, face_plane, starting_half_edge)) {
+            if constexpr (!has_embedded_gradient<ReturnType>::value) {
+              full_moments +=
+                  computeFaceOnlyContribution<ReturnType, ScalarType>(
+                      a_aligned_paraboloid, face_plane,
+                      starting_half_edge->getVertex()->getLocation());
+            } else {
+              full_moments +=
+                  computeFaceOnlyContributionWithGradient<ReturnType,
+                                                          ScalarType>(
+                      a_aligned_paraboloid, face_plane,
+                      starting_half_edge->getVertex()->getLocation());
+            }
             // Return surface parametrization
             if constexpr (!std::is_same<SurfaceOutputType,
                                         NoSurfaceOutput>::value) {
-              addEllipseToSurfaceOutput(a_aligned_paraboloid, face_plane,
-                                        a_surface);
+              addEllipseToSurfaceOutput<ScalarType>(a_aligned_paraboloid,
+                                                    face_plane, a_surface);
             }
           }
         }
@@ -1987,7 +2622,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
             face_valid = false;
             break;
           }
-          if (vertex.getLocation().getPt()[2] > 0.0) {
+          if (vertex.getLocation().getPt()[2] > ZERO) {
             face_valid = true;
           }
           current_half_edge = current_half_edge->getNextHalfEdge();
@@ -1996,19 +2631,29 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           continue;
         }
 
-        // Made it this far, check if there is a face-only intersection
+        // Made it this far, check if there is a face-only
+        // intersection
         const auto& face_plane = face.getPlane();
-        if (std::fabs(face_plane.normal()[2]) > DBL_EPSILON) {
+        if (fabs(face_plane.normal()[2]) > MACHINE_EPSILON) {
           // Get ellipse on this face
-          if (ellipseContainedInFace(a_aligned_paraboloid, face_plane,
-                                     starting_half_edge)) {
-            full_moments += computeFaceOnlyContribution<ReturnType>(
-                a_aligned_paraboloid, face_plane,
-                starting_half_edge->getVertex()->getLocation());
+          if (ellipseContainedInFace<ScalarType>(
+                  a_aligned_paraboloid, face_plane, starting_half_edge)) {
+            if constexpr (!has_embedded_gradient<ReturnType>::value) {
+              full_moments +=
+                  computeFaceOnlyContribution<ReturnType, ScalarType>(
+                      a_aligned_paraboloid, face_plane,
+                      starting_half_edge->getVertex()->getLocation());
+            } else {
+              full_moments +=
+                  computeFaceOnlyContributionWithGradient<ReturnType,
+                                                          ScalarType>(
+                      a_aligned_paraboloid, face_plane,
+                      starting_half_edge->getVertex()->getLocation());
+            }
             if constexpr (!std::is_same<SurfaceOutputType,
                                         NoSurfaceOutput>::value) {
-              addEllipseToSurfaceOutput(a_aligned_paraboloid, face_plane,
-                                        a_surface);
+              addEllipseToSurfaceOutput<ScalarType>(a_aligned_paraboloid,
+                                                    face_plane, a_surface);
             }
           }
         }
@@ -2022,13 +2667,13 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
       // if constexpr (std::is_same<typename ReturnType::moment_type,
       //                            VolumeMoments>::value) {
       // If volume == 0, then there are no face-only intersections
-      if (full_moments.volume() == 0.0) {
+      if (full_moments.volume() == ZERO) {
         // Find vertex closest to the paraboloid
-        double min_dist = DBL_MAX;
+        ScalarType min_dist = static_cast<ScalarType>(DBL_MAX);
         pt_type closest_pt;
         for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
           auto& vertex = *(a_polytope->getVertex(v));
-          const double dist = std::fabs(signedDistance(
+          const ScalarType dist = fabs(signedDistance(
               vertex.getLocation().getPt(), a_aligned_paraboloid));
           if (dist < min_dist) {
             min_dist = dist;
@@ -2042,14 +2687,16 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         for (UnsignedIndex_t d = 0; d < 3; ++d) {
           pt[d] = scalar_type(closest_pt.getPt()[d], closest_pt.getData()[d]);
         }
-        auto A_grad = gradient_type(0.0), B_grad = gradient_type(0.0);
-        A_grad.setGradA(1.0);
-        B_grad.setGradB(1.0);
+        auto A_grad = gradient_type(ZERO), B_grad = gradient_type(ZERO);
+        A_grad.setGradA(ONE);
+        B_grad.setGradB(ONE);
         const auto A = scalar_type(a_aligned_paraboloid.a(), A_grad),
                    B = scalar_type(a_aligned_paraboloid.b(), B_grad);
         const auto volume_add_on =
             -(A * pt[0] * pt[0] + B * pt[1] * pt[1] + pt[2]);
-        const double scale = std::pow(a_polytope->calculateVolume(), 2.0 / 3.0);
+        const ScalarType scale =
+            pow(static_cast<ScalarType>(a_polytope->calculateVolume()),
+                TWO / THREE);
         full_moments.volume() = volume_add_on.value() * scale;
         full_moments.volume_gradient() = volume_add_on.gradient() * scale;
       }
@@ -2067,43 +2714,51 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
     auto& face = *(*a_polytope)[f];
     const auto& face_normal = face.getPlane().normal();
-    if (squaredMagnitude(face_normal) < 0.99) {
-      // std::cout << "-> Face has normal " << face_normal << std::endl;
-      // std::cout << "Vertices : " << std::endl;
-      // auto starting_half_edge = face.getStartingHalfEdge();
-      // auto current_half_edge = starting_half_edge;
-      // do {
-      //   std::cout << "             "
-      //             << current_half_edge->getVertex()->getLocation().getPt()
-      //             << std::endl;
-      //   current_half_edge = current_half_edge->getNextHalfEdge();
-      // } while (current_half_edge != starting_half_edge);
+    if (squaredMagnitude(face_normal) < MACHINE_EPSILON) {
       continue;
-    } else {
-      // std::cout << "-> Face IS VALID " << face_normal << std::endl;
-      // std::cout << "Vertices : " << std::endl;
-      // auto starting_half_edge = face.getStartingHalfEdge();
-      // auto current_half_edge = starting_half_edge;
-      // do {
-      //   std::cout << "             "
-      //             << current_half_edge->getVertex()->getLocation().getPt()
-      //             << std::endl;
-      //   current_half_edge = current_half_edge->getNextHalfEdge();
-      // } while (current_half_edge != starting_half_edge);
     }
     auto starting_half_edge = face.getStartingHalfEdge();
     const auto intersection_size = face.getNumberOfIntersections();
     if (intersection_size % 2 == 1) {
-      nudge_direction = determineNudgeDirection(
+      nudge_direction = determineNudgeDirection<ScalarType>(
           a_aligned_paraboloid, starting_half_edge,
           starting_half_edge->getVertex()->getLocation().getPt());
       nudge_direction.normalize();
       resetPolyhedron(a_polytope, a_complete_polytope);
-      nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
-                      nudge_epsilon, a_nudge_iter + 1, a_surface);
-      return formParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid,
-          a_nudge_iter + 1, a_surface);
+
+      if constexpr (!has_embedded_gradient<ReturnType>::value) {
+        if constexpr (std::is_same_v<ScalarType, double>) {
+          converted_complete_polytope_type converted_polytope_paraboloid;
+          convertPolytopeFromDoubleToQuadPrecision(
+              a_polytope, a_complete_polytope, &converted_polytope_paraboloid);
+          auto converted_segmented_paraboloid =
+              converted_polytope_paraboloid.generateSegmentedPolyhedron();
+          assert(converted_segmented_paraboloid.checkValidHalfEdgeStructure());
+
+          /* Nudge polytope */
+          const auto converted_nudge_direction =
+              NormalBase<Quad_t>(static_cast<Quad_t>(nudge_direction[0]),
+                                 static_cast<Quad_t>(nudge_direction[1]),
+                                 static_cast<Quad_t>(nudge_direction[2]));
+
+          nudgePolyhedron(&converted_segmented_paraboloid,
+                          &converted_polytope_paraboloid,
+                          converted_nudge_direction, nudge_epsilon,
+                          a_nudge_iter + 1, a_surface);
+          return formParaboloidIntersectionBases<ReturnType>(
+              &converted_segmented_paraboloid, &converted_polytope_paraboloid,
+              AlignedParaboloidBase<Quad_t>(a_aligned_paraboloid),
+              a_nudge_iter + 1, a_surface);
+        } else {
+          nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
+                          nudge_epsilon, a_nudge_iter + 1, a_surface);
+          return formParaboloidIntersectionBases<ReturnType>(
+              a_polytope, a_complete_polytope, a_aligned_paraboloid,
+              a_nudge_iter + 1, a_surface);
+        }
+      } else {
+        ///////////////////////////////////////TODO }
+      }
     }
 
     if (intersection_size == 0) {
@@ -2115,8 +2770,14 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         auto prev_pt = current_half_edge->getPreviousVertex()->getLocation();
         do {
           const auto& curr_pt = current_half_edge->getVertex()->getLocation();
-          full_moments +=
-              computeType1Contribution<ReturnType>(ref_pt, prev_pt, curr_pt);
+          if constexpr (!has_embedded_gradient<ReturnType>::value) {
+            full_moments += computeType1Contribution<ReturnType, ScalarType>(
+                ref_pt, prev_pt, curr_pt);
+          } else {
+            full_moments +=
+                computeType1ContributionWithGradient<ReturnType, ScalarType>(
+                    ref_pt, prev_pt, curr_pt);
+          }
           prev_pt = curr_pt;
           current_half_edge = current_half_edge->getNextHalfEdge();
         } while (current_half_edge != starting_half_edge);
@@ -2124,30 +2785,28 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     } else if (intersection_size == 2) {
       const auto& ref_pt = starting_half_edge->getVertex()->getLocation();
       half_edge_type* exit_half_edge;
-      full_moments += computeUnclippedSegmentType1Contribution<ReturnType>(
+      full_moments +=
+          computeUnclippedSegmentType1Contribution<ReturnType, ScalarType>(
+              a_aligned_paraboloid, ref_pt, starting_half_edge, exit_half_edge,
+              true);
+      full_moments += computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
           a_aligned_paraboloid, ref_pt, starting_half_edge, exit_half_edge,
-          true);
-      full_moments += computeNewEdgeSegmentContribution<ReturnType>(
-          a_aligned_paraboloid, ref_pt, starting_half_edge, exit_half_edge,
-          true, a_surface, &requires_nudge, nudge_direction);
+          true, false, &requires_nudge, nudge_direction, a_surface);
     } else {
       // More than 2 intersections. More complicated cases.
       const bool elliptic_face =
-          a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > 0.0 &&
-          std::fabs(face_normal[2]) > DBL_EPSILON;
+          a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > ZERO &&
+          fabs(face_normal[2]) > MACHINE_EPSILON;
       const bool hyperbolic_face =
-          a_aligned_paraboloid.a() * a_aligned_paraboloid.b() < 0.0 &&
-          std::fabs(face_normal[2]) > DBL_EPSILON;
+          a_aligned_paraboloid.a() * a_aligned_paraboloid.b() < ZERO &&
+          fabs(face_normal[2]) > MACHINE_EPSILON;
 
-      // -----> If NO surface ouput : DOES NOT NEED SORTING
-      if (  // face.getNumberOfEdgeParallelIntersections() < 2 &&
-          std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        const bool reverse = a_aligned_paraboloid.a() < 0.0;
+      // -----> NO SORTING
+      if (0)  // face.getNumberOfEdgeParallelIntersections() < 2 &&
+              // std::is_same<SurfaceOutputType, NoSurfaceOutput>::value)
+      {
+        const bool reverse = a_aligned_paraboloid.a() < ZERO;
         if (elliptic_face) {
-          // std::cout << "ELLIPTIC FACE with more than 2 intersections"
-          //           << std::endl;
-          // std::cout << "Face normal = " << face_normal << std::endl;
-          // std::cout << "Reverse? = " << (reverse ? 1 : 0) << std::endl;
           const auto& ref_pt = starting_half_edge->getVertex()->getLocation();
           half_edge_type* exit_half_edge;
           auto current_edge = starting_half_edge;
@@ -2155,14 +2814,17 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           std::size_t found_intersections = 0;
           do {
             full_moments +=
-                computeUnclippedSegmentType1Contribution<ReturnType>(
+                computeUnclippedSegmentType1Contribution<ReturnType,
+                                                         ScalarType>(
                     a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
                     skip_first);
 
             if (reverse) {
-              full_moments += computeNewEdgeSegmentContribution<ReturnType>(
-                  a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
-                  skip_first, a_surface, &requires_nudge, nudge_direction);
+              full_moments +=
+                  computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
+                      a_aligned_paraboloid, ref_pt, current_edge,
+                      exit_half_edge, skip_first, false, &requires_nudge,
+                      nudge_direction, a_surface);
               current_edge = exit_half_edge->getNextHalfEdge();
               while (current_edge->getVertex()->needsToSeek()) {
                 current_edge = current_edge->getNextHalfEdge();
@@ -2172,10 +2834,11 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
               while (current_edge->getVertex()->needsToSeek()) {
                 current_edge = current_edge->getNextHalfEdge();
               }
-              full_moments += computeNewEdgeSegmentContribution<ReturnType>(
-                  a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
-                  current_edge == starting_half_edge, a_surface,
-                  &requires_nudge, nudge_direction);
+              full_moments +=
+                  computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
+                      a_aligned_paraboloid, ref_pt, current_edge,
+                      exit_half_edge, current_edge == starting_half_edge, false,
+                      &requires_nudge, nudge_direction, a_surface);
             }
             skip_first = false;
             found_intersections += 2;
@@ -2191,7 +2854,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           bool skip_first = true;
           do {
             full_moments +=
-                computeUnclippedSegmentType1Contribution<ReturnType>(
+                computeUnclippedSegmentType1Contribution<ReturnType,
+                                                         ScalarType>(
                     a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
                     skip_first);
             current_edge->getVertex()->markAsEntry();
@@ -2207,29 +2871,30 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           } while (found_intersections != intersection_size);
 
           if (hyperbolic_face) {
-            // std::cout << "HYPERBOLIC FACE with more than 2 intersections"
+            // std::cout << "HYPERBOLIC FACE with more than 2
+            // intersections"
             // << std::endl;
-            const std::array<double, 2> conic_center{
+            const std::array<ScalarType, 2> conic_center{
                 {face_normal[0] /
-                     (2.0 * a_aligned_paraboloid.a() * face_normal[2]),
+                     (TWO * a_aligned_paraboloid.a() * face_normal[2]),
                  face_normal[1] /
-                     (2.0 * a_aligned_paraboloid.b() * face_normal[2])}};
+                     (TWO * a_aligned_paraboloid.b() * face_normal[2])}};
             const auto& pt_in_plane =
                 intersections[0]->getVertex()->getLocation().getPt();
-            const double delta_face = (face_normal[0] * pt_in_plane[0] +
-                                       face_normal[1] * pt_in_plane[1] +
-                                       face_normal[2] * pt_in_plane[2]) /
-                                      face_normal[2];
-            const double gamma_face =
+            const ScalarType delta_face = (face_normal[0] * pt_in_plane[0] +
+                                           face_normal[1] * pt_in_plane[1] +
+                                           face_normal[2] * pt_in_plane[2]) /
+                                          face_normal[2];
+            const ScalarType gamma_face =
                 a_aligned_paraboloid.a() * conic_center[0] * conic_center[0] +
                 a_aligned_paraboloid.b() * conic_center[1] * conic_center[1] -
                 delta_face;
-            const double z_diff =
+            const ScalarType z_diff =
                 face_normal[0] * conic_center[0] / face_normal[2] +
                 face_normal[1] * conic_center[1] / face_normal[2] - gamma_face -
-                2.0 * delta_face;
+                TWO * delta_face;
             const std::size_t split_ind =
-                a_aligned_paraboloid.a() * gamma_face > 0.0 ? 0 : 1;
+                a_aligned_paraboloid.a() * gamma_face > ZERO ? 0 : 1;
 
             bool vertices_on_same_branch = true;
             for (std::size_t i = 1; i < intersection_size; ++i) {
@@ -2237,34 +2902,35 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                   intersections[i]->getVertex()->getLocation().getPt();
               if ((pt_in_plane[split_ind] - conic_center[split_ind]) *
                       (curr_pt[split_ind] - conic_center[split_ind]) <
-                  0.0) {
+                  ZERO) {
                 vertices_on_same_branch = false;
                 break;
               }
             }
-            bool total_invert = z_diff < 0.0 ? !vertices_on_same_branch
-                                             : vertices_on_same_branch;
+            bool total_invert = z_diff < ZERO ? !vertices_on_same_branch
+                                              : vertices_on_same_branch;
             if (total_invert) {
               reverse_order = true;
             }
           } else {
-            // std::cout << "PARABOLIC FACE with more than 2 intersections"
+            // std::cout << "PARABOLIC FACE with more than 2
+            // intersections"
             //           << std::endl;
 
-            Pt intersection_avg = Pt(0.0, 0.0, 0.0);
+            Pt intersection_avg = Pt(ZERO, ZERO, ZERO);
             for (std::size_t i = 0; i < intersection_size; ++i) {
               const auto& curr_pt =
                   intersections[i]->getVertex()->getLocation().getPt();
               intersection_avg += curr_pt;
             }
-            intersection_avg /= static_cast<double>(intersection_size);
-            const double z_diff = intersection_avg[2] +
-                                  a_aligned_paraboloid.a() *
-                                      intersection_avg[0] *
-                                      intersection_avg[0] +
-                                  a_aligned_paraboloid.b() *
-                                      intersection_avg[1] * intersection_avg[1];
-            if (z_diff > 0.0) {
+            intersection_avg /= static_cast<ScalarType>(intersection_size);
+            const ScalarType z_diff =
+                intersection_avg[2] +
+                a_aligned_paraboloid.a() * intersection_avg[0] *
+                    intersection_avg[0] +
+                a_aligned_paraboloid.b() * intersection_avg[1] *
+                    intersection_avg[1];
+            if (z_diff > ZERO) {
               reverse_order = true;
             }
           }
@@ -2286,9 +2952,11 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
             }
 
             auto exit_half_edge = intersections[exit_index];
-            full_moments += computeNewEdgeSegmentContribution<ReturnType>(
-                a_aligned_paraboloid, ref_pt, entry_half_edge, exit_half_edge,
-                first_entry, a_surface, &requires_nudge, nudge_direction);
+            full_moments +=
+                computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
+                    a_aligned_paraboloid, ref_pt, entry_half_edge,
+                    exit_half_edge, first_entry, false, &requires_nudge,
+                    nudge_direction, a_surface);
             first_entry = false;
           }
           // Clear list of intersections
@@ -2297,7 +2965,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
       }
       // -----> If surface ouput : NEEDS SORTING
       else {
-        using stype = std::pair<half_edge_type*, double>;
+        bool ignore_type3_contributions = false;
+        using stype = std::pair<half_edge_type*, ScalarType>;
         SmallVector<stype, 10> intersections;
         // Find intersections and determine status
         auto current_edge = starting_half_edge;
@@ -2307,15 +2976,16 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         const auto& ref_pt = starting_half_edge->getVertex()->getLocation();
         bool skip_first = true;
         do {
-          full_moments += computeUnclippedSegmentType1Contribution<ReturnType>(
-              a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
-              skip_first);
+          full_moments +=
+              computeUnclippedSegmentType1Contribution<ReturnType, ScalarType>(
+                  a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
+                  skip_first);
           current_edge->getVertex()->markAsEntry();
           exit_half_edge->getVertex()->markAsExit();
-          intersections.push_back(
-              std::pair<half_edge_type*, double>({current_edge, DBL_MAX}));
-          intersections.push_back(
-              std::pair<half_edge_type*, double>({exit_half_edge, DBL_MAX}));
+          intersections.push_back(std::pair<half_edge_type*, ScalarType>(
+              {current_edge, static_cast<ScalarType>(DBL_MAX)}));
+          intersections.push_back(std::pair<half_edge_type*, ScalarType>(
+              {exit_half_edge, static_cast<ScalarType>(DBL_MAX)}));
           current_edge = exit_half_edge->getNextHalfEdge();
           while (current_edge->getVertex()->needsToSeek()) {
             current_edge = current_edge->getNextHalfEdge();
@@ -2325,19 +2995,19 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
         } while (found_intersections != intersection_size);
 
         if (elliptic_face) {
-          const std::array<double, 2> conic_center{
+          const std::array<ScalarType, 2> conic_center{
               {face_normal[0] /
-                   (2.0 * a_aligned_paraboloid.a() * face_normal[2]),
+                   (TWO * a_aligned_paraboloid.a() * face_normal[2]),
                face_normal[1] /
-                   (2.0 * a_aligned_paraboloid.b() * face_normal[2])}};
-          const double normal_invert = std::copysign(1.0, face_normal[2]);
-          const double invert =
-              a_aligned_paraboloid.a() < 0.0 ? -normal_invert : normal_invert;
+                   (TWO * a_aligned_paraboloid.b() * face_normal[2])}};
+          const ScalarType normal_invert = copysign(ONE, face_normal[2]);
+          const ScalarType invert =
+              a_aligned_paraboloid.a() < ZERO ? -normal_invert : normal_invert;
 
           for (auto& element : intersections) {
             const auto& pt = element.first->getVertex()->getLocation().getPt();
-            element.second = invert * std::atan2(pt[1] - conic_center[1],
-                                                 pt[0] - conic_center[0]);
+            element.second = invert * atan2(pt[1] - conic_center[1],
+                                            pt[0] - conic_center[0]);
           }
           std::sort(intersections.begin(), intersections.end(),
                     [](const stype& a, const stype& b) {
@@ -2348,8 +3018,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           // floating-point errors)
           bool restart_sort = false;
           for (std::size_t i = 0; i < intersection_size - 1; ++i) {
-            if (std::fabs(intersections[i].second -
-                          intersections[i + 1].second) < 10.0 * DBL_EPSILON) {
+            if (fabs(intersections[i].second - intersections[i + 1].second) <
+                ONE_HUNDRED * MACHINE_EPSILON) {
               restart_sort = true;
               break;
             }
@@ -2389,17 +3059,17 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
             bool re_restart_sort = false;
             if (pos_end > 0) {
               for (UnsignedIndex_t i = 0; i < pos_end - 1; ++i) {
-                if (std::fabs(intersections[i].second -
-                              intersections[i + 1].second) <
-                    10.0 * DBL_EPSILON) {
+                if (fabs(intersections[i].second -
+                         intersections[i + 1].second) <
+                    ONE_HUNDRED * MACHINE_EPSILON) {
                   re_restart_sort = true;
                   break;
                 }
               }
             }
             for (UnsignedIndex_t i = pos_end; i < intersection_size - 1; ++i) {
-              if (std::fabs(intersections[i].second -
-                            intersections[i + 1].second) < 10.0 * DBL_EPSILON) {
+              if (fabs(intersections[i].second - intersections[i + 1].second) <
+                  ONE_HUNDRED * MACHINE_EPSILON) {
                 re_restart_sort = true;
                 break;
               }
@@ -2437,9 +3107,9 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
               bool re_re_restart_sort = false;
               if (pos_end > 0) {
                 for (UnsignedIndex_t i = 0; i < pos_end - 1; ++i) {
-                  if (std::fabs(intersections[i].second -
-                                intersections[i + 1].second) <
-                      10.0 * DBL_EPSILON) {
+                  if (fabs(intersections[i].second -
+                           intersections[i + 1].second) <
+                      ONE_HUNDRED * MACHINE_EPSILON) {
                     re_re_restart_sort = true;
                     break;
                   }
@@ -2447,9 +3117,9 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
               }
               for (UnsignedIndex_t i = pos_end; i < intersection_size - 1;
                    ++i) {
-                if (std::fabs(intersections[i].second -
-                              intersections[i + 1].second) <
-                    10.0 * DBL_EPSILON) {
+                if (fabs(intersections[i].second -
+                         intersections[i + 1].second) <
+                    ONE_HUNDRED * MACHINE_EPSILON) {
                   re_re_restart_sort = true;
                   break;
                 }
@@ -2457,12 +3127,47 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
               if (re_re_restart_sort) {
                 nudge_direction = face_normal;
                 nudge_direction.normalize();
-                nudgePolyhedron(a_polytope, a_complete_polytope,
-                                nudge_direction, nudge_epsilon,
-                                a_nudge_iter + 1, a_surface);
-                return formParaboloidIntersectionBases<ReturnType>(
-                    a_polytope, a_complete_polytope, a_aligned_paraboloid,
-                    a_nudge_iter + 1, a_surface);
+                resetPolyhedron(a_polytope, a_complete_polytope);
+
+                if constexpr (!has_embedded_gradient<ReturnType>::value) {
+                  if constexpr (std::is_same_v<ScalarType, double>) {
+                    converted_complete_polytope_type
+                        converted_polytope_paraboloid;
+                    convertPolytopeFromDoubleToQuadPrecision(
+                        a_polytope, a_complete_polytope,
+                        &converted_polytope_paraboloid);
+                    auto converted_segmented_paraboloid =
+                        converted_polytope_paraboloid
+                            .generateSegmentedPolyhedron();
+                    assert(converted_segmented_paraboloid
+                               .checkValidHalfEdgeStructure());
+
+                    /* Nudge polytope */
+                    const auto converted_nudge_direction = NormalBase<Quad_t>(
+                        static_cast<Quad_t>(nudge_direction[0]),
+                        static_cast<Quad_t>(nudge_direction[1]),
+                        static_cast<Quad_t>(nudge_direction[2]));
+
+                    nudgePolyhedron(&converted_segmented_paraboloid,
+                                    &converted_polytope_paraboloid,
+                                    converted_nudge_direction, nudge_epsilon,
+                                    a_nudge_iter + 1, a_surface);
+                    return formParaboloidIntersectionBases<ReturnType>(
+                        &converted_segmented_paraboloid,
+                        &converted_polytope_paraboloid,
+                        AlignedParaboloidBase<Quad_t>(a_aligned_paraboloid),
+                        a_nudge_iter + 1, a_surface);
+                  } else {
+                    nudgePolyhedron(a_polytope, a_complete_polytope,
+                                    nudge_direction, nudge_epsilon,
+                                    a_nudge_iter + 1, a_surface);
+                    return formParaboloidIntersectionBases<ReturnType>(
+                        a_polytope, a_complete_polytope, a_aligned_paraboloid,
+                        a_nudge_iter + 1, a_surface);
+                  }
+                } else {
+                  ///////////////////////////////////////TODO }
+                }
               }
             }
           }
@@ -2470,31 +3175,31 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           std::size_t pos_end = 0;
           std::size_t neg_end = 0;
           auto intersection_copy = intersections;
-          const std::array<double, 2> conic_center{
+          const std::array<ScalarType, 2> conic_center{
               {face_normal[0] /
-                   (2.0 * a_aligned_paraboloid.a() * face_normal[2]),
+                   (TWO * a_aligned_paraboloid.a() * face_normal[2]),
                face_normal[1] /
-                   (2.0 * a_aligned_paraboloid.b() * face_normal[2])}};
+                   (TWO * a_aligned_paraboloid.b() * face_normal[2])}};
           const auto& pt_in_plane =
               intersections[0].first->getVertex()->getLocation().getPt();
-          const double delta_face = (face_normal[0] * pt_in_plane[0] +
-                                     face_normal[1] * pt_in_plane[1] +
-                                     face_normal[2] * pt_in_plane[2]) /
-                                    face_normal[2];
-          const double gamma_face =
+          const ScalarType delta_face = (face_normal[0] * pt_in_plane[0] +
+                                         face_normal[1] * pt_in_plane[1] +
+                                         face_normal[2] * pt_in_plane[2]) /
+                                        face_normal[2];
+          const ScalarType gamma_face =
               a_aligned_paraboloid.a() * conic_center[0] * conic_center[0] +
               a_aligned_paraboloid.b() * conic_center[1] * conic_center[1] -
               delta_face;
           const std::size_t split_ind =
-              a_aligned_paraboloid.a() * gamma_face > 0.0 ? 0 : 1;
+              a_aligned_paraboloid.a() * gamma_face > ZERO ? 0 : 1;
           const std::size_t store_ind = split_ind == 0 ? 1 : 0;
-          const double z_center_plane =
+          const ScalarType z_center_plane =
               -face_normal[0] * conic_center[0] / face_normal[2] -
               face_normal[1] * conic_center[1] / face_normal[2] + delta_face;
-          const double z_center_paraboloid =
+          const ScalarType z_center_paraboloid =
               -a_aligned_paraboloid.a() * conic_center[0] * conic_center[0] -
               a_aligned_paraboloid.b() * conic_center[1] * conic_center[1];
-          double total_invert = std::copysign(1.0, face_normal[2]);
+          ScalarType total_invert = copysign(ONE, face_normal[2]);
           total_invert = z_center_plane < z_center_paraboloid ? total_invert
                                                               : -total_invert;
           total_invert = split_ind == 0 ? total_invert : -total_invert;
@@ -2521,32 +3226,52 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                     [](const stype& a, const stype& b) {
                       return a.second < b.second;
                     });
+          if (fabs(gamma_face) < ONE_HUNDRED * MACHINE_EPSILON ||
+              fabs(z_center_plane - z_center_paraboloid) <
+                  ONE_HUNDRED * MACHINE_EPSILON) {
+            requires_nudge = true;
+          } else {
+            for (std::size_t i = 0; i < intersection_size - 1; ++i) {
+              if (fabs(intersection_copy[i].second -
+                       intersection_copy[i + 1].second) <
+                  ONE_HUNDRED * MACHINE_EPSILON) {
+                requires_nudge = true;
+                break;
+              }
+            }
+          }
           intersections = intersection_copy;
         } else {
-          Pt intersection_avg = Pt(0.0, 0.0, 0.0);
+          Pt intersection_avg = Pt(ZERO, ZERO, ZERO);
           for (std::size_t i = 0; i < intersection_size; ++i) {
             const auto& curr_pt =
                 intersections[i].first->getVertex()->getLocation().getPt();
             intersection_avg += curr_pt;
           }
-          intersection_avg /= static_cast<double>(intersection_size);
-          const double z_diff = intersection_avg[2] +
-                                a_aligned_paraboloid.a() * intersection_avg[0] *
-                                    intersection_avg[0] +
-                                a_aligned_paraboloid.b() * intersection_avg[1] *
-                                    intersection_avg[1];
+          intersection_avg /= static_cast<ScalarType>(intersection_size);
+          const ScalarType z_diff =
+              intersection_avg[2] +
+              a_aligned_paraboloid.a() * intersection_avg[0] *
+                  intersection_avg[0] +
+              a_aligned_paraboloid.b() * intersection_avg[1] *
+                  intersection_avg[1];
+
+          if (fabs(z_diff) < ONE_HUNDRED * MACHINE_EPSILON) {
+            requires_nudge = true;
+          }
 
           // Find dominant face normal direction
           std::size_t dir = 0;
-          double max_normal = std::fabs(face_normal[dir]);
+          ScalarType max_normal = fabs(face_normal[dir]);
           for (std::size_t d = 1; d < 3; ++d) {
-            if (std::fabs(face_normal[d]) > max_normal) {
+            if (fabs(face_normal[d]) > max_normal) {
               dir = d;
             }
-            max_normal = std::fabs(face_normal[dir]);
+            max_normal = fabs(face_normal[dir]);
           }
-          const double normal_invert = std::copysign(1.0, face_normal[dir]);
-          const double invert = z_diff < 0.0 ? normal_invert : -normal_invert;
+          const ScalarType normal_invert = copysign(ONE, face_normal[dir]);
+          const ScalarType invert =
+              z_diff < ZERO ? normal_invert : -normal_invert;
           // Compute convex hull on projected plane
           const std::size_t x_id = (dir + 1) % 3;
           const std::size_t y_id = (dir + 2) % 3;
@@ -2564,8 +3289,8 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
             }
           }
 
-          // Start from leftmost point, keep moving counterclockwise until
-          // reach the start point again.
+          // Start from leftmost point, keep moving counterclockwise
+          // until reach the start point again.
           std::size_t p = left_id;
           auto p_pt = left_pt;
           std::size_t hull_size = 0;
@@ -2583,15 +3308,15 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                     intersections[i].first->getVertex()->getLocation().getPt();
                 const auto q_pt =
                     intersections[q].first->getVertex()->getLocation().getPt();
-                double dot_product =
+                ScalarType dot_product =
                     (i_pt[y_id] - p_pt[y_id]) * (q_pt[x_id] - i_pt[x_id]) -
                     (i_pt[x_id] - p_pt[x_id]) * (q_pt[y_id] - i_pt[y_id]);
-                // If the points are aligned, keep closest and increase
-                // flatness counter
-                if (std::fabs(dot_product) < 5.0 * DBL_EPSILON) {
+                // If the points are aligned, keep closest and
+                // increase flatness counter
+                if (fabs(dot_product) < ANGLE_EPSILON) {
                   has_flat = true;
                   flatness_counter++;
-                } else if (dot_product < 0.0) {
+                } else if (dot_product < ZERO) {
                   q = i;
                 }
               }
@@ -2609,14 +3334,15 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                     element.first->getVertex()->getLocation().getPt();
                 // element.second =
                 //     invert *
-                //     std::atan2(pt[store_ind] - intersection_avg[store_ind],
+                //     std::atan2(pt[store_ind] -
+                //     intersection_avg[store_ind],
                 //                pt[x_id] - intersection_avg[x_id]);
                 element.second =
                     invert *
-                    std::copysign(
-                        1. - (pt[x_id] - intersection_avg[x_id]) /
-                                 (std::fabs(pt[x_id] - intersection_avg[x_id]) +
-                                  std::fabs(pt[y_id] - intersection_avg[y_id])),
+                    copysign(
+                        ONE - (pt[x_id] - intersection_avg[x_id]) /
+                                  (fabs(pt[x_id] - intersection_avg[x_id]) +
+                                   fabs(pt[y_id] - intersection_avg[y_id])),
                         (pt[y_id] - intersection_avg[y_id]));
               }
               std::sort(intersections.begin(), intersections.end(),
@@ -2625,12 +3351,12 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                         });
             } else {
               if (hull_size != intersection_size) {
-                std::cout
-                    << "Parabolic intersections don't form a convex polygon!"
-                    << std::endl;
+                std::cout << "Parabolic intersections don't form a "
+                             "convex polygon!"
+                          << std::endl;
                 exit(-1);
               }
-              if (invert > 0.0) {
+              if (invert > ZERO) {
                 intersections = intersection_copy;
               } else {
                 for (std::size_t i = 0; i < intersection_size; ++i) {
@@ -2639,6 +3365,17 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
                 }
               }
             }
+          }
+          UnsignedIndex_t intersection_are_aligned = 0;
+          for (std::size_t i = 0; i < intersection_size - 1; ++i) {
+            if (fabs(intersections[i].second - intersections[i + 1].second) <
+                ONE_HUNDRED * MACHINE_EPSILON) {
+              requires_nudge = true;
+              intersection_are_aligned++;  // break;
+            }
+          }
+          if (intersection_are_aligned == intersection_size) {
+            ignore_type3_contributions = true;
           }
         }
         // Traverse face from entry->exit
@@ -2659,9 +3396,11 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
           const UnsignedIndex_t exit_index =
               i != 0 ? i - 1 : intersection_size - 1;
           const auto exit_half_edge = intersections[exit_index].first;
-          full_moments += computeNewEdgeSegmentContribution<ReturnType>(
-              a_aligned_paraboloid, ref_pt, entry_half_edge, exit_half_edge,
-              false, a_surface, &requires_nudge, nudge_direction);
+          full_moments +=
+              computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
+                  a_aligned_paraboloid, ref_pt, entry_half_edge, exit_half_edge,
+                  false, ignore_type3_contributions, &requires_nudge,
+                  nudge_direction, a_surface);
         }
         // Clear list of intersections
         intersections.clear();
@@ -2669,13 +3408,42 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     }
     if (requires_nudge) {
       resetPolyhedron(a_polytope, a_complete_polytope);
-      nudge_direction += Normal(0.0, 0.0, 0.0);
+      nudge_direction += Normal(ZERO, ZERO, ZERO);
       nudge_direction.normalize();
-      nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
-                      nudge_epsilon, a_nudge_iter + 1, a_surface);
-      return formParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid,
-          a_nudge_iter + 1, a_surface);
+
+      if constexpr (!has_embedded_gradient<ReturnType>::value) {
+        if constexpr (std::is_same_v<ScalarType, double>) {
+          converted_complete_polytope_type converted_polytope_paraboloid;
+          convertPolytopeFromDoubleToQuadPrecision(
+              a_polytope, a_complete_polytope, &converted_polytope_paraboloid);
+          auto converted_segmented_paraboloid =
+              converted_polytope_paraboloid.generateSegmentedPolyhedron();
+          assert(converted_segmented_paraboloid.checkValidHalfEdgeStructure());
+
+          /* Nudge polytope */
+          const auto converted_nudge_direction =
+              NormalBase<Quad_t>(static_cast<Quad_t>(nudge_direction[0]),
+                                 static_cast<Quad_t>(nudge_direction[1]),
+                                 static_cast<Quad_t>(nudge_direction[2]));
+
+          nudgePolyhedron(&converted_segmented_paraboloid,
+                          &converted_polytope_paraboloid,
+                          converted_nudge_direction, nudge_epsilon,
+                          a_nudge_iter + 1, a_surface);
+          return formParaboloidIntersectionBases<ReturnType>(
+              &converted_segmented_paraboloid, &converted_polytope_paraboloid,
+              AlignedParaboloidBase<Quad_t>(a_aligned_paraboloid),
+              a_nudge_iter + 1, a_surface);
+        } else {
+          nudgePolyhedron(a_polytope, a_complete_polytope, nudge_direction,
+                          nudge_epsilon, a_nudge_iter + 1, a_surface);
+          return formParaboloidIntersectionBases<ReturnType>(
+              a_polytope, a_complete_polytope, a_aligned_paraboloid,
+              a_nudge_iter + 1, a_surface);
+        }
+      } else {
+        ///////////////////////////////////////TODO }
+      }
     }
   }
 
@@ -3004,7 +3772,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   //         if (vertex.needsToSeek()) {
   //           const Pt& pt = vertex.getLocation().getPt();
   //           double distance = signedDistance(pt, a_aligned_paraboloid);
-  //           if (distance < -10.0 * DBL_EPSILON) {
+  //           if (distance < -TEN * DBL_EPSILON) {
   //             std::cout << "P" << reinterpret_cast<std::uintptr_t>(&pt)
   //                       << " -- ";
   //             face_exists = true;
@@ -3113,7 +3881,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   //         if (vertex.needsToSeek()) {
   //           const Pt& pt = vertex.getLocation().getPt();
   //           double distance = signedDistance(pt, a_aligned_paraboloid);
-  //           if (distance < -10.0 * DBL_EPSILON) {
+  //           if (distance < -TEN * DBL_EPSILON) {
   //             std::cout << "Pxy" << reinterpret_cast<std::uintptr_t>(&pt)
   //                       << " -- ";
   //             face_exists = true;
@@ -3200,7 +3968,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   //   for (UnsignedIndex_t v = 0; v < vertices_after_intersection; ++v) {
   //     const Pt& pt = a_polytope->getVertex(v)->getLocation().getPt();
   //     double distance = signedDistance(pt, a_aligned_paraboloid);
-  //     if (distance < -10.0 * DBL_EPSILON) {
+  //     if (distance < -TEN * DBL_EPSILON) {
   //       std::cout
   //           << "if (plot_unclipped_corners) {draw(shift(P"
   //           << reinterpret_cast<std::uintptr_t>(&pt)
@@ -3215,7 +3983,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   //                    "arrow_size), "
   //                    "color_unclipped_edge+linewidth(link_size));}"
   //                 << std::endl;
-  //     } else if (distance > 10.0 * DBL_EPSILON) {
+  //     } else if (distance > TEN * DBL_EPSILON) {
   //       std::cout
   //           << "if (plot_clipped_corners) {draw(shift(P"
   //           << reinterpret_cast<std::uintptr_t>(&pt)
@@ -3452,7 +4220,7 @@ formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
   //         if (vertex.needsToSeek()) {
   //           const Pt& pt = vertex.getLocation().getPt();
   //           double distance = signedDistance(pt, a_aligned_paraboloid);
-  //           if (distance < -10.0 * DBL_EPSILON) {
+  //           if (distance < -TEN * DBL_EPSILON) {
   //             sprintf(faces_string[f], "%s(Pxy%ld) -- ", faces_string[f],
   //                     reinterpret_cast<std::uintptr_t>(&pt));
   //             center += pt;

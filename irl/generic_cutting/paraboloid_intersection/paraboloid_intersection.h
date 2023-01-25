@@ -32,71 +32,94 @@
 
 namespace IRL {
 
-inline Normal computeTangentVectorAtPoint(const AlignedParaboloid& a_paraboloid,
-                                          const Normal& a_plane_normal,
-                                          const Pt& a_pt);
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class ParaboloidType>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
+                                  HalfEdgePolytopeType* a_complete_polytope,
+                                  const ParaboloidType& a_paraboloid);
 
-template <class PtWithGradientType>
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class AlignedParaboloidType,
+          class SurfaceOutputType = NoSurfaceOutput>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+intersectPolyhedronWithAlignedParaboloid(
+    SegmentedHalfEdgePolyhedronType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const AlignedParaboloidType& a_paraboloid,
+    SurfaceOutputType* a_surface = nullptr);
+
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class AligneParaboloidType,
+          class SurfaceOutputType = NoSurfaceOutput>
+enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
+formParaboloidIntersectionBases(
+    SegmentedHalfEdgePolyhedronType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const AligneParaboloidType& a_aligned_paraboloid,
+    const UnsignedIndex_t a_nudge_iter, SurfaceOutputType* a_surface = nullptr);
+
+template <class ScalarType>
+inline NormalBase<ScalarType> computeTangentVectorAtPoint(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal,
+    const PtBase<ScalarType>& a_pt);
+
+template <class ScalarType, class PtWithGradientType>
 inline PtWithGradientType computeTangentVectorAndGradientAtPoint(
-    const AlignedParaboloid& a_paraboloid,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtWithGradientType& a_plane_normal, const PtWithGradientType& a_pt);
 
-inline Normal computeAndCorrectTangentVectorAtPt(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_plane_normal,
-    const Pt& a_origin_pt, const Pt& a_end_pt, const Normal& a_end_tangent,
-    const Pt& a_intersection_pt);
+template <class ScalarType>
+inline NormalBase<ScalarType> computeAndCorrectTangentVectorAtPt(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal,
+    const PtBase<ScalarType>& a_origin_pt, const PtBase<ScalarType>& a_end_pt,
+    const NormalBase<ScalarType>& a_end_tangent,
+    const PtBase<ScalarType>& a_intersection_pt);
 
-template <class PtTypeWithGradient>
+template <class ScalarType, class PtTypeWithGradient>
 inline PtTypeWithGradient computeAndCorrectTangentVectorAndGradientAtPt(
-    const AlignedParaboloid& a_paraboloid,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtTypeWithGradient& a_plane_normal,
     const PtTypeWithGradient& a_origin_pt, const PtTypeWithGradient& a_end_pt,
     const PtTypeWithGradient& a_end_tangent,
     const PtTypeWithGradient& a_intersection_pt);
 
-template <class ReturnType, class SurfaceOutputType = NoSurfaceOutput,
-          class PtType>
+template <class ReturnType, class ScalarType,
+          class SurfaceOutputType = NoSurfaceOutput, class PtType>
 ReturnType computeType3ContributionWithSplit(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_plane_normal,
-    const PtType& a_pt_ref, const PtType& a_pt_0, const PtType& a_pt_1,
-    const Normal& a_tangent_0, const Normal& a_tangent_1,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_plane_normal, const PtType& a_pt_ref,
+    const PtType& a_pt_0, const PtType& a_pt_1,
+    const NormalBase<ScalarType>& a_tangent_0,
+    const NormalBase<ScalarType>& a_tangent_1, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction, UnsignedIndex_t* a_split_counter,
     SurfaceOutputType* a_surface = nullptr);
 
-template <class ReturnType, class SurfaceOutputType = NoSurfaceOutput,
+template <class ReturnType, class ScalarType, class SurfaceOutputType,
           class PtType>
 ReturnType computeType3ContributionWithGradientWithSplit(
-    const AlignedParaboloid& a_paraboloid, const PtType& a_plane_normal,
-    const PtType& a_pt_ref, const PtType& a_pt_0, const PtType& a_pt_1,
-    const PtType& a_tangent_0, const PtType& a_tangent_1,
-    SurfaceOutputType* a_surface = nullptr);
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtType& a_plane_normal, const PtType& a_pt_ref, const PtType& a_pt_0,
+    const PtType& a_pt_1, const PtType& a_tangent_0, const PtType& a_tangent_1,
+    SurfaceOutputType* a_surface);
 
-template <class ReturnType, class HalfEdgeType, class PtType>
+template <class ReturnType, class ScalarType, class HalfEdgeType, class PtType>
 ReturnType computeUnclippedSegmentType1Contribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_ref_pt,
-    const HalfEdgeType a_entry_half_edge, HalfEdgeType& a_exit_half_edge,
-    const bool skip_first);
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PtType& a_ref_pt, const HalfEdgeType a_entry_half_edge,
+    HalfEdgeType& a_exit_half_edge, const bool skip_first);
 
-template <class ReturnType, class HalfEdgeType,
+template <class ReturnType, class ScalarType, class HalfEdgeType,
           class SurfaceOutputType = NoSurfaceOutput, class PtType>
 ReturnType computeNewEdgeSegmentContribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_ref_pt,
-    const HalfEdgeType a_entry_half_edge, const HalfEdgeType a_exit_half_edge,
-    const bool skip_first, SurfaceOutputType* a_surface = nullptr);
-
-template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType>
-enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                  HalfEdgePolytopeType* a_complete_polytope,
-                                  const Paraboloid& a_paraboloid);
-
-template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
-enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                  HalfEdgePolytopeType* a_complete_polytope,
-                                  const AlignedParaboloid& a_paraboloid,
-                                  SurfaceOutputType* a_surface = nullptr);
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PtType& a_ref_pt, const HalfEdgeType a_entry_half_edge,
+    const HalfEdgeType a_exit_half_edge, const bool skip_first,
+    const bool a_ignore_type3, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction,
+    SurfaceOutputType* a_surface = nullptr);
 
 template <class PtType, class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType>
@@ -107,73 +130,73 @@ void placeSingleIntercept(const PtType& a_intersection_location,
 
 template <class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType, class VertexType>
-void placeDoubleIntercept(const StackVector<std::pair<VertexType, double>, 2>&
-                              a_intersection_location,
-                          HalfEdgeType* a_half_edge_with_intersection,
-                          SegmentedHalfEdgePolytopeType* a_polytope,
-                          HalfEdgePolytopeType* a_complete_polytope);
+void placeDoubleIntercept(
+    const StackVector<std::pair<VertexType, typename HalfEdgeType::value_type>,
+                      2>& a_intersection_location,
+    HalfEdgeType* a_half_edge_with_intersection,
+    SegmentedHalfEdgePolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope);
 
-template <class PtType>
+template <class PtType, class ScalarType>
 void checkAndFindIntercepts(
-    const AlignedParaboloid& a_paraboloid, const PtType& a_pt_0,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid, const PtType& a_pt_0,
     const PtType& a_pt_1,
-    StackVector<std::pair<PtType, double>, 2>* a_intercepts,
-    const double a_nudge_epsilon);
+    StackVector<std::pair<PtType, ScalarType>, 2>* a_intercepts,
+    const ScalarType a_nudge_epsilon);
 
 template <class VertexType>
-bool vertexBelow(const VertexType& a_pt, const AlignedParaboloid& a_paraboloid);
+bool vertexBelow(
+    const VertexType& a_pt,
+    const AlignedParaboloidBase<typename VertexType::value_type>& a_paraboloid);
 
+template <class ScalarType>
 inline bool isPtBeforeIntersectionWithEdge(
-    const std::array<double, 2>& a_test_pt, const Pt& a_vertex_0,
-    const Pt& a_vertex_1);
+    const std::array<ScalarType, 2>& a_test_pt,
+    const PtBase<ScalarType>& a_vertex_0, const PtBase<ScalarType>& a_vertex_1);
 
+template <class ScalarType>
 inline bool isPtBeforeIntersectionWithEdgeWithComponent(
-    const Pt& a_test_pt, const Pt& a_vertex_0, const Pt& a_vertex_1,
-    const UnsignedIndex_t a_index);
+    const PtBase<ScalarType>& a_test_pt, const PtBase<ScalarType>& a_vertex_0,
+    const PtBase<ScalarType>& a_vertex_1, const UnsignedIndex_t a_index);
 
-template <class HalfEdgeType>
-bool ellipseContainedInFace(const AlignedParaboloid& a_aligned_paraboloid,
-                            const Plane& a_face_plane,
-                            HalfEdgeType* const a_half_edge);
+template <class ScalarType, class HalfEdgeType>
+bool ellipseContainedInFace(
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PlaneBase<ScalarType>& a_face_plane, HalfEdgeType* const a_half_edge);
 
-template <class ReturnType, class HalfEdgeType,
+template <class ReturnType, class ScalarType, class HalfEdgeType,
           class SurfaceOutputType = NoSurfaceOutput>
 ReturnType orientAndApplyType3Correction(
-    const AlignedParaboloid& a_paraboloid, HalfEdgeType* a_start,
-    HalfEdgeType* a_end, SurfaceOutputType* a_surface = nullptr);
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    HalfEdgeType* a_start, HalfEdgeType* a_end, bool* a_requires_nudge,
+    NormalBase<ScalarType>& a_nudge_direction,
+    SurfaceOutputType* a_surface = nullptr);
 
-template <class ReturnType, class HalfEdgeType,
-          class SurfaceOutputType = NoSurfaceOutput>
+template <class ReturnType, class ScalarType, class HalfEdgeType,
+          class SurfaceOutputType>
 ReturnType orientAndApplyType3CorrectionWithGradients(
     const AlignedParaboloid& a_paraboloid, HalfEdgeType* a_start,
-    HalfEdgeType* a_end, SurfaceOutputType* a_surface = nullptr);
+    HalfEdgeType* a_end, SurfaceOutputType* a_surface, bool* a_requires_nudge,
+    Normal& a_nudge_direction);
 
-template <class HalfEdgeType, class PtType>
-Normal determineNudgeDirection(const AlignedParaboloid& a_paraboloid,
-                               HalfEdgeType* a_current_edge,
-                               const PtType& a_inter_pt);
+template <class ScalarType, class HalfEdgeType, class PtType>
+Normal determineNudgeDirection(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    HalfEdgeType* a_current_edge, const PtType& a_inter_pt);
 
 template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType>
 enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, void>
 resetPolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                 HalfEdgePolytopeType* a_complete_polytope);
 
-template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType>
+template <class ScalarType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class SurfaceOutputType>
 void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                      HalfEdgePolytopeType* a_complete_polytope,
-                     const Normal a_nudge_direction,
-                     const double a_nudge_epsilon,
-                     const UnsignedIndex_t a_nudge_iter);
-
-template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
-          class HalfEdgePolytopeType, class SurfaceOutputType = NoSurfaceOutput>
-enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
-formParaboloidIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
-                                HalfEdgePolytopeType* a_complete_polytope,
-                                const AlignedParaboloid& a_aligned_paraboloid,
-                                const UnsignedIndex_t a_nudge_iter,
-                                SurfaceOutputType* a_surface = nullptr);
-
+                     const NormalBase<ScalarType> a_nudge_direction,
+                     const ScalarType a_nudge_epsilon,
+                     const UnsignedIndex_t a_nudge_iter,
+                     SurfaceOutputType* a_surface);
 template <class C>
 struct has_embedded_gradient : std::false_type {};
 

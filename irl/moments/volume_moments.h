@@ -19,32 +19,39 @@
 namespace IRL {
 
 /// \brief Zeroeth (volume) and first order (centroid) geometric moments
-class VolumeMoments {
+template <class ScalarType>
+class VolumeMomentsBase {
  public:
-  using gradient_type = VolumeMoments;
+  using gradient_type = VolumeMomentsBase;
+  using value_type = ScalarType;
 
   /// \brief Default constructor.
-  VolumeMoments(void);
+  VolumeMomentsBase(void);
 
   /// \brief Constructor that initializes volume and centroid.
-  constexpr VolumeMoments(const double a_volume, const Pt& a_centroid);
+  constexpr VolumeMomentsBase(const ScalarType a_volume,
+                              const PtBase<ScalarType>& a_centroid);
+  constexpr VolumeMomentsBase(const VolumeMomentsBase<double>& a_moments);
+  constexpr VolumeMomentsBase(const VolumeMomentsBase<Quad_t>& a_moments);
 
-  static constexpr VolumeMoments fromRawDoublePointer(const double* a_list);
+  static constexpr VolumeMomentsBase fromRawDoublePointer(
+      const ScalarType* a_list);
 
-  static constexpr VolumeMoments fromScalarConstant(const double a_value);
+  static constexpr VolumeMomentsBase fromScalarConstant(
+      const ScalarType a_value);
 
   /// \brief Obtain un-normalized VolumeMoments from the supplied geometry.
   template <class GeometryType>
-  static VolumeMoments calculateMoments(GeometryType* a_geometry);
+  static VolumeMomentsBase calculateMoments(GeometryType* a_geometry);
 
   /// \brief Return value of stored volume.
-  Volume& volume(void);
+  VolumeBase<ScalarType>& volume(void);
   /// \brief Return const reference to stored volume.
-  const Volume& volume(void) const;
+  const VolumeBase<ScalarType>& volume(void) const;
   /// \brief Return copy of stored centroid.
-  Pt& centroid(void);
+  PtBase<ScalarType>& centroid(void);
   /// \brief Return const reference to stored centroid.
-  const Pt& centroid(void) const;
+  const PtBase<ScalarType>& centroid(void) const;
 
   /// \brief Divide the centroid by the volume.
   void normalizeByVolume(void);
@@ -53,53 +60,62 @@ class VolumeMoments {
   void multiplyByVolume(void);
 
   /// \brief Overload += operator to update moments.
-  VolumeMoments& operator+=(const VolumeMoments& a_rhs);
+  VolumeMomentsBase& operator+=(const VolumeMomentsBase& a_rhs);
 
   /// \brief Overload *= operator to multiply by constant double
-  VolumeMoments& operator*=(const double a_rhs);
+  VolumeMomentsBase& operator*=(const ScalarType a_rhs);
 
   /// \brief Overload *= operator to multiply by constant double
-  VolumeMoments& operator/=(const double a_rhs);
+  VolumeMomentsBase& operator/=(const ScalarType a_rhs);
 
   /// \brief Overload assignment to assign constant value to moments.
-  VolumeMoments& operator=(const double a_value);
+  VolumeMomentsBase& operator=(const ScalarType a_value);
 
   // Unary - operator
-  VolumeMoments operator-(void) const;
+  VolumeMomentsBase operator-(void) const;
 
   /// \brief Default destructor.
-  ~VolumeMoments(void) = default;
+  ~VolumeMomentsBase(void) = default;
 
  private:
   /// \brief Construct VolumeMoments from a list of doubles.
   ///
   /// Construct VolumeMoments from a list of 4 doubles. The necessary order
   /// is volume, centroid_x, centroid_y, centroid_z.
-  constexpr explicit VolumeMoments(const double* a_list);
+  constexpr explicit VolumeMomentsBase(const ScalarType* a_list);
 
   /// \brief Construct that initializes volume/centroid as a value.
-  constexpr explicit VolumeMoments(const double a_value);
+  constexpr explicit VolumeMomentsBase(const ScalarType a_value);
 
-  Volume volume_m;  ///< \brief Zeroeth moment (volume).
-  Pt centroid_m;    ///< \brief First moment (centroid).
+  VolumeBase<ScalarType> volume_m;  ///< \brief Zeroeth moment (volume).
+  PtBase<ScalarType> centroid_m;    ///< \brief First moment (centroid).
 };
 
-inline std::ostream& operator<<(std::ostream& out,
-                                const VolumeMoments& a_volume_moments);
+template <class ScalarType>
+inline std::ostream& operator<<(
+    std::ostream& out, const VolumeMomentsBase<ScalarType>& a_volume_moments);
 
 /// \brief Overload + operator to add two geometric moments together
-inline VolumeMoments operator+(const VolumeMoments& a_vm1,
-                               const VolumeMoments& a_vm2);
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator+(
+    const VolumeMomentsBase<ScalarType>& a_vm1,
+    const VolumeMomentsBase<ScalarType>& a_vm2);
 /// \brief Overload - operator to subtract one
 /// geometric moment object from another.
-inline VolumeMoments operator-(const VolumeMoments& a_vm1,
-                               const VolumeMoments& a_vm2);
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator-(
+    const VolumeMomentsBase<ScalarType>& a_vm1,
+    const VolumeMomentsBase<ScalarType>& a_vm2);
 /// \brief Overload * operator to multiply volume/centroid
-inline VolumeMoments operator*(const double a_multiplier,
-                               const VolumeMoments& a_vm);
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator*(
+    const ScalarType a_multiplier, const VolumeMomentsBase<ScalarType>& a_vm);
 /// \brief Overload * operator to multiply volume/centroid
-inline VolumeMoments operator*(const VolumeMoments& a_vm,
-                               const double a_multiplier);
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator*(
+    const VolumeMomentsBase<ScalarType>& a_vm, const ScalarType a_multiplier);
+
+using VolumeMoments = VolumeMomentsBase<double>;
 
 }  // namespace IRL
 

@@ -1,6 +1,7 @@
 
 #include "examples/paraboloid_advector/vtk.h"
 
+#include <mpi.h>
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -89,6 +90,86 @@ void VTKOutput::writeVTKFile(const double a_time) {
   ++data_files_written_m;
 }
 
+void VTKOutput::writeParametrizedInterface(
+    const double a_time,
+    std::vector<IRL::ParametrizedSurfaceOutput>& a_surface) {
+  const auto surface_file_name =
+      directory_m + "/" + file_name_base_m + "_interface_" +
+      std::to_string(interface_files_written_m) + ".irl";
+  FILE* file;
+
+  int dummy1, dummy2;
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Status status;
+
+  int number_of_surfaces = a_surface.size(), total_surfaces = 0;
+  MPI_Allreduce(&number_of_surfaces, &total_surfaces, 1, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    file = fopen(surface_file_name.c_str(), "w");
+    fprintf(file, "Number of surface patches: %i\n", total_surfaces);
+    fclose(file);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&dummy1, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      file = fopen(surface_file_name.c_str(), "a");
+      for (std::size_t i = 0; i < a_surface.size(); ++i) {
+        auto paraboloid = a_surface[i].getParaboloid();
+        auto datum = paraboloid.getDatum();
+        auto ref_frame = paraboloid.getReferenceFrame();
+        auto aligned_paraboloid = paraboloid.getAlignedParaboloid();
+        auto arc_list = a_surface[i].getArcs();
+        fprintf(file, "Number of arcs: %i\n",
+                static_cast<int>(arc_list.size()));
+        fprintf(file,
+                "Reference frame: ( %+.16e %+.16e %+.16e ) ( %+.16e %+.16e "
+                "%+.16e ) ( %+.16e %+.16e %+.16e )\n",
+                static_cast<double>(ref_frame[0][0]),
+                static_cast<double>(ref_frame[0][1]),
+                static_cast<double>(ref_frame[0][2]),
+                static_cast<double>(ref_frame[1][0]),
+                static_cast<double>(ref_frame[1][1]),
+                static_cast<double>(ref_frame[1][2]),
+                static_cast<double>(ref_frame[2][0]),
+                static_cast<double>(ref_frame[2][1]),
+                static_cast<double>(ref_frame[2][2]));
+        fprintf(file, "Datum: ( %+.16e %+.16e %+.16e )\n",
+                static_cast<double>(datum[0]), static_cast<double>(datum[1]),
+                static_cast<double>(datum[2]));
+        fprintf(file, "Coefficients: ( %+.16e %+.16e )\n",
+                static_cast<double>(aligned_paraboloid.a()),
+                static_cast<double>(aligned_paraboloid.b()));
+        for (std::size_t j = 0; j < arc_list.size(); ++j) {
+          const auto arc = arc_list[j];
+          fprintf(file,
+                  "Arc %i: %i %i %+.16e ( %+.16e %+.16e %+.16e ) ( %+.16e "
+                  "%+.16e %+.16e ) ( %+.16e %+.16e %+.16e )\n",
+                  j, arc.start_point_id(), arc.end_point_id(), arc.weight(),
+                  arc.start_point()[0], arc.start_point()[1],
+                  arc.start_point()[2], arc.control_point()[0],
+                  arc.control_point()[1], arc.control_point()[2],
+                  arc.end_point()[0], arc.end_point()[1], arc.end_point()[2]);
+        }
+      }
+
+      fclose(file);
+      if (size > 1 && rank < size - 1) {
+        MPI_Send(&dummy2, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
+    }
+  }
+  ++interface_files_written_m;
+}
+
 void VTKOutput::writeVTKInterface(
     const double a_time, std::vector<IRL::ParametrizedSurfaceOutput>& a_surface,
     const bool a_print_info) {
@@ -102,82 +183,184 @@ void VTKOutput::writeVTKInterface(
   FILE* file;
 
   //////////////////// WRITING TRIANGLES
-  file = fopen(surface_file_name.c_str(), "w");
-
   std::vector<IRL::TriangulatedSurfaceOutput> triangulated_surface;
   triangulated_surface.resize(a_surface.size());
   for (std::size_t i = 0; i < a_surface.size(); ++i) {
     triangulated_surface[i] = a_surface[i].triangulate();
   }
 
-  std::size_t number_of_vertices = 0;
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+  int number_of_vertices = 0;
+  std::vector<int> offset(triangulated_surface.size() + 1, 0);
+  for (int i = 0; i < triangulated_surface.size(); ++i) {
     const auto& vlist = triangulated_surface[i].getVertexList();
     number_of_vertices += vlist.size();
+    offset[i + 1] = offset[i] + vlist.size();
   }
 
-  std::size_t number_of_triangles = 0;
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+  int number_of_triangles = 0;
+  for (int i = 0; i < triangulated_surface.size(); ++i) {
     const auto& tlist = triangulated_surface[i].getTriangleList();
     number_of_triangles += tlist.size();
   }
 
-  fprintf(file, "<VTKFile type=\"UnstructuredGrid\">\n");
-  fprintf(file, "<UnstructuredGrid>\n");
-  fprintf(file, "<Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
-          static_cast<int>(number_of_vertices),
-          static_cast<int>(number_of_triangles));
-  fprintf(file, "<Points>\n");
-  fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
-  std::vector<std::size_t> offset(triangulated_surface.size() + 1, 0);
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
-    const auto& vlist = triangulated_surface[i].getVertexList();
-    for (const auto& vertex : vlist) {
-      fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(vertex[0]),
-              static_cast<double>(vertex[1]), static_cast<double>(vertex[2]));
-    }
-    offset[i + 1] = offset[i] + vlist.size();
-  }
-  fprintf(file, "</DataArray>\n</Points>\n");
-
-  fprintf(file, "<Cells>\n");
-  fprintf(
-      file,
-      "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
-
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
-    const auto& tlist = triangulated_surface[i].getTriangleList();
+  int number_of_bdy_edges = 0;
+  std::vector<int> edge_mapping(number_of_vertices, 0);
+  for (int i = 0; i < triangulated_surface.size(); ++i) {
+    const auto& elist = triangulated_surface[i].getBoundaryEdgeList();
     const auto off = offset[i];
-    for (const auto& triangle : tlist) {
-      const auto& index_mapping = triangle.getIndexMapping();
-      fprintf(file, "%d %d %d ", static_cast<int>(off + index_mapping[0]),
-              static_cast<int>(off + index_mapping[1]),
-              static_cast<int>(off + index_mapping[2]));
+    for (const auto& edge : elist) {
+      if (!edge_mapping[off + edge.first]) {
+        edge_mapping[off + edge.first] = 1;
+      }
+      if (!edge_mapping[off + edge.second]) {
+        edge_mapping[off + edge.second] = 1;
+      }
+    }
+    number_of_bdy_edges += elist.size();
+  }
+  int number_of_bdy_vertices = 0;
+  for (int i = 0; i < number_of_vertices; ++i) {
+    if (edge_mapping[i]) {
+      edge_mapping[i] = 1 + number_of_bdy_vertices++;
     }
   }
-  fprintf(file, "</DataArray>\n");
 
-  fprintf(file,
-          "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-  for (std::size_t i = 0; i < number_of_triangles; ++i) {
-    fprintf(file, "%d ", static_cast<int>(3 * (i + 1)));
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Status status;
+
+  int start = 0;
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&start, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      if (size > 1 && rank < size - 1) {
+        int next = start + number_of_vertices;
+        MPI_Send(&next, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
+    }
   }
-  fprintf(file, "</DataArray>\n");
 
-  fprintf(file, "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-  for (std::size_t i = 0; i < number_of_triangles; ++i) {
-    fprintf(file, "5 ");
+  // std::cout << "Rank " << rank << " has " << number_of_vertices << "
+  // vertices, "
+  //           << number_of_triangles << " triangles, and " <<
+  //           number_of_bdy_edges
+  //           << "edges" << std::endl;
+
+  int total_vertices = number_of_vertices,
+      total_triangles = number_of_triangles,
+      total_edge_vertices = number_of_bdy_vertices,
+      total_edges = number_of_bdy_edges;
+  MPI_Allreduce(&number_of_vertices, &total_vertices, 1, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+  MPI_Allreduce(&number_of_triangles, &total_triangles, 1, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+  MPI_Allreduce(&number_of_bdy_edges, &total_edges, 1, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+  MPI_Allreduce(&number_of_bdy_vertices, &total_edge_vertices, 1, MPI_INT,
+                MPI_SUM, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    file = fopen(surface_file_name.c_str(), "w");
+    fprintf(file, "<VTKFile type=\"UnstructuredGrid\">\n");
+    fprintf(file, "<UnstructuredGrid>\n");
+    fprintf(file, "<Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
+            static_cast<int>(total_vertices),
+            static_cast<int>(total_triangles));
+    fprintf(file, "<Points>\n");
+    fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
+    fclose(file);
   }
-  fprintf(file, "</DataArray>\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+  int dummy1 = 0, dummy2 = 0;
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&dummy1, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      file = fopen(surface_file_name.c_str(), "a");
+      for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+        const auto& vlist = triangulated_surface[i].getVertexList();
+        for (const auto& vertex : vlist) {
+          fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(vertex[0]),
+                  static_cast<double>(vertex[1]),
+                  static_cast<double>(vertex[2]));
+        }
+      }
+      fclose(file);
+      if (size > 1 && rank < size - 1) {
+        MPI_Send(&dummy2, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    file = fopen(surface_file_name.c_str(), "a");
+    fprintf(file, "</DataArray>\n</Points>\n");
 
-  fprintf(file, "</Cells>\n");
-
-  if (a_print_info) {
-    fprintf(file, "<PointData>\n");
+    fprintf(file, "<Cells>\n");
     fprintf(
         file,
-        "<DataArray type=\"Float64\" Name=\"Normal\" NumberOfComponents=\"3\" "
-        "format=\"ascii\">\n");
+        "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
+    fclose(file);
+  }
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&dummy1, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      file = fopen(surface_file_name.c_str(), "a");
+      for (int i = 0; i < triangulated_surface.size(); ++i) {
+        const auto& tlist = triangulated_surface[i].getTriangleList();
+        const auto off = start + offset[i];
+        for (const auto& triangle : tlist) {
+          const auto& index_mapping = triangle.getIndexMapping();
+          fprintf(file, "%d %d %d ", static_cast<int>(off + index_mapping[0]),
+                  static_cast<int>(off + index_mapping[1]),
+                  static_cast<int>(off + index_mapping[2]));
+        }
+      }
+      fclose(file);
+      if (size > 1 && rank < size - 1) {
+        MPI_Send(&dummy2, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    file = fopen(surface_file_name.c_str(), "a");
+    fprintf(file, "</DataArray>\n");
+
+    fprintf(file,
+            "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < total_triangles; ++i) {
+      fprintf(file, "%d ", static_cast<int>(3 * (i + 1)));
+    }
+    fprintf(file, "</DataArray>\n");
+
+    fprintf(file,
+            "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < total_triangles; ++i) {
+      fprintf(file, "5 ");
+    }
+    fprintf(file, "</DataArray>\n");
+
+    fprintf(file, "</Cells>\n");
+    fclose(file);
+  }
+
+  if (size == 1 && a_print_info) {
+    fprintf(file, "<PointData>\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"Normal\" "
+            "NumberOfComponents=\"3\" "
+            "format=\"ascii\">\n");
     for (std::size_t i = 0; i < a_surface.size(); ++i) {
       const auto& vlist = triangulated_surface[i].getVertexList();
       for (const auto& vertex : vlist) {
@@ -222,9 +405,9 @@ void VTKOutput::writeVTKInterface(
       }
     }
     fprintf(file, "</DataArray>\n");
-    fprintf(
-        file,
-        "<DataArray type=\"Float64\" Name=\"SurfaceArea\" format=\"ascii\">\n");
+    fprintf(file,
+            "<DataArray type=\"Float64\" Name=\"SurfaceArea\" "
+            "format=\"ascii\">\n");
     for (std::size_t i = 0; i < a_surface.size(); ++i) {
       auto surface_area = a_surface[i].getSurfaceArea();
       const auto& tlist = triangulated_surface[i].getTriangleList();
@@ -281,85 +464,122 @@ void VTKOutput::writeVTKInterface(
 
     fprintf(file, "</CellData>\n");
   }
-  fprintf(file, "</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
-  fclose(file);
+  if (rank == 0) {
+    file = fopen(surface_file_name.c_str(), "a");
+    fprintf(file, "</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
+    fclose(file);
+  }
 
   //////////////////// WRITING EDGES
-  file = fopen(bdy_edge_file_name.c_str(), "w");
-  std::size_t number_of_bdy_edges = 0;
-  std::vector<std::size_t> edge_mapping(number_of_vertices, 0);
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
-    const auto& elist = triangulated_surface[i].getBoundaryEdgeList();
-    const auto off = offset[i];
-    for (const auto& edge : elist) {
-      if (!edge_mapping[off + edge.first]) {
-        edge_mapping[off + edge.first] = 1;
-      }
-      if (!edge_mapping[off + edge.second]) {
-        edge_mapping[off + edge.second] = 1;
-      }
-    }
-    number_of_bdy_edges += elist.size();
-  }
-  std::size_t number_of_bdy_vertices = 0;
-  for (std::size_t i = 0; i < number_of_vertices; ++i) {
-    if (edge_mapping[i]) {
-      edge_mapping[i] = 1 + number_of_bdy_vertices++;
-    }
-  }
 
-  fprintf(file, "<VTKFile type=\"UnstructuredGrid\">\n");
-  fprintf(file, "<UnstructuredGrid>\n");
-  fprintf(file, "<Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
-          static_cast<int>(number_of_bdy_vertices),
-          static_cast<int>(number_of_bdy_edges));
-  fprintf(file, "<Points>\n");
-  fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
-    const auto& vlist = triangulated_surface[i].getVertexList();
-    const auto off = offset[i];
-    for (std::size_t j = 0; j < vlist.size(); ++j) {
-      if (edge_mapping[off + j]) {
-        fprintf(file, "%15.8E %15.8E %15.8E ", static_cast<double>(vlist[j][0]),
-                static_cast<double>(vlist[j][1]),
-                static_cast<double>(vlist[j][2]));
+  start = 0;
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&start, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      if (size > 1 && rank < size - 1) {
+        int next = start + number_of_bdy_vertices;
+        MPI_Send(&next, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
       }
     }
   }
-  fprintf(file, "</DataArray>\n</Points>\n");
 
-  fprintf(file, "<Cells>\n");
-  fprintf(
-      file,
-      "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
-
-  for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
-    const auto& elist = triangulated_surface[i].getBoundaryEdgeList();
-    const auto off = offset[i];
-    for (const auto& edge : elist) {
-      fprintf(file, "%d %d ",
-              static_cast<int>(edge_mapping[off + edge.first] - 1),
-              static_cast<int>(edge_mapping[off + edge.second] - 1));
+  if (rank == 0) {
+    file = fopen(bdy_edge_file_name.c_str(), "w");
+    fprintf(file, "<VTKFile type=\"UnstructuredGrid\">\n");
+    fprintf(file, "<UnstructuredGrid>\n");
+    fprintf(file, "<Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
+            static_cast<int>(total_edge_vertices),
+            static_cast<int>(total_edges));
+    fprintf(file, "<Points>\n");
+    fprintf(file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\">\n");
+    fclose(file);
+  }
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&dummy1, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      file = fopen(bdy_edge_file_name.c_str(), "a");
+      for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+        const auto& vlist = triangulated_surface[i].getVertexList();
+        const auto off = offset[i];
+        for (std::size_t j = 0; j < vlist.size(); ++j) {
+          if (edge_mapping[off + j]) {
+            fprintf(file, "%15.8E %15.8E %15.8E ",
+                    static_cast<double>(vlist[j][0]),
+                    static_cast<double>(vlist[j][1]),
+                    static_cast<double>(vlist[j][2]));
+          }
+        }
+      }
+      fclose(file);
+      if (size > 1 && rank < size - 1) {
+        MPI_Send(&dummy2, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
     }
   }
-  fprintf(file, "</DataArray>\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    file = fopen(bdy_edge_file_name.c_str(), "a");
+    fprintf(file, "</DataArray>\n</Points>\n");
 
-  fprintf(file,
-          "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-  for (std::size_t i = 0; i < number_of_bdy_edges; ++i) {
-    fprintf(file, "%d ", static_cast<int>(2 * (i + 1)));
+    fprintf(file, "<Cells>\n");
+    fprintf(
+        file,
+        "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
+    fclose(file);
   }
-  fprintf(file, "</DataArray>\n");
-
-  fprintf(file, "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-  for (std::size_t i = 0; i < number_of_bdy_edges; ++i) {
-    fprintf(file, "3 ");
+  for (int r = 0; r < size; r++) {
+    if (rank == r) {
+      if (rank > 0) {
+        MPI_Recv(&dummy1, 1, MPI_INT, r - 1, 1234 + r - 1, MPI_COMM_WORLD,
+                 &status);
+      }
+      file = fopen(bdy_edge_file_name.c_str(), "a");
+      for (std::size_t i = 0; i < triangulated_surface.size(); ++i) {
+        const auto& elist = triangulated_surface[i].getBoundaryEdgeList();
+        const auto off = offset[i];
+        for (const auto& edge : elist) {
+          fprintf(
+              file, "%d %d ",
+              static_cast<int>(start + edge_mapping[off + edge.first] - 1),
+              static_cast<int>(start + edge_mapping[off + edge.second] - 1));
+        }
+      }
+      fclose(file);
+      if (size > 1 && rank < size - 1) {
+        MPI_Send(&dummy2, 1, MPI_INT, r + 1, 1234 + r, MPI_COMM_WORLD);
+      }
+    }
   }
-  fprintf(file, "</DataArray>\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    file = fopen(bdy_edge_file_name.c_str(), "a");
+    fprintf(file, "</DataArray>\n");
 
-  fprintf(file, "</Cells>\n");
+    fprintf(file,
+            "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < total_edges; ++i) {
+      fprintf(file, "%d ", static_cast<int>(2 * (i + 1)));
+    }
+    fprintf(file, "</DataArray>\n");
 
-  if (a_print_info) {
+    fprintf(file,
+            "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+    for (std::size_t i = 0; i < total_edges; ++i) {
+      fprintf(file, "3 ");
+    }
+    fprintf(file, "</DataArray>\n");
+
+    fprintf(file, "</Cells>\n");
+    fclose(file);
+  }
+
+  if (size == 1 && a_print_info) {
     fprintf(file, "<PointData>\n");
     fprintf(file,
             "<DataArray type=\"Float64\" Name=\"Normal\" "
@@ -479,8 +699,10 @@ void VTKOutput::writeVTKInterface(
 
     fprintf(file, "</CellData>\n");
   }
-  fprintf(file, "</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
-  fclose(file);
-
+  if (rank == 0) {
+    file = fopen(bdy_edge_file_name.c_str(), "a");
+    fprintf(file, "</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
+    fclose(file);
+  }
   ++interface_files_written_m;
 }

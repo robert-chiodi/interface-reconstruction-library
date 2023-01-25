@@ -31,7 +31,8 @@ PtList<VertexType, kMaxNumberOfPts>::fromRawPtPointer(
 template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
 PtList<VertexType, kMaxNumberOfPts>
 PtList<VertexType, kMaxNumberOfPts>::fromRawDoublePointer(
-    const UnsignedIndex_t a_number_of_pts, const double* a_array_of_locs) {
+    const UnsignedIndex_t a_number_of_pts,
+    const typename VertexType::value_type* a_array_of_locs) {
   return PtList(a_number_of_pts, a_array_of_locs);
 }
 
@@ -61,23 +62,27 @@ const VertexType& PtList<VertexType, kMaxNumberOfPts>::operator[](
 }
 
 template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
-IRL::Pt PtList<VertexType, kMaxNumberOfPts>::getLowerLimits(void) const {
-  Pt pt_to_return(DBL_MAX, DBL_MAX, DBL_MAX);
+PtBase<typename VertexType::value_type>
+PtList<VertexType, kMaxNumberOfPts>::getLowerLimits(void) const {
+  PtBase<typename VertexType::value_type> pt_to_return(DBL_MAX, DBL_MAX,
+                                                       DBL_MAX);
   for (const auto& pt : pt_list_m) {
-    pt_to_return[0] = std::min(pt_to_return[0], pt[0]);
-    pt_to_return[1] = std::min(pt_to_return[1], pt[1]);
-    pt_to_return[2] = std::min(pt_to_return[2], pt[2]);
+    pt_to_return[0] = minimum(pt_to_return[0], pt[0]);
+    pt_to_return[1] = minimum(pt_to_return[1], pt[1]);
+    pt_to_return[2] = minimum(pt_to_return[2], pt[2]);
   }
   return pt_to_return;
 }
 
 template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
-IRL::Pt PtList<VertexType, kMaxNumberOfPts>::getUpperLimits(void) const {
-  Pt pt_to_return(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+PtBase<typename VertexType::value_type>
+PtList<VertexType, kMaxNumberOfPts>::getUpperLimits(void) const {
+  PtBase<typename VertexType::value_type> pt_to_return(-DBL_MAX, -DBL_MAX,
+                                                       -DBL_MAX);
   for (const auto& pt : pt_list_m) {
-    pt_to_return[0] = std::max(pt_to_return[0], pt[0]);
-    pt_to_return[1] = std::max(pt_to_return[1], pt[1]);
-    pt_to_return[2] = std::max(pt_to_return[2], pt[2]);
+    pt_to_return[0] = maximum(pt_to_return[0], pt[0]);
+    pt_to_return[1] = maximum(pt_to_return[1], pt[1]);
+    pt_to_return[2] = maximum(pt_to_return[2], pt[2]);
   }
   return pt_to_return;
 }
@@ -160,7 +165,8 @@ PtList<VertexType, kMaxNumberOfPts>::PtList(
 
 template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
 PtList<VertexType, kMaxNumberOfPts>::PtList(
-    const UnsignedIndex_t a_number_of_pts, const double* a_array_of_locs)
+    const UnsignedIndex_t a_number_of_pts,
+    const typename VertexType::value_type* a_array_of_locs)
     : pt_list_m() {
   assert(a_number_of_pts <= kMaxNumberOfPts);
   for (UnsignedIndex_t n = 0; n < a_number_of_pts; ++n) {
@@ -171,4 +177,4 @@ PtList<VertexType, kMaxNumberOfPts>::PtList(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_PT_LIST_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_PT_LIST_TPP_

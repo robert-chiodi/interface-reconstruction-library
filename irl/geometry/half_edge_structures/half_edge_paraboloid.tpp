@@ -136,7 +136,10 @@ inline const VertexType* HalfEdgeParaboloid<VertexType>::getPreviousVertex(
 
 template <class PtType>
 inline VertexParaboloid<PtType>::VertexParaboloid(void)
-    : vertex_location_m(Pt(0.0, 0.0, 0.0)),
+    : vertex_location_m(PtBase<typename PtType::value_type>(
+          static_cast<typename PtType::value_type>(0),
+          static_cast<typename PtType::value_type>(0),
+          static_cast<typename PtType::value_type>(0))),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
       is_clipped_m{false},
@@ -185,11 +188,12 @@ inline void VertexParaboloid<PtType>::setLocation(const PtType& a_location) {
 
 template <class PtType>
 inline void VertexParaboloid<PtType>::calculateDistanceToPlane(
-    const Plane& a_plane) {
+    const PlaneBase<typename PtType::value_type>& a_plane) {
   distance_m = a_plane.signedDistanceToPoint(this->getLocation());
 }
 template <class PtType>
-inline double VertexParaboloid<PtType>::getDistance(void) const {
+inline typename PtType::value_type VertexParaboloid<PtType>::getDistance(
+    void) const {
   return distance_m;
 }
 
@@ -285,11 +289,13 @@ inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(
       edge_parallel_intersections_m(0) {}
 
 template <class HalfEdgeType>
-inline void FaceParaboloid<HalfEdgeType>::setPlane(const Plane& a_plane) {
+inline void FaceParaboloid<HalfEdgeType>::setPlane(
+    const PlaneBase<typename HalfEdgeType::value_type>& a_plane) {
   face_plane_m = a_plane;
 }
 template <class HalfEdgeType>
-inline const Plane& FaceParaboloid<HalfEdgeType>::getPlane(void) const {
+inline const PlaneBase<typename HalfEdgeType::value_type>&
+FaceParaboloid<HalfEdgeType>::getPlane(void) const {
   return face_plane_m;
 }
 

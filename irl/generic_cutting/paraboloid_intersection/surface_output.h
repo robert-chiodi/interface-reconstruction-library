@@ -17,9 +17,11 @@
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 
 namespace IRL {
-void addEllipseToSurfaceOutput(const AlignedParaboloid& a_aligned_paraboloid,
-                               const Plane& a_face_plane,
-                               const ParametrizedSurfaceOutput* a_surface);
+template <class ScalarType>
+void addEllipseToSurfaceOutput(
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PlaneBase<ScalarType>& a_face_plane,
+    const ParametrizedSurfaceOutput* a_surface);
 }  // namespace IRL
 
 #include "irl/generic_cutting/paraboloid_intersection/surface_output.tpp"

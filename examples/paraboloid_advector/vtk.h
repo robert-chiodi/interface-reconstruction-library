@@ -40,6 +40,10 @@ class VTKOutput {
                          std::vector<IRL::ParametrizedSurfaceOutput>& a_surface,
                          const bool a_print_info = false);
 
+  void writeParametrizedInterface(
+      const double a_time,
+      std::vector<IRL::ParametrizedSurfaceOutput>& a_surface);
+
  private:
   std::string directory_m;
   std::string file_name_base_m;

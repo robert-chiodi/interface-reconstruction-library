@@ -12,21 +12,24 @@
 
 namespace IRL {
 
-  template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-ExpandablePtList<VertexType, kStaticAllocSize> ExpandablePtList<VertexType, kStaticAllocSize>::fromRawPtPointer(
+template <class VertexType, UnsignedIndex_t kStaticAllocSize>
+ExpandablePtList<VertexType, kStaticAllocSize>
+ExpandablePtList<VertexType, kStaticAllocSize>::fromRawPtPointer(
     const UnsignedIndex_t a_number_of_pts, const VertexType* a_array_of_pts) {
   assert(a_array_of_pts != nullptr);
   return ExpandablePtList(a_number_of_pts, a_array_of_pts);
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-ExpandablePtList<VertexType, kStaticAllocSize> ExpandablePtList<VertexType, kStaticAllocSize>::fromRawDoublePointer(
+ExpandablePtList<VertexType, kStaticAllocSize>
+ExpandablePtList<VertexType, kStaticAllocSize>::fromRawDoublePointer(
     const UnsignedIndex_t a_number_of_pts, const double* a_array_of_locs) {
   return ExpandablePtList(a_number_of_pts, a_array_of_locs);
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-UnsignedIndex_t ExpandablePtList<VertexType, kStaticAllocSize>::getNumberOfPts(void) const {
+UnsignedIndex_t ExpandablePtList<VertexType, kStaticAllocSize>::getNumberOfPts(
+    void) const {
   return static_cast<UnsignedIndex_t>(pt_list_m.size());
 }
 
@@ -38,19 +41,21 @@ void ExpandablePtList<VertexType, kStaticAllocSize>::setNumberOfPts(
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::reserve(const UnsignedIndex_t a_number) {
+void ExpandablePtList<VertexType, kStaticAllocSize>::reserve(
+    const UnsignedIndex_t a_number) {
   pt_list_m.reserve(a_number);
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::addPt(const VertexType& a_pt) {
+void ExpandablePtList<VertexType, kStaticAllocSize>::addPt(
+    const VertexType& a_pt) {
   pt_list_m.push_back(a_pt);
   this->checkIfStaticAllocationExceeded();
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::addPtAtIndex(const UnsignedIndex_t a_index,
-                                                const VertexType& a_pt) {
+void ExpandablePtList<VertexType, kStaticAllocSize>::addPtAtIndex(
+    const UnsignedIndex_t a_index, const VertexType& a_pt) {
   pt_list_m.insert(this->begin() + a_index, a_pt);
   this->checkIfStaticAllocationExceeded();
 }
@@ -70,7 +75,8 @@ const VertexType& ExpandablePtList<VertexType, kStaticAllocSize>::operator[](
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::removePt(const UnsignedIndex_t a_index) {
+void ExpandablePtList<VertexType, kStaticAllocSize>::removePt(
+    const UnsignedIndex_t a_index) {
   assert(a_index < this->getNumberOfPts());
   pt_list_m.erase(pt_list_m.begin() + a_index);
 }
@@ -81,8 +87,9 @@ void ExpandablePtList<VertexType, kStaticAllocSize>::removeLastPt(void) {
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-IRL::Pt ExpandablePtList<VertexType, kStaticAllocSize>::getLowerLimits(void) const {
-  Pt pt_to_return(DBL_MAX, DBL_MAX, DBL_MAX);
+VertexType ExpandablePtList<VertexType, kStaticAllocSize>::getLowerLimits(
+    void) const {
+  VertexType pt_to_return(DBL_MAX, DBL_MAX, DBL_MAX);
   for (const auto& pt : pt_list_m) {
     pt_to_return[0] = std::min(pt_to_return[0], pt[0]);
     pt_to_return[1] = std::min(pt_to_return[1], pt[1]);
@@ -92,8 +99,9 @@ IRL::Pt ExpandablePtList<VertexType, kStaticAllocSize>::getLowerLimits(void) con
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-IRL::Pt ExpandablePtList<VertexType, kStaticAllocSize>::getUpperLimits(void) const {
-  Pt pt_to_return(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+VertexType ExpandablePtList<VertexType, kStaticAllocSize>::getUpperLimits(
+    void) const {
+  VertexType pt_to_return(-DBL_MAX, -DBL_MAX, -DBL_MAX);
   for (const auto& pt : pt_list_m) {
     pt_to_return[0] = std::max(pt_to_return[0], pt[0]);
     pt_to_return[1] = std::max(pt_to_return[1], pt[1]);
@@ -134,7 +142,8 @@ ExpandablePtList<VertexType, kStaticAllocSize>::cend(void) const noexcept {
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-LargeOffsetIndex_t ExpandablePtList<VertexType, kStaticAllocSize>::getSerializedSize(void) const {
+LargeOffsetIndex_t
+ExpandablePtList<VertexType, kStaticAllocSize>::getSerializedSize(void) const {
   LargeOffsetIndex_t mysize =
       sizeof(UnsignedIndex_t);  // Size of number of points
   for (const auto& point : pt_list_m) {
@@ -144,7 +153,8 @@ LargeOffsetIndex_t ExpandablePtList<VertexType, kStaticAllocSize>::getSerialized
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::serialize(ByteBuffer* a_buffer) const {
+void ExpandablePtList<VertexType, kStaticAllocSize>::serialize(
+    ByteBuffer* a_buffer) const {
   UnsignedIndex_t number_of_points = this->getNumberOfPts();
   a_buffer->pack(&number_of_points, 1);
   for (const auto& point : pt_list_m) {
@@ -153,7 +163,8 @@ void ExpandablePtList<VertexType, kStaticAllocSize>::serialize(ByteBuffer* a_buf
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::unpackSerialized(ByteBuffer* a_buffer) {
+void ExpandablePtList<VertexType, kStaticAllocSize>::unpackSerialized(
+    ByteBuffer* a_buffer) {
   UnsignedIndex_t number_of_points;
   a_buffer->unpack(&number_of_points, 1);
   this->setNumberOfPts(number_of_points);
@@ -186,9 +197,11 @@ ExpandablePtList<VertexType, kStaticAllocSize>::ExpandablePtList(
 }
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-void ExpandablePtList<VertexType, kStaticAllocSize>::checkIfStaticAllocationExceeded(void) const {
+void ExpandablePtList<
+    VertexType, kStaticAllocSize>::checkIfStaticAllocationExceeded(void) const {
 #ifndef NDEBUG_PERF
-  if (pt_list_m.capacity() > ExpandablePtList<VertexType, kStaticAllocSize>::on_stack_size) {
+  if (pt_list_m.capacity() >
+      ExpandablePtList<VertexType, kStaticAllocSize>::on_stack_size) {
     std::cout << "Static allocation size for SmallVector exceeded in "
                  "ExpandablePtList. Expect performance penalty if this "
                  "happens frequently."
@@ -199,4 +212,4 @@ void ExpandablePtList<VertexType, kStaticAllocSize>::checkIfStaticAllocationExce
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_EXPANDABLE_PT_LIST_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_EXPANDABLE_PT_LIST_TPP_

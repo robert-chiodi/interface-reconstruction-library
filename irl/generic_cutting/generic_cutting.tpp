@@ -172,15 +172,16 @@ inline ReturnType getVolumeMomentsProvidedStorage<
 }
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 inline ReturnType getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
-    enable_if_t<IsParaboloidReconstruction<Paraboloid>::value &&
+    ParaboloidBase<ScalarType>,
+    enable_if_t<IsParaboloidReconstruction<ParaboloidBase<ScalarType>>::value &&
                 !is_separated_moments<ReturnType>::value>>::
-    getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
-                                   HalfEdgePolytopeType* a_complete_polytope,
-                                   const Paraboloid& a_reconstruction) {
+    getVolumeMomentsImplementation(
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ParaboloidBase<ScalarType>& a_reconstruction) {
   return intersectPolyhedronWithParaboloid<ReturnType>(
       a_polytope, a_complete_polytope, a_reconstruction);
 }
@@ -366,13 +367,14 @@ inline ReturnType getVolumeMomentsProvidedStorage<
   return separated_volume_moments;
 }
 
-template <class ReturnType, class CuttingMethod, class EncompassingType>
-inline ReturnType
-getVolumeMoments<ReturnType, CuttingMethod, EncompassingType, Paraboloid,
-                 enable_if_t<is_separated_moments<ReturnType>::value>>::
+template <class ReturnType, class CuttingMethod, class EncompassingType,
+          class ScalarType>
+inline ReturnType getVolumeMoments<
+    ReturnType, CuttingMethod, EncompassingType, ParaboloidBase<ScalarType>,
+    enable_if_t<is_separated_moments<ReturnType>::value>>::
     getVolumeMomentsImplementation(
         const EncompassingType& a_encompassing_polyhedron,
-        const Paraboloid& a_separating_reconstruction) {
+        const ParaboloidBase<ScalarType>& a_separating_reconstruction) {
   typename ReturnType::moments_type volume_moments =
       IRL::getVolumeMoments<typename ReturnType::moments_type, CuttingMethod>(
           a_encompassing_polyhedron, a_separating_reconstruction);
@@ -383,15 +385,16 @@ getVolumeMoments<ReturnType, CuttingMethod, EncompassingType, Paraboloid,
 }
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 inline ReturnType getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
+    ParaboloidBase<ScalarType>,
     enable_if_t<isHalfEdgeCutting<CuttingMethod>::value &&
                 is_separated_moments<ReturnType>::value>>::
-    getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
-                                   HalfEdgePolytopeType* a_complete_polytope,
-                                   const Paraboloid& a_reconstruction) {
+    getVolumeMomentsImplementation(
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ParaboloidBase<ScalarType>& a_reconstruction) {
   typename ReturnType::moments_type encompassing_moments =
       ReturnType::moments_type::calculateMoments(a_polytope);
   auto volume_moments =
@@ -403,15 +406,16 @@ inline ReturnType getVolumeMomentsProvidedStorage<
 }
 
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
-          class HalfEdgePolytopeType>
+          class HalfEdgePolytopeType, class ScalarType>
 inline ReturnType getVolumeMomentsProvidedStorage<
     ReturnType, CuttingMethod, SegmentedPolytopeType, HalfEdgePolytopeType,
-    Paraboloid,
+    ParaboloidBase<ScalarType>,
     enable_if_t<isSimplexCutting<CuttingMethod>::value &&
                 is_separated_moments<ReturnType>::value>>::
-    getVolumeMomentsImplementation(SegmentedPolytopeType* a_polytope,
-                                   HalfEdgePolytopeType* a_complete_polytope,
-                                   const Paraboloid& a_reconstruction) {
+    getVolumeMomentsImplementation(
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ParaboloidBase<ScalarType>& a_reconstruction) {
   typename ReturnType::moments_type encompassing_moments =
       ReturnType::moments_type::calculateMoments(a_polytope);
 

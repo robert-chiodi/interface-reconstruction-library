@@ -18,26 +18,28 @@
 
 namespace IRL {
 
-template <class Derived, class AttachedDataType>
+template <class Derived, class AttachedDataType, class ScalarType>
 class PtWithDataCommon {
   Derived& getDerived(void);
   const Derived& getDerived(void) const;
 
  public:
   using contained_type = AttachedDataType;
+  using value_type = ScalarType;
 
   PtWithDataCommon(void) = default;
 
-  PtWithDataCommon(const Pt& a_pt, const AttachedDataType& a_data);
+  PtWithDataCommon(const PtBase<ScalarType>& a_pt,
+                   const AttachedDataType& a_data);
 
-  explicit PtWithDataCommon(const Pt& a_pt);
+  explicit PtWithDataCommon(const PtBase<ScalarType>& a_pt);
 
   /// \brief Provides access to underlying base_pt location.
-  double& operator[](const UnsignedIndex_t a_index);
-  const double& operator[](const UnsignedIndex_t a_index) const;
+  ScalarType& operator[](const UnsignedIndex_t a_index);
+  const ScalarType& operator[](const UnsignedIndex_t a_index) const;
 
-  Pt& getPt(void);
-  const Pt& getPt(void) const;
+  PtBase<ScalarType>& getPt(void);
+  const PtBase<ScalarType>& getPt(void) const;
 
   AttachedDataType& getData(void);
   const AttachedDataType& getData(void) const;
@@ -45,58 +47,65 @@ class PtWithDataCommon {
   ~PtWithDataCommon(void) = default;
 
  private:
-  Pt base_pt_m;
+  PtBase<ScalarType> base_pt_m;
   AttachedDataType data_m;
 };
 
-template <class GradientDataType>
-class PtWithGradient
-    : public PtWithDataCommon<PtWithGradient<GradientDataType>,
-                              std::array<GradientDataType, 3>> {
+template <class GradientDataType, class ScalarType>
+class PtWithGradientBase
+    : public PtWithDataCommon<PtWithGradientBase<GradientDataType, ScalarType>,
+                              std::array<GradientDataType, 3>, ScalarType> {
  public:
   using gradient_type = GradientDataType;
 
-  PtWithGradient(void);
+  PtWithGradientBase(void);
 
-  using PtWithDataCommon<PtWithGradient<GradientDataType>,
-                         std::array<GradientDataType, 3>>::PtWithDataCommon;
+  using PtWithDataCommon<PtWithGradientBase<GradientDataType, ScalarType>,
+                         std::array<GradientDataType, 3>,
+                         ScalarType>::PtWithDataCommon;
 
-  explicit PtWithGradient(const Pt& a_pt);
+  explicit PtWithGradientBase(const PtBase<ScalarType>& a_pt);
 
-  PtWithGradient& operator-(void);
-  PtWithGradient& operator=(const Pt& a_pt);
-  PtWithGradient& operator=(const PtWithGradient& a_pt);
-  PtWithGradient& operator+=(const PtWithGradient& a_other_pt);
+  PtWithGradientBase& operator-(void);
+  PtWithGradientBase& operator=(const PtBase<ScalarType>& a_pt);
+  PtWithGradientBase& operator=(const PtWithGradientBase& a_pt);
+  PtWithGradientBase& operator+=(const PtWithGradientBase& a_other_pt);
 
-  ~PtWithGradient(void) = default;
+  ~PtWithGradientBase(void) = default;
 };
 
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator*(
+    const ScalarType a_rhs,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt);
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator*(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt,
+    const ScalarType a_rhs);
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator/(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt,
+    const ScalarType a_rhs);
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator+(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt1,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt2);
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator-(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt1,
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt2);
+template <class GradientDataType, class ScalarType>
+const PtWithGradientBase<GradientDataType, ScalarType> operator-(
+    const PtWithGradientBase<GradientDataType, ScalarType>& a_pt);
+
 template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator*(
-    const double a_rhs, const PtWithGradient<GradientDataType>& a_pt);
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator*(
-    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs);
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator/(
-    const PtWithGradient<GradientDataType>& a_pt, const double a_rhs);
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator+(
-    const PtWithGradient<GradientDataType>& a_pt1,
-    const PtWithGradient<GradientDataType>& a_pt2);
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator-(
-    const PtWithGradient<GradientDataType>& a_pt1,
-    const PtWithGradient<GradientDataType>& a_pt2);
-template <class GradientDataType>
-const PtWithGradient<GradientDataType> operator-(
-    const PtWithGradient<GradientDataType>& a_pt);
+using PtWithGradient = PtWithGradientBase<GradientDataType, double>;
 
 template <class FunctorType, UnsignedIndex_t kArrayLength>
 class PtWithDoublesStatelessFunctor
     : public PtWithDataCommon<
           PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>,
-          std::array<double, kArrayLength>> {
+          std::array<double, kArrayLength>, double> {
   using ArrayType = std::array<double, kArrayLength>;
 
  public:
@@ -106,7 +115,7 @@ class PtWithDoublesStatelessFunctor
 
   using PtWithDataCommon<
       PtWithDoublesStatelessFunctor<FunctorType, kArrayLength>,
-      std::array<double, kArrayLength>>::PtWithDataCommon;
+      std::array<double, kArrayLength>, double>::PtWithDataCommon;
 
   explicit PtWithDoublesStatelessFunctor(const Pt& a_pt);
   PtWithDoublesStatelessFunctor& operator=(const Pt& a_pt);

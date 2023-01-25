@@ -34,27 +34,32 @@ namespace IRL {
 // Paraboloid represented by a datum,
 // reference frame, and an AlignedParaboloid defined as
 // z + c + a*x^2 + b*y^2 = 0
-class Paraboloid {
+template <class ScalarType>
+class ParaboloidBase {
  public:
-  Paraboloid(void);
+  using value_type = ScalarType;
+  ParaboloidBase(void);
 
   /// a_reference_frame should have the normal vector in a_reference_frame[2],
   /// and the tangent vectors corresponding to a_coef_a and a_coef_b in
   /// element 0 and 1, respectively.
-  Paraboloid(const Pt& a_datum, const ReferenceFrame& a_reference_frame,
-             const double a_coef_a, const double a_coef_b);
+  ParaboloidBase(const PtBase<ScalarType>& a_datum,
+                 const ReferenceFrameBase<ScalarType>& a_reference_frame,
+                 const ScalarType a_coef_a, const ScalarType a_coef_b);
 
-  static Paraboloid createAlwaysAbove(void);
+  static ParaboloidBase createAlwaysAbove(void);
 
-  static Paraboloid createAlwaysBelow(void);
+  static ParaboloidBase createAlwaysBelow(void);
 
-  void setDatum(const Pt& a_datum);
-  void setReferenceFrame(const ReferenceFrame& a_reference_frame);
-  void setAlignedParaboloid(const AlignedParaboloid& a_aligned_paraboloid);
+  void setDatum(const PtBase<ScalarType>& a_datum);
+  void setReferenceFrame(
+      const ReferenceFrameBase<ScalarType>& a_reference_frame);
+  void setAlignedParaboloid(
+      const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid);
 
-  const Pt& getDatum(void) const;
-  const ReferenceFrame& getReferenceFrame(void) const;
-  const AlignedParaboloid& getAlignedParaboloid(void) const;
+  const PtBase<ScalarType>& getDatum(void) const;
+  const ReferenceFrameBase<ScalarType>& getReferenceFrame(void) const;
+  const AlignedParaboloidBase<ScalarType>& getAlignedParaboloid(void) const;
 
   /// Indicates that the intersection should actually be performed.
   void markAsRealReconstruction(void);
@@ -78,59 +83,79 @@ class Paraboloid {
   static constexpr bool isFlipped(void) { return false; }
 
   /// \brief Since localizers are always convex, never flip.
-  static constexpr double flip(void) { return 1.0; }
+  static constexpr ScalarType flip(void) { return static_cast<ScalarType>(1); }
 
   /// \brief Return if cutting for gas phase is needed.
   static constexpr bool isNotFlipped(void) { return true; }
 
-  ~Paraboloid(void) = default;
+  ~ParaboloidBase(void) = default;
 
  private:
-  Pt datum_m;
-  ReferenceFrame frame_m;
-  AlignedParaboloid paraboloid_m;
+  PtBase<ScalarType> datum_m;
+  ReferenceFrameBase<ScalarType> frame_m;
+  AlignedParaboloidBase<ScalarType> paraboloid_m;
   std::array<bool, 2> place_infinite_shortcut_m;
 };
 
-using LocalizedParaboloid = JoinedReconstructions<PlanarLocalizer, Paraboloid>;
+using Paraboloid = ParaboloidBase<double>;
+
+template <class ScalarType>
+using LocalizedParaboloid =
+    JoinedReconstructions<PlanarLocalizer, ParaboloidBase<ScalarType>>;
+// using LocalizedParaboloid = LocalizedParaboloidBase<double>;
+
+template <class ScalarType>
 using LocalizedParaboloidLink =
-    ReconstructionLink<LocalizedParaboloid, UnDirectedGraphNode>;
+    ReconstructionLink<LocalizedParaboloid<ScalarType>, UnDirectedGraphNode>;
+// using LocalizedParaboloidLink = LocalizedParaboloidLinkBase<double>;
 
-inline Pt conicCenter(const Plane& a_plane,
-                      const AlignedParaboloid& a_paraboloid);
+template <class ScalarType>
+inline PtBase<ScalarType> conicCenter(
+    const PlaneBase<ScalarType>& a_plane,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid);
 
-inline Normal getParaboloidSurfaceNormal(const AlignedParaboloid& a_paraboloid,
-                                         const Pt& a_pt);
+template <class ScalarType>
+inline NormalBase<ScalarType> getParaboloidSurfaceNormal(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtBase<ScalarType>& a_pt);
 
-template <class PtTypeWithGradient>
+template <class PtTypeWithGradient, class ScalarType>
 inline PtTypeWithGradient getParaboloidSurfaceNormalWithGradient(
-    const AlignedParaboloid& a_paraboloid, const PtTypeWithGradient& a_pt);
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtTypeWithGradient& a_pt);
 
-inline StackVector<double, 2> solveQuadratic(const double a, const double b,
-                                             const double c);
+template <class ScalarType>
+inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
+                                                 const ScalarType b,
+                                                 const ScalarType c);
 
-template <class GradientType>
-inline StackVector<std::pair<double, GradientType>, 2>
-solveQuadraticWithGradient(const double a, const double b, const double c,
-                           const GradientType& a_grad,
+template <class GradientType, class ScalarType>
+inline StackVector<std::pair<ScalarType, GradientType>, 2>
+solveQuadraticWithGradient(const ScalarType a, const ScalarType b,
+                           const ScalarType c, const GradientType& a_grad,
                            const GradientType& b_grad,
                            const GradientType& c_grad);
 
-inline Pt projectPtAlongLineOntoParaboloid(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_line,
-    const Pt& a_starting_pt);
+template <class ScalarType>
+inline PtBase<ScalarType> projectPtAlongLineOntoParaboloid(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_line,
+    const PtBase<ScalarType>& a_starting_pt);
 
-inline Pt projectPtAlongHalfLineOntoParaboloid(
-    const AlignedParaboloid& a_paraboloid, const Normal& a_line,
-    const Pt& a_starting_pt);
+template <class ScalarType>
+inline PtBase<ScalarType> projectPtAlongHalfLineOntoParaboloid(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const NormalBase<ScalarType>& a_line,
+    const PtBase<ScalarType>& a_starting_pt);
 
-template <class PtTypeWithGradient>
+template <class PtTypeWithGradient, class ScalarType>
 inline PtTypeWithGradient projectPtAlongHalfLineOntoParaboloidWithGradient(
-    const AlignedParaboloid& a_paraboloid, const PtTypeWithGradient& a_line,
-    const PtTypeWithGradient& a_starting_pt);
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtTypeWithGradient& a_line, const PtTypeWithGradient& a_starting_pt);
 
+template <class ScalarType>
 inline std::ostream& operator<<(std::ostream& out,
-                                const Paraboloid& a_paraboloid);
+                                const ParaboloidBase<ScalarType>& a_paraboloid);
 
 }  // namespace IRL
 

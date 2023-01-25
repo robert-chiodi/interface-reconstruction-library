@@ -17,31 +17,31 @@
 
 #include "examples/paraboloid_advector/data.h"
 
-void resetCentroids(
-    const Data<IRL::LocalizedParaboloidLink>& a_link_localized_paraboloid,
-    Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid);
+void resetCentroids(const Data<IRL::LocalizedParaboloidLink<double>>&
+                        a_link_localized_paraboloid,
+                    Data<IRL::Pt>* a_liquid_centroid,
+                    Data<IRL::Pt>* a_gas_centroid);
 
 std::array<int, 3> getIndexFromTag(const BasicMesh& a_mesh,
                                    const IRL::UnsignedIndex_t a_tag);
 
 void connectMesh(
     const BasicMesh& a_mesh,
-    Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid);
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid);
 
-void advectVOF(const std::string& a_advection_method,
-               const std::string& a_reconstruction_method, const double a_dt,
-               const Data<double>& a_U, const Data<double>& a_V,
-               const Data<double>& a_W,
-               Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
-               Data<double>* a_liquid_volume_fraction,
-               Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid,
-               Data<IRL::Paraboloid>* a_interface);
+void advectVOF(
+    const std::string& a_advection_method,
+    const std::string& a_reconstruction_method, const double a_dt,
+    const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
+    Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
+    Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
+    Data<IRL::Pt>* a_gas_centroid, Data<IRL::Paraboloid>* a_interface);
 
 struct Split {
   static void advectVOF(
       const std::string& a_reconstruction_method, const double a_dt,
       const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-      Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+      Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid, Data<IRL::Paraboloid>* a_interface);
 };
@@ -50,7 +50,7 @@ struct FullLagrangian {
   static void advectVOF(
       const std::string& a_reconstruction_method, const double a_dt,
       const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-      Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+      Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);
 };
@@ -59,7 +59,7 @@ struct SemiLagrangian {
   static void advectVOF(
       const std::string& a_reconstruction_method, const double a_dt,
       const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-      Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+      Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);
 };
@@ -68,13 +68,15 @@ struct SemiLagrangianCorrected {
   static void advectVOF(
       const std::string& a_reconstruction_method, const double a_dt,
       const Data<double>& a_U, const Data<double>& a_V, const Data<double>& a_W,
-      Data<IRL::LocalizedParaboloidLink>* a_link_localized_paraboloid,
+      Data<IRL::LocalizedParaboloidLink<double>>* a_link_localized_paraboloid,
       Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
       Data<IRL::Pt>* a_gas_centroid);
 };
 
-inline IRL::Vec3 getVelocity(const IRL::Pt& a_location, const Data<double>& a_U,
-                             const Data<double>& a_V, const Data<double>& a_W);
+inline IRL::Vec3<double> getVelocity(const IRL::Pt& a_location,
+                                     const Data<double>& a_U,
+                                     const Data<double>& a_V,
+                                     const Data<double>& a_W);
 
 inline IRL::Pt back_project_vertex(const IRL::Pt& a_initial_pt,
                                    const double a_dt, const Data<double>& a_U,
@@ -103,10 +105,13 @@ inline IRL::Pt back_project_vertex(const IRL::Pt& a_initial_pt,
          IRL::Pt::fromVec3(a_dt * (v1 + 2.0 * v2 + 2.0 * v3 + v4) / 6.0);
 }
 
-inline IRL::Vec3 getVelocity(const IRL::Pt& a_location, const Data<double>& a_U,
-                             const Data<double>& a_V, const Data<double>& a_W) {
-  return IRL::Vec3(a_U.interpolate(a_location), a_V.interpolate(a_location),
-                   a_W.interpolate(a_location));
+inline IRL::Vec3<double> getVelocity(const IRL::Pt& a_location,
+                                     const Data<double>& a_U,
+                                     const Data<double>& a_V,
+                                     const Data<double>& a_W) {
+  return IRL::Vec3<double>(a_U.interpolate(a_location),
+                           a_V.interpolate(a_location),
+                           a_W.interpolate(a_location));
 }
 
 #endif  // EXAMPLES_PARABOLOID_ADVECTOR_VOF_ADVECTION_H_

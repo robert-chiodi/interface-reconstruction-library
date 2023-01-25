@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -34,6 +35,12 @@ int main(int argc, char* argv[]) {
     std::exit(-1);
   }
 
+  MPI_Init(&argc, &argv);
+
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   std::string simulation_type = argv[1];
   std::string advection_method = argv[2];
   std::string reconstruction_method = argv[3];
@@ -47,6 +54,8 @@ int main(int argc, char* argv[]) {
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<double> runtime = end - start;
   printf("Total run time: %20f \n\n", runtime.count());
+
+  MPI_Finalize();
 
   return 0;
 }

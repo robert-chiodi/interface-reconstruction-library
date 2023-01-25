@@ -27,49 +27,93 @@
 
 namespace IRL {
 
-inline double signedDistance(const Pt& a_pt,
-                             const AlignedParaboloid& a_paraboloid);
+template <class ScalarType>
+inline ScalarType signedDistance(
+    const PtBase<ScalarType>& a_pt,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid);
 
-template <class ReturnType, class PtType>
-ReturnType computeType1Contribution(const PtType& a_ref_pt,
-                                    const PtType& a_pt_0, const PtType& a_pt_1);
+template <class ReturnType, class ScalarType>
+ReturnType computeType1Contribution(const PtBase<ScalarType>& a_ref_pt,
+                                    const PtBase<ScalarType>& a_pt_0,
+                                    const PtBase<ScalarType>& a_pt_1);
 
-template <class ReturnType, class PtType>
+template <class ReturnType, class ScalarType>
+inline ReturnType computeType1ContributionWithGradient(
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_ref_pt,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_0,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_1);
+
+template <class ReturnType, class ScalarType>
 ReturnType computeType2Contribution(
-    const AlignedParaboloid& a_aligned_paraboloid, const PtType& a_pt_0,
-    const PtType& a_pt_1);
+    const AlignedParaboloidBase<ScalarType>& a_aligned_paraboloid,
+    const PtBase<ScalarType>& a_pt_0, const PtBase<ScalarType>& a_pt_1);
 
-inline std::array<double, 3> coeffsV3SeriesOne(const double a_weight);
-template <class GradientType>
-inline std::array<std::pair<double, GradientType>, 3>
-coeffsV3SeriesOneWithGradient(const double a_weight,
-                              const GradientType& a_weight_grad);
+template <class ReturnType, class ScalarType>
+inline ReturnType computeType2ContributionWithGradient(
+    const AlignedParaboloid& a_aligned_paraboloid,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_0,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_1);
 
-inline std::array<double, 12> coeffsV3andC3SeriesOne(const double a_weight);
-inline std::array<double, 3> coeffsV3SeriesInfinity(const double a_weight);
-inline std::array<double, 12> coeffsV3andC3SeriesInfinity(
-    const double a_weight);
+template <class ContainerType, class ScalarType>
+inline std::array<ContainerType, 3> coeffsV3SeriesOne(
+    const ContainerType& a_weight);
 
-inline std::array<double, 3> coeffsV3Exact(const double a_weight);
+template <class ContainerType, class ScalarType>
+inline std::array<ContainerType, 12> coeffsV3andC3SeriesOne(
+    const ContainerType& a_weight);
 
-template <class GradientType>
-inline std::array<std::pair<double, GradientType>, 3> coeffsV3ExactWithGradient(
-    const double a_weight, const GradientType& a_weight_grad);
+template <class ContainerType, class ScalarType>
+inline std::array<ContainerType, 3> coeffsV3Exact(
+    const ContainerType& a_weight);
 
-inline std::array<double, 12> coeffsV3andC3Exact(const double a_weight);
+template <class ContainerType, class ScalarType>
+inline std::array<ContainerType, 12> coeffsV3andC3Exact(
+    const ContainerType& a_weight);
 
-template <class ReturnType, class RationalBezierArcType>
-ReturnType computeType3Contribution(const AlignedParaboloid& a_paraboloid,
-                                    const RationalBezierArcType& a_arc);
-template <class ReturnType, class PtType>
-ReturnType computeFaceOnlyContribution(const AlignedParaboloid& a_paraboloid,
-                                       const Plane& a_face_plane,
-                                       const PtType& a_pt_ref);
+template <class ReturnType, class ScalarType>
+ReturnType computeType3Contribution(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const RationalBezierArcBase<ScalarType>& a_arc);
 
-template <class ReturnType, class PtType>
-ReturnType computeTriangleCorrection(const AlignedParaboloid& a_paraboloid,
-                                     const PtType& a_pt_0, const PtType& a_pt_1,
-                                     const PtType& a_pt_2);
+template <class ReturnType, class ScalarType>
+inline ReturnType computeType3ContributionWithGradient(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const RationalBezierArcWithGradientBase<
+        PtWithGradient<typename ReturnType::gradient_type>, ScalarType>& a_arc);
+
+template <class ReturnType, class ScalarType>
+ReturnType computeFaceOnlyContribution(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PlaneBase<ScalarType>& a_face_plane,
+    const PtBase<ScalarType>& a_pt_ref);
+
+template <class ReturnType, class ScalarType>
+ReturnType computeFaceOnlyContributionWithGradient(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PlaneBase<ScalarType>& a_face_plane,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_ref);
+
+template <class ReturnType, class ScalarType>
+ReturnType computeTriangleCorrection(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtBase<ScalarType>& a_pt_0, const PtBase<ScalarType>& a_pt_1,
+    const PtBase<ScalarType>& a_pt_2);
+
+template <class ReturnType, class ScalarType>
+ReturnType computeTriangleCorrectionWithGradient(
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_0,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_1,
+    const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
+        a_pt_2);
 
 static double v3Series[41][3] = {
     {2.09523809523809528832e-01, 3.80952380952380931234e-01,

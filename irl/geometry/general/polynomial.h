@@ -14,22 +14,23 @@
 
 namespace IRL {
 
-template <UnsignedIndex_t kNCoefficients>
-class Polynomial {
+template <UnsignedIndex_t kNCoefficients, class ScalarType>
+class PolynomialBase {
  public:
-  Polynomial(void) {
-    std::fill(coefficients_m.begin(), coefficients_m.end(), 0.0);
+  PolynomialBase(void) {
+    std::fill(coefficients_m.begin(), coefficients_m.end(),
+              static_cast<ScalarType>(0));
   }
 
-  Polynomial(const std::array<double, kNCoefficients>& a_coefficients) {
+  PolynomialBase(const std::array<ScalarType, kNCoefficients>& a_coefficients) {
     coefficients_m = a_coefficients;
   }
 
-  double& operator[](const UnsignedIndex_t a_index) {
+  ScalarType& operator[](const UnsignedIndex_t a_index) {
     assert(a_index < coefficients_m.size());
     return coefficients_m[a_index];
   }
-  double operator[](const UnsignedIndex_t a_index) const {
+  ScalarType operator[](const UnsignedIndex_t a_index) const {
     assert(a_index < coefficients_m.size());
     return coefficients_m[a_index];
   }
@@ -40,11 +41,14 @@ class Polynomial {
   auto end(void) const { return this->cend(); }
   auto cend(void) const { return coefficients_m.cend(); }
 
-  ~Polynomial(void) = default;
+  ~PolynomialBase(void) = default;
 
  private:
-  std::array<double, kNCoefficients> coefficients_m;
+  std::array<ScalarType, kNCoefficients> coefficients_m;
 };
+
+template <UnsignedIndex_t kNCoefficients>
+using Polynomial = PolynomialBase<kNCoefficients, double>;
 
 }  // namespace IRL
 

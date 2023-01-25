@@ -12,105 +12,170 @@
 
 namespace IRL {
 
-inline VolumeMoments::VolumeMoments(void)
-    : volume_m{0.0}, centroid_m{0.0, 0.0, 0.0} {}
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType>::VolumeMomentsBase(void)
+    : volume_m{static_cast<ScalarType>(0)},
+      centroid_m{static_cast<ScalarType>(0), static_cast<ScalarType>(0),
+                 static_cast<ScalarType>(0)} {}
 
-inline constexpr VolumeMoments::VolumeMoments(const double a_volume,
-                                              const Pt& a_centroid)
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>::VolumeMomentsBase(
+    const ScalarType a_volume, const PtBase<ScalarType>& a_centroid)
     : volume_m(a_volume), centroid_m(a_centroid) {}
 
-inline constexpr VolumeMoments VolumeMoments::fromRawDoublePointer(
-    const double* a_list) {
-  return VolumeMoments(a_list);
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>::VolumeMomentsBase(
+    const VolumeMomentsBase<double>& a_moments)
+    : volume_m{static_cast<ScalarType>(a_moments.volume())},
+      centroid_m{static_cast<ScalarType>(a_moments.centroid()[0]),
+                 static_cast<ScalarType>(a_moments.centroid()[1]),
+                 static_cast<ScalarType>(a_moments.centroid()[2])} {}
+
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>::VolumeMomentsBase(
+    const VolumeMomentsBase<Quad_t>& a_moments)
+    : volume_m{static_cast<ScalarType>(a_moments.volume())},
+      centroid_m{static_cast<ScalarType>(a_moments.centroid()[0]),
+                 static_cast<ScalarType>(a_moments.centroid()[1]),
+                 static_cast<ScalarType>(a_moments.centroid()[2])} {}
+
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>
+VolumeMomentsBase<ScalarType>::fromRawDoublePointer(const ScalarType* a_list) {
+  return VolumeMomentsBase<ScalarType>(a_list);
 }
 
-inline constexpr VolumeMoments VolumeMoments::fromScalarConstant(
-    const double a_value) {
-  return VolumeMoments(a_value);
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>
+VolumeMomentsBase<ScalarType>::fromScalarConstant(const ScalarType a_value) {
+  return VolumeMomentsBase<ScalarType>(static_cast<ScalarType>(a_value));
 }
 
+template <class ScalarType>
 template <class GeometryType>
-inline VolumeMoments VolumeMoments::calculateMoments(GeometryType* a_geometry) {
-  return a_geometry->calculateMoments();
+inline VolumeMomentsBase<ScalarType>
+VolumeMomentsBase<ScalarType>::calculateMoments(GeometryType* a_geometry) {
+  return VolumeMomentsBase<ScalarType>(a_geometry->calculateMoments());
 }
 
-inline Volume& VolumeMoments::volume(void) { return volume_m; }
+template <class ScalarType>
+inline VolumeBase<ScalarType>& VolumeMomentsBase<ScalarType>::volume(void) {
+  return volume_m;
+}
 
-inline const Volume& VolumeMoments::volume(void) const { return volume_m; }
+template <class ScalarType>
+inline const VolumeBase<ScalarType>& VolumeMomentsBase<ScalarType>::volume(
+    void) const {
+  return volume_m;
+}
 
-inline Pt& VolumeMoments::centroid(void) { return centroid_m; }
+template <class ScalarType>
+inline PtBase<ScalarType>& VolumeMomentsBase<ScalarType>::centroid(void) {
+  return centroid_m;
+}
 
-inline const Pt& VolumeMoments::centroid(void) const { return centroid_m; }
+template <class ScalarType>
+inline const PtBase<ScalarType>& VolumeMomentsBase<ScalarType>::centroid(
+    void) const {
+  return centroid_m;
+}
 
-inline void VolumeMoments::normalizeByVolume(void) {
-  if (this->volume() != 0.0) {
+template <class ScalarType>
+inline void VolumeMomentsBase<ScalarType>::normalizeByVolume(void) {
+  if (this->volume() != static_cast<ScalarType>(0)) {
     this->centroid() /= this->volume();
   }
 }
 
-inline void VolumeMoments::multiplyByVolume(void) {
+template <class ScalarType>
+inline void VolumeMomentsBase<ScalarType>::multiplyByVolume(void) {
   this->centroid() *= this->volume();
 }
 
-inline VolumeMoments& VolumeMoments::operator+=(const VolumeMoments& a_rhs) {
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType>& VolumeMomentsBase<ScalarType>::operator+=(
+    const VolumeMomentsBase<ScalarType>& a_rhs) {
   this->volume() += a_rhs.volume();
   this->centroid() += a_rhs.centroid();
   return (*this);
 }
 
-inline VolumeMoments& VolumeMoments::operator*=(const double a_rhs) {
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType>& VolumeMomentsBase<ScalarType>::operator*=(
+    const ScalarType a_rhs) {
   this->volume() *= a_rhs;
   this->centroid() *= a_rhs;
   return (*this);
 }
 
-inline VolumeMoments& VolumeMoments::operator/=(const double a_rhs) {
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType>& VolumeMomentsBase<ScalarType>::operator/=(
+    const ScalarType a_rhs) {
   this->volume() /= a_rhs;
   this->centroid() /= a_rhs;
   return (*this);
 }
 
-inline VolumeMoments& VolumeMoments::operator=(const double a_value) {
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType>& VolumeMomentsBase<ScalarType>::operator=(
+    const ScalarType a_value) {
   this->volume() = a_value;
   this->centroid() = a_value;
   return (*this);
 }
 
-inline VolumeMoments VolumeMoments::operator-(void) const {
-  return VolumeMoments(-volume_m, -centroid_m);
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> VolumeMomentsBase<ScalarType>::operator-(
+    void) const {
+  return VolumeMomentsBase<ScalarType>(-volume_m, -centroid_m);
 }
 
-inline constexpr VolumeMoments::VolumeMoments(const double* a_list)
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>::VolumeMomentsBase(
+    const ScalarType* a_list)
     : volume_m(a_list[0]), centroid_m{a_list[1], a_list[2], a_list[3]} {}
 
-inline constexpr VolumeMoments::VolumeMoments(const double a_value)
-    : volume_m(a_value), centroid_m(Pt::fromScalarConstant(a_value)) {}
+template <class ScalarType>
+inline constexpr VolumeMomentsBase<ScalarType>::VolumeMomentsBase(
+    const ScalarType a_value)
+    : volume_m(a_value),
+      centroid_m(PtBase<ScalarType>::fromScalarConstant(a_value)) {}
 
-inline std::ostream& operator<<(std::ostream& out,
-                                const VolumeMoments& a_volume_moments) {
-  out << static_cast<double>(a_volume_moments.volume()) << " ";
+template <class ScalarType>
+inline std::ostream& operator<<(
+    std::ostream& out, const VolumeMomentsBase<ScalarType>& a_volume_moments) {
+  out << static_cast<ScalarType>(a_volume_moments.volume()) << " ";
   out << a_volume_moments.centroid();
   return out;
 }
 
-inline VolumeMoments operator+(const VolumeMoments& a_vm1,
-                               const VolumeMoments& a_vm2) {
-  return VolumeMoments(a_vm1.volume() + a_vm2.volume(),
-                       IRL::Pt(a_vm1.centroid() + a_vm2.centroid()));
-}
-inline VolumeMoments operator-(const VolumeMoments& a_vm1,
-                               const VolumeMoments& a_vm2) {
-  return VolumeMoments(a_vm1.volume() - a_vm2.volume(),
-                       a_vm1.centroid() - a_vm2.centroid());
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator+(
+    const VolumeMomentsBase<ScalarType>& a_vm1,
+    const VolumeMomentsBase<ScalarType>& a_vm2) {
+  return VolumeMomentsBase<ScalarType>(
+      a_vm1.volume() + a_vm2.volume(),
+      IRL::PtBase<ScalarType>(a_vm1.centroid() + a_vm2.centroid()));
 }
 
-inline VolumeMoments operator*(const double a_multiplier,
-                               const VolumeMoments& a_vm) {
-  return VolumeMoments(a_multiplier * a_vm.volume(),
-                       a_multiplier * a_vm.centroid());
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator-(
+    const VolumeMomentsBase<ScalarType>& a_vm1,
+    const VolumeMomentsBase<ScalarType>& a_vm2) {
+  return VolumeMomentsBase<ScalarType>(a_vm1.volume() - a_vm2.volume(),
+                                       a_vm1.centroid() - a_vm2.centroid());
 }
-inline VolumeMoments operator*(const VolumeMoments& a_vm,
-                               const double a_multiplier) {
+
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator*(
+    const ScalarType a_multiplier, const VolumeMomentsBase<ScalarType>& a_vm) {
+  return VolumeMomentsBase<ScalarType>(a_multiplier * a_vm.volume(),
+                                       a_multiplier * a_vm.centroid());
+}
+
+template <class ScalarType>
+inline VolumeMomentsBase<ScalarType> operator*(
+    const VolumeMomentsBase<ScalarType>& a_vm, const ScalarType a_multiplier) {
   return a_multiplier * a_vm;
 }
 

@@ -12,8 +12,22 @@
 
 #include <vector>
 
+#define IRL_NO_USE_TRIANGLE
+
 #ifndef IRL_NO_USE_TRIANGLE
 #include "external/triangle/triangle.h"
+#else
+#include <CGAL/Arr_segment_traits_2.h>
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <CGAL/Delaunay_mesh_face_base_2.h>
+#include <CGAL/Delaunay_mesh_size_criteria_2.h>
+#include <CGAL/Delaunay_mesh_vertex_base_2.h>
+#include <CGAL/Delaunay_mesher_2.h>
+// #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Surface_sweep_2_algorithms.h>
+#include <CGAL/lloyd_optimize_mesh_2.h>
+#include "external/CDT/CDT/include/CDT.h"
 #endif
 
 #include "irl/geometry/general/normal.h"
