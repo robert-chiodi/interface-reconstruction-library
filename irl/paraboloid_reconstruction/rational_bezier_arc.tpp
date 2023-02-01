@@ -95,9 +95,13 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
         ONEHUNDRED * ONEHUNDRED * EPSILON * EPSILON) {
       weight_m = static_cast<ScalarType>(DBL_MAX);
     } else {
-      mid_to_control.normalize();
-      const ScalarType mid_dot_face_normal = mid_to_control * a_plane_normal;
-      mid_to_control = mid_to_control - mid_dot_face_normal * a_plane_normal;
+      const ScalarType crude_invmag =
+          ONE / (fabs(mid_to_control[0]) + fabs(mid_to_control[1]) +
+                 fabs(mid_to_control[2]));
+      mid_to_control *= crude_invmag;
+      // mid_to_control.normalize();
+      mid_to_control =
+          mid_to_control - (mid_to_control * a_plane_normal) * a_plane_normal;
       const auto projected_pt =
           projectPtAlongHalfLineOntoParaboloid<ScalarType>(
               a_paraboloid, mid_to_control, average_pt);

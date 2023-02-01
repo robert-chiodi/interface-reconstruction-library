@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#define IRL_NO_USE_TRIANGLE
+// #define IRL_NO_USE_TRIANGLE
 
 #ifndef IRL_NO_USE_TRIANGLE
 #include "external/triangle/triangle.h"
@@ -117,6 +117,10 @@ class ParametrizedSurfaceOutput {
   inline Normal getAverageNormalNonAligned(void);
   inline double getAverageMeanCurvature(void);
   inline double getAverageGaussianCurvature(void);
+
+  void triangulate_fromPtr(
+      const double a_length_scale = -1.0, const UnsignedIndex_t a_nsplit = 5,
+      TriangulatedSurfaceOutput* a_surface = nullptr) const;
 
   TriangulatedSurfaceOutput triangulate(
       const double a_length_scale = -1.0,

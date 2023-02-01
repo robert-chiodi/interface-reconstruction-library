@@ -12,6 +12,38 @@
 
 namespace IRL {
 
+inline TriangulatedSurfaceOutput::TriangulatedSurfaceOutput(
+    TriangulatedSurfaceOutput&& a_rhs)
+    : vertices_m(std::move(a_rhs.vertices_m)),
+      bdy_edges_m(std::move(a_rhs.bdy_edges_m)),
+      triangles_m(std::move(a_rhs.triangles_m)) {}
+
+inline TriangulatedSurfaceOutput::TriangulatedSurfaceOutput(
+    const TriangulatedSurfaceOutput& a_rhs)
+    : vertices_m(a_rhs.vertices_m),
+      bdy_edges_m(a_rhs.bdy_edges_m),
+      triangles_m(a_rhs.triangles_m) {}
+
+inline TriangulatedSurfaceOutput& TriangulatedSurfaceOutput::operator=(
+    TriangulatedSurfaceOutput&& a_rhs) {
+  if (this != &a_rhs) {
+    vertices_m = std::move(a_rhs.vertices_m);
+    bdy_edges_m = std::move(a_rhs.bdy_edges_m);
+    triangles_m = std::move(a_rhs.triangles_m);
+  }
+  return *this;
+}
+
+inline TriangulatedSurfaceOutput& TriangulatedSurfaceOutput::operator=(
+    const TriangulatedSurfaceOutput& a_rhs) {
+  if (this != &a_rhs) {
+    vertices_m = a_rhs.vertices_m;
+    bdy_edges_m = a_rhs.bdy_edges_m;
+    triangles_m = a_rhs.triangles_m;
+  }
+  return *this;
+}
+
 inline void TriangulatedSurfaceOutput::addVertex(const Pt& a_vertex) {
   vertices_m.push_back(a_vertex);
 }
@@ -95,10 +127,9 @@ inline void TriangulatedSurfaceOutput::refineSize(
   UnsignedIndex_t new_pos = static_cast<UnsignedIndex_t>(this->nVertices());
 
   std::array<UnsignedIndex_t, 2> dims =
-      a_compute_dim == 0
-          ? std::array<UnsignedIndex_t, 2>{{1, 2}}
-          : a_compute_dim == 1 ? std::array<UnsignedIndex_t, 2>{{0, 2}}
-                               : std::array<UnsignedIndex_t, 2>{{0, 1}};
+      a_compute_dim == 0   ? std::array<UnsignedIndex_t, 2>{{1, 2}}
+      : a_compute_dim == 1 ? std::array<UnsignedIndex_t, 2>{{0, 2}}
+                           : std::array<UnsignedIndex_t, 2>{{0, 1}};
 
   for (std::size_t i = 0; i < this->nTriangles(); ++i) {
     while (triangles_m[i].calculateAbsoluteVolume() > a_max_size) {

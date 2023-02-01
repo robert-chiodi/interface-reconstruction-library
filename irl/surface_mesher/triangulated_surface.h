@@ -32,6 +32,12 @@ class TriangulatedSurfaceOutput {
   TriangulatedSurfaceOutput(void) = default;
   ~TriangulatedSurfaceOutput(void) = default;
 
+  TriangulatedSurfaceOutput(const TriangulatedSurfaceOutput& a_rhs);
+  TriangulatedSurfaceOutput(TriangulatedSurfaceOutput&& a_rhs);
+
+  TriangulatedSurfaceOutput& operator=(const TriangulatedSurfaceOutput& a_rhs);
+  TriangulatedSurfaceOutput& operator=(TriangulatedSurfaceOutput&& a_rhs);
+
   void addVertex(const Pt& a_vertex);
   void addBoundaryEdge(const UnsignedIndex_t a, const UnsignedIndex_t b);
   void addTriangle(const UnsignedIndex_t a, const UnsignedIndex_t b,

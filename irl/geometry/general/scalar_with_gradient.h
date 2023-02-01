@@ -65,8 +65,17 @@ class ScalarWithGradientBase {
   GradientType gradient_m;
 };
 
-template <class ScalarType, class GradientType>
-struct has_embedded_gradient<ScalarWithGradientBase<ScalarType, GradientType>>
+// template <class ScalarType, class GradientType>
+// struct has_embedded_gradient<ScalarWithGradientBase<ScalarType,
+// GradientType>>
+//     : std::true_type {};
+
+template <class GradientType>
+struct has_embedded_gradient<ScalarWithGradientBase<double, GradientType>>
+    : std::true_type {};
+
+template <class GradientType>
+struct has_embedded_gradient<ScalarWithGradientBase<Quad_t, GradientType>>
     : std::true_type {};
 
 template <class ScalarType, class GradientType>

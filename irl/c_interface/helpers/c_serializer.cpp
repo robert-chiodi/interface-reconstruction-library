@@ -31,4 +31,22 @@ void c_unpackAndStore_PlanarSep_ByteBuffer(c_PlanarSep* a_separator,
   IRL::unpackAndStore(a_separator->obj_ptr, a_container->obj_ptr);
 }
 
+void c_serializeAndPack_Paraboloid_ByteBuffer(const c_Paraboloid* a_separator,
+                                              c_ByteBuffer* a_container) {
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(a_container != nullptr);
+  assert(a_container->obj_ptr != nullptr);
+  IRL::serializeAndPack(*a_separator->obj_ptr, a_container->obj_ptr);
+}
+
+void c_unpackAndStore_Paraboloid_ByteBuffer(c_Paraboloid* a_separator,
+                                            c_ByteBuffer* a_container) {
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(a_container != nullptr);
+  assert(a_container->obj_ptr != nullptr);
+  IRL::unpackAndStore(a_separator->obj_ptr, a_container->obj_ptr);
+}
+
 }  // end extern C

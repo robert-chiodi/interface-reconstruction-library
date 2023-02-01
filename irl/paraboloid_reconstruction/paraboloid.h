@@ -88,6 +88,9 @@ class ParaboloidBase {
   /// \brief Return if cutting for gas phase is needed.
   static constexpr bool isNotFlipped(void) { return true; }
 
+  void serialize(ByteBuffer* a_buffer) const;
+  void unpackSerialized(ByteBuffer* a_buffer);
+
   ~ParaboloidBase(void) = default;
 
  private:

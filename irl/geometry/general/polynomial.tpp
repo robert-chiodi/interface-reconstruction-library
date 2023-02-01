@@ -10,4 +10,19 @@
 #ifndef IRL_GEOMETRY_GENERAL_POLYNOMIAL_TPP_
 #define IRL_GEOMETRY_GENERAL_POLYNOMIAL_TPP_
 
+namespace IRL {
+
+template <UnsignedIndex_t kNCoefficients, class ScalarType>
+inline void PolynomialBase<kNCoefficients, ScalarType>::serialize(
+    ByteBuffer* a_buffer) const {
+  a_buffer->pack(&coefficients_m, kNCoefficients);
+}
+
+template <UnsignedIndex_t kNCoefficients, class ScalarType>
+inline void PolynomialBase<kNCoefficients, ScalarType>::unpackSerialized(
+    ByteBuffer* a_buffer) {
+  a_buffer->unpack(&coefficients_m, kNCoefficients);
+}
+}  // namespace IRL
+
 #endif  // IRL_GEOMETRY_GENERAL_POLYNOMIAL_TPP_

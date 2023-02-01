@@ -55,11 +55,13 @@ module f_getMoments
   use f_TagAccVM_Vol_class
   use f_TagAccVM2_Vol_class
   use f_PlanarSep_class
+  use f_Paraboloid_class
   use f_PlanarSepPathGroup_class
   use f_PlanarLoc_class
   use f_LocLink_class
   use f_TagAccListVM_VMAN_class
   use f_LocSepLink_class
+  use f_LocParabLink_class
   use f_LocSep_class
   use f_LocSepGroupLink_class
   implicit none
@@ -80,6 +82,8 @@ module f_getMoments
     module procedure getNormMoments_Octa_LocSepLink_Vol
     ! Cut CapDod by LocSepLink to get SeparatedMoments<VM>
     module procedure getNormMoments_CapDod_LocSepLink_SepVM
+    ! Cut CapDod by LocParabLink to get SeparatedMoments<VM>
+    module procedure getNormMoments_CapDod_LocParabLink_SepVM
     ! Cut CapDodWithDoubles3 by LocSepLink to get SeparatedMoments<VMAndDoubles<3>>
     module procedure getNormMoments_CapDod_d3_LocSepLink_SepVM_d3
     ! Cut Poly24_d3 by LocSepLink to get SeparatedMoments<VMAndDoubles<3>>
@@ -96,6 +100,8 @@ module f_getMoments
     module procedure getNormMoments_Octa_LocSepLink_TagAccVM_SepVol
     ! Cut RectCub by PlanarSep to get Volume
     module procedure getNormMoments_RectCub_PlanarSep_Vol
+    ! Cut RectCub by PlanarSep to get Volume
+    module procedure getNormMoments_RectCub_Paraboloid_Vol
     ! Cut Tet by PlanarSep to get Volume
     module procedure getNormMoments_Tet_PlanarSep_Vol
     ! Cut TriPrism  by PlanarSep to get Volume
@@ -114,6 +120,8 @@ module f_getMoments
     module procedure getNormMoments_Dod_LocSepLink_TagAccVM_SepVM
     ! Cut RectCub by PlanarSep to get SeparatedMoments<VM>
     module procedure getNormMoments_RectCub_PlanarSep_SepVM
+    ! Cut RectCub by Paraboloid to get SeparatedMoments<VM>
+    module procedure getNormMoments_RectCub_Paraboloid_SepVM
     ! Cut Tri by PlanarLoc to get Volume (Surface Area)
     module procedure getNormMoments_Tri_PlanarLoc_Vol
     ! Cut Poly by PlanarSep to get Volume (Surface Area)
@@ -267,6 +275,8 @@ module f_getMoments
     module procedure getNormMoments_Octa_LocSepLink_Vol
     ! Cut CapDod by LocSepLink to get SeparatedMoments<VM>
     module procedure getMoments_CapDod_LocSepLink_SepVM
+    ! Cut CapDod by LocParabLink to get SeparatedMoments<VM>
+    module procedure getMoments_CapDod_LocParabLink_SepVM
     ! Cut Dod by LocSepLink to get SeparatedMoments<VM>
     module procedure getMoments_Dod_LocSepLink_SepVM
     ! Cut Dod by LocSepLink to get TagAccVM<SeparatedMoments<VM>>
@@ -493,7 +503,7 @@ module f_getMoments
   end interface
 
   interface
-    subroutine F_getNormMoments_CapDod_LocSepLink_SepVM(a_Capped_Dod, a_localized_separator_link, a_moments_to_return) &
+  subroutine F_getNormMoments_CapDod_LocSepLink_SepVM(a_Capped_Dod, a_localized_separator_link, a_moments_to_return) &
     bind(C, name="c_getNormMoments_CapDod_LocSepLink_SepVM")
       use, intrinsic :: iso_c_binding
       import
@@ -502,6 +512,18 @@ module f_getMoments
       type(c_LocSepLink) :: a_localized_separator_link ! Pointer to LocSepLink object
       type(c_SepVM) :: a_moments_to_return ! Where separated moments is returned to
     end subroutine F_getNormMoments_CapDod_LocSepLink_SepVM
+  end interface
+
+  interface
+  subroutine F_getNormMoments_CapDod_LocParabLink_SepVM(a_Capped_Dod, a_localized_paraboloid_link, a_moments_to_return) &
+    bind(C, name="c_getNormMoments_CapDod_LocParabLink_SepVM")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_CapDod) :: a_Capped_Dod ! Pointer to CapDod object
+      type(c_LocParabLink) :: a_localized_paraboloid_link ! Pointer to LocSepLink object
+      type(c_SepVM) :: a_moments_to_return ! Where separated moments is returned to
+    end subroutine F_getNormMoments_CapDod_LocParabLink_SepVM
   end interface
 
   interface
@@ -553,6 +575,18 @@ module f_getMoments
   end interface
 
   interface
+    subroutine F_getMoments_CapDod_LocParabLink_SepVM(a_Capped_Dod, a_localized_paraboloid_link, a_moments_to_return) &
+    bind(C, name="c_getMoments_CapDod_LocParabLink_SepVM")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_CapDod) :: a_Capped_Dod ! Pointer to CapDod object
+      type(c_LocParabLink) :: a_localized_paraboloid_link ! Pointer to LocSepLink object
+      type(c_SepVM) :: a_moments_to_return ! Where separated moments is returned to
+    end subroutine F_getMoments_CapDod_LocParabLink_SepVM
+  end interface
+
+  interface
     subroutine F_getMoments_Dod_LocSepLink_SepVM(a_Dod, a_localized_separator_link, a_moments_to_return) &
     bind(C, name="c_getMoments_Dod_LocSepLink_SepVM")
       use, intrinsic :: iso_c_binding
@@ -599,6 +633,18 @@ module f_getMoments
       real(C_DOUBLE) :: a_moments_to_return ! Where volume is returned to
     end subroutine F_getNormMoments_RectCub_PlanarSep_Vol
   end interface
+
+  interface
+  subroutine F_getNormMoments_RectCub_Paraboloid_Vol(a_rectangular_cuboid, a_paraboloid, a_moments_to_return) &
+  bind(C, name="c_getNormMoments_RectCub_Paraboloid_Vol")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    type(c_RectCub) :: a_rectangular_cuboid ! Pointer to RectangularCuboid object
+    type(c_Paraboloid) :: a_paraboloid ! Pointer to PlanarSep object
+    real(C_DOUBLE) :: a_moments_to_return ! Where volume is returned to
+  end subroutine F_getNormMoments_RectCub_Paraboloid_Vol
+end interface
 
   interface
     subroutine F_getNormMoments_Tet_PlanarSep_Vol(a_tet, a_planar_separator, a_moments_to_return) &
@@ -767,6 +813,18 @@ module f_getMoments
       type(c_SepVM) :: a_moments_to_return ! Where separated moments is returned to
     end subroutine F_getNormMoments_RectCub_PlanarSep_SepVM
   end interface
+
+  interface
+  subroutine F_getNormMoments_RectCub_Paraboloid_SepVM(a_rectangular_cuboid, a_paraboloid, a_moments_to_return) &
+  bind(C, name="c_getNormMoments_RectCub_Paraboloid_SepVM")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    type(c_RectCub) :: a_rectangular_cuboid ! Pointer to Dod object
+    type(c_Paraboloid) :: a_paraboloid ! Pointer to PlanarSep object
+    type(c_SepVM) :: a_moments_to_return ! Where separated moments is returned to
+  end subroutine F_getNormMoments_RectCub_Paraboloid_SepVM
+end interface
 
   interface
     subroutine F_getNormMoments_Tri_LocLink_TagAccVM_VM(a_tri, a_localizer_link, a_moments_to_return) &
@@ -1871,6 +1929,18 @@ contains
 
   end subroutine getNormMoments_CapDod_LocSepLink_SepVM
 
+  subroutine getNormMoments_CapDod_LocParabLink_SepVM(a_Capped_Dod, a_localized_paraboloid_link, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(CapDod_type), intent(in) :: a_Capped_Dod
+      type(LocParabLink_type), intent(in) :: a_localized_paraboloid_link
+      type(SepVM_type), intent(inout) :: a_moments_to_return
+
+      call F_getNormMoments_CapDod_LocParabLink_SepVM &
+          (a_capped_dod%c_object, a_localized_paraboloid_link%c_object, a_moments_to_return%c_object)
+
+  end subroutine getNormMoments_CapDod_LocParabLink_SepVM
+
   subroutine getNormMoments_CapDod_d3_LocSepLink_SepVM_d3(a_Capped_Dod, a_localized_separator_link, a_moments_to_return)
     use, intrinsic :: iso_c_binding
     implicit none
@@ -1919,6 +1989,18 @@ contains
 
   end subroutine getMoments_CapDod_LocSepLink_SepVM
 
+  subroutine getMoments_CapDod_LocParabLink_SepVM(a_Capped_Dod, a_localized_paraboloid_link, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(CapDod_type), intent(in) :: a_Capped_Dod
+      type(LocParabLink_type), intent(in) :: a_localized_paraboloid_link
+      type(SepVM_type), intent(inout) :: a_moments_to_return
+
+      call F_getMoments_CapDod_LocParabLink_SepVM &
+          (a_capped_dod%c_object, a_localized_paraboloid_link%c_object, a_moments_to_return%c_object)
+
+  end subroutine getMoments_CapDod_LocParabLink_SepVM
+
   subroutine getMoments_Dod_LocSepLink_SepVM(a_Dod, a_localized_separator_link, a_moments_to_return)
     use, intrinsic :: iso_c_binding
     implicit none
@@ -1966,6 +2048,18 @@ contains
           (a_rectangular_cuboid%c_object, a_planar_separator%c_object, a_moments_to_return)
 
   end subroutine getNormMoments_RectCub_PlanarSep_Vol
+
+  subroutine getNormMoments_RectCub_Paraboloid_Vol(a_rectangular_cuboid, a_paraboloid, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(RectCub_type), intent(in) :: a_rectangular_cuboid
+      type(Paraboloid_type), intent(in) :: a_paraboloid
+      real(IRL_double), intent(inout) :: a_moments_to_return
+
+      call F_getNormMoments_RectCub_Paraboloid_Vol &
+          (a_rectangular_cuboid%c_object, a_paraboloid%c_object, a_moments_to_return)
+
+  end subroutine getNormMoments_RectCub_Paraboloid_Vol
 
   subroutine getNormMoments_Tet_PlanarSep_Vol(a_tet, a_planar_separator, a_moments_to_return)
     use, intrinsic :: iso_c_binding
@@ -2135,6 +2229,18 @@ contains
           (a_rectangular_cuboid%c_object, a_planar_separator%c_object, a_moments_to_return%c_object)
 
   end subroutine getNormMoments_RectCub_PlanarSep_SepVM
+
+  subroutine getNormMoments_RectCub_Paraboloid_SepVM(a_rectangular_cuboid, a_paraboloid, a_moments_to_return)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(RectCub_type), intent(in) :: a_rectangular_cuboid
+      type(Paraboloid_type), intent(in) :: a_paraboloid
+      type(SepVM_type), intent(inout) :: a_moments_to_return
+
+      call F_getNormMoments_RectCub_Paraboloid_SepVM &
+          (a_rectangular_cuboid%c_object, a_paraboloid%c_object, a_moments_to_return%c_object)
+
+  end subroutine getNormMoments_RectCub_Paraboloid_SepVM
 
   subroutine getNormMoments_Tri_LocLink_TagAccVM_VM(a_tri, a_localizer_link, a_moments_to_return)
     use, intrinsic :: iso_c_binding

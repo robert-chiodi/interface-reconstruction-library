@@ -139,6 +139,16 @@ inline Quad_t sqrt(const Quad_t a_scalar) {
 }
 
 template <>
+inline double invsqrt(const double a_scalar) {
+  return 1.0 / std::sqrt(a_scalar);
+}
+
+template <>
+inline Quad_t invsqrt(const Quad_t a_scalar) {
+  return 1.0q / sqrtq(a_scalar);
+}
+
+template <>
 inline double pow(const double a_scalar, const double a_power) {
   return std::pow(a_scalar, a_power);
 }

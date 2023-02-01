@@ -14,7 +14,7 @@
 #include <iomanip>
 
 #include "external/NumericalIntegration/NumericalIntegration.h"
-#define IRL_NO_USE_TRIANGLE
+// #define IRL_NO_USE_TRIANGLE
 
 namespace IRL {
 
@@ -797,6 +797,14 @@ inline double ParametrizedSurfaceOutput::getGaussianCurvatureNonAligned(
 
 inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     const double a_length_scale, const UnsignedIndex_t a_nsplit) const {
+  TriangulatedSurfaceOutput returned_surface;
+  this->triangulate_fromPtr(a_length_scale, a_nsplit, &returned_surface);
+  return returned_surface;
+}
+
+inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
+    const double a_length_scale, const UnsignedIndex_t a_nsplit,
+    TriangulatedSurfaceOutput* returned_surface) const {
   const UnsignedIndex_t nArcs = this->size();
   double length_scale, length_scale_ref = length_scale_m;
   if (a_length_scale > 0.0) {
@@ -843,13 +851,13 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
   //           << static_cast<UnsignedIndex_t>(list_of_closed_curves.size())
   //           << " curves and validity is " << valid_curves << std::endl;
 
-  TriangulatedSurfaceOutput returned_surface;
-  returned_surface.clearAll();
+  // TriangulatedSurfaceOutput returned_surface;
+  returned_surface->clearAll();
 
   if (valid_curves) {
 #ifdef IRL_NO_USE_TRIANGLE
 
-    typedef CGAL::Exact_predicates_exact_constructions_kernel K;
+    typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
     typedef CGAL::Exact_predicates_exact_constructions_kernel Kexact;
     typedef CGAL::Delaunay_mesh_vertex_base_2<K> Vb;
     typedef CGAL::Delaunay_mesh_face_base_2<K> Fb;
@@ -990,7 +998,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
     myfile << "Mesh has " << cdt.number_of_vertices() << " vertices.\n";
     myfile << "Refining with length-scale " << length_scale << ".\n";
-    sleep(1.0e-4);
+    // sleep(1.0e-4);
     CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(),
                                  list_of_seeds.end(),
                                  Criteria(0.15, length_scale), false);
@@ -998,8 +1006,8 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     myfile << "Mesh has " << cdt.number_of_faces() << " faces.\n";
     // CGAL::lloyd_optimize_mesh_2(cdt,
     //                             CGAL::parameters::max_iteration_number = 20);
-    auto& vlist = returned_surface.getVertexList();
-    auto& tlist = returned_surface.getTriangleList();
+    auto& vlist = returned_surface->getVertexList();
+    auto& tlist = returned_surface->getTriangleList();
     UnsignedIndex_t count = 0;
     CDT::Finite_faces_iterator face;
     myfile << "Counting faces.\n";
@@ -1029,8 +1037,8 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
           vlist[3 * count + d] = Pt(x, y, z);
           auto neigh = face->neighbor(d);
           if (!neigh->is_in_domain()) {
-            returned_surface.addBoundaryEdge(3 * count + (d + 1) % 3,
-                                             3 * count + (d + 2) % 3);
+            returned_surface->addBoundaryEdge(3 * count + (d + 1) % 3,
+                                              3 * count + (d + 2) % 3);
           }
         }
         count++;
@@ -1350,11 +1358,9 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
           free(out.edgelist);
           free(out.edgemarkerlist);
           free(out.normlist);
-
-          return returned_surface;
         }
 
-        auto& vlist = returned_surface.getVertexList();
+        auto& vlist = returned_surface->getVertexList();
         vlist.resize(out.numberofpoints);
         for (UnsignedIndex_t i = 0; i < out.numberofpoints; ++i) {
           const double x = out.pointlist[2 * i + 0];
@@ -1380,12 +1386,12 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
 
         for (UnsignedIndex_t i = 0; i < out.numberofedges; ++i) {
           if (out.edgemarkerlist[i] == 1) {
-            returned_surface.addBoundaryEdge(out.edgelist[2 * i],
-                                             out.edgelist[2 * i + 1]);
+            returned_surface->addBoundaryEdge(out.edgelist[2 * i],
+                                              out.edgelist[2 * i + 1]);
           }
         }
 
-        auto& tlist = returned_surface.getTriangleList();
+        auto& tlist = returned_surface->getTriangleList();
         tlist.resize(out.numberoftriangles,
                      TriangulatedSurfaceOutput::TriangleStorage::value_type::
                          fromNoExistencePlane(vlist, {0, 0, 0}));
@@ -1428,7 +1434,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
         free(in.edgemarkerlist);
         free(in.normlist);
       } else {  // Triangulate by hand
-        auto& vlist = returned_surface.getVertexList();
+        auto& vlist = returned_surface->getVertexList();
         vlist.resize(input_points.size() / 2);
         for (UnsignedIndex_t i = 0; i < input_points.size() / 2; ++i) {
           const double x = input_points[2 * i + 0];
@@ -1452,12 +1458,12 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
           vertex += datum;
         }
 
-        returned_surface.addBoundaryEdge(input_points.size() / 2 - 1, 0);
+        returned_surface->addBoundaryEdge(input_points.size() / 2 - 1, 0);
         for (UnsignedIndex_t i = 0; i < input_points.size() / 2 - 1; ++i) {
-          returned_surface.addBoundaryEdge(i, i + 1);
+          returned_surface->addBoundaryEdge(i, i + 1);
         }
 
-        auto& tlist = returned_surface.getTriangleList();
+        auto& tlist = returned_surface->getTriangleList();
         tlist.resize(input_points.size() / 2 - 2,
                      TriangulatedSurfaceOutput::TriangleStorage::value_type::
                          fromNoExistencePlane(vlist, {0, 0, 0}));
@@ -1469,7 +1475,7 @@ inline TriangulatedSurfaceOutput ParametrizedSurfaceOutput::triangulate(
     }
 #endif
   }
-  return returned_surface;
+  // return returned_surface;
 }
 
 inline std::ostream& operator<<(

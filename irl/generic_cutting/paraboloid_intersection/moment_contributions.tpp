@@ -288,11 +288,29 @@ inline std::array<ContainerType, 3> coeffsV3SeriesOne(
   std::array<ContainerType, 3> coeffs;
   coeffs.fill(ContainerType(static_cast<ScalarType>(0.0)));
   ContainerType x(static_cast<ScalarType>(1.0));
-  for (UnsignedIndex_t i = 0; i <= 40; ++i) {
-    for (UnsignedIndex_t j = 0; j < 3; ++j) {
-      coeffs[j] += static_cast<ScalarType>(v3Series[i][j]) * x;
+  if constexpr (has_embedded_gradient<ContainerType>::value) {
+    for (UnsignedIndex_t i = 0; i <= 40; ++i) {
+      for (UnsignedIndex_t j = 0; j < 3; ++j) {
+        coeffs[j] += static_cast<ScalarType>(v3Series[i][j]) * x;
+      }
+      x *= a_weight - ContainerType(static_cast<ScalarType>(1.0));
     }
-    x *= a_weight - ContainerType(static_cast<ScalarType>(1.0));
+  } else {
+    UnsignedIndex_t i = 0;
+    ScalarType max_diff = static_cast<ScalarType>(1);
+    while (i <= 40) {
+      max_diff = static_cast<ScalarType>(0);
+      for (UnsignedIndex_t j = 0; j < 3; ++j) {
+        ScalarType add_to_coeff = static_cast<ScalarType>(v3Series[i][j]) * x;
+        coeffs[j] += add_to_coeff;
+        max_diff = maximum(max_diff, fabs(add_to_coeff));
+      }
+      if (max_diff < static_cast<ScalarType>(10.0 * DBL_EPSILON)) {
+        break;
+      }
+      x *= a_weight - static_cast<ScalarType>(1);
+      i++;
+    }
   }
   return coeffs;
 }
@@ -377,6 +395,28 @@ inline std::array<ContainerType, 3> coeffsV3Exact(
                 S
           : ArctanhMoments<ContainerType>((a_weight - ContainerType(ONE)) / S) /
                 S;
+  //   ContainerType T;
+  //   if constexpr (has_embedded_gradient<ContainerType>::value) {
+  //   } else {
+  //     if (a_weight > static_cast<ScalarType>(0.35) &&
+  //         a_weight < static_cast<ScalarType>(1.7)) {
+  //       const Quad_t S = (a_weight < ONE)
+  //                            ? sqrt(1.0q - static_cast<Quad_t>(a_weight) *
+  //                                              static_cast<Quad_t>(a_weight))
+  //                            : sqrt(static_cast<Quad_t>(a_weight) *
+  //                                       static_cast<Quad_t>(a_weight) -
+  //                                   1.0q);
+  //       T = static_cast<ScalarType>(
+  //           (a_weight < ONE)
+  //               ? atan((1.0q - static_cast<Quad_t>(a_weight)) / S) / S
+  //               : atanh((static_cast<Quad_t>(a_weight) - 1.0q) / S) / S);
+  //     } else {
+  //       const auto S = (a_weight < ONE) ? sqrt(ONE - a_weight * a_weight)
+  //                                       : sqrt(a_weight * a_weight - ONE);
+  //       T = (a_weight < ONE) ? atan((ONE - a_weight) / S) / S
+  //                            : atanh((a_weight - ONE) / S) / S;
+  //     }
+  //   }
   return std::array<ContainerType, 3>(
       {(TWO * w6 - THREE * w4 + static_cast<ScalarType>(31) * w2 -
         (static_cast<ScalarType>(42) * w3 +
@@ -554,6 +594,7 @@ ReturnType computeType3Contribution(
       coeffs = coeffsV3Exact<ScalarType, ScalarType>(weight);
     else  // This is within EPSILON of the actual value
       coeffs = std::array<ScalarType, 3>({ONE / SIX, TWO / THREE, ZERO});
+
     return area_proj_triangle *
            (coeffs[0] *
                 signedDistance<ScalarType>(HALF * (pt_0 + pt_1), a_paraboloid) +
@@ -884,7 +925,8 @@ ReturnType computeType3Contribution(
 //                         1)
 //     coeffs = coeffsV3SeriesOne<ScalarType, ScalarType>(weight);
 //   else if (weight < static_cast<ScalarType>(
-//                         1.0e9))  // We use the series expansion (w -> infty)
+//                         1.0e9))  // We use the series expansion (w ->
+//                         infty)
 //     coeffs = coeffsV3Exact<ScalarType, ScalarType>(weight);
 //   else  // This is within EPSILON of the actual value
 //     coeffs = std::array<ScalarType, 3>(
@@ -894,7 +936,8 @@ ReturnType computeType3Contribution(
 //   return area_proj_triangle *
 //          (coeffs[0] *
 //               signedDistance<ScalarType>(
-//                   (pt_0 + pt_1) / static_cast<ScalarType>(2), a_paraboloid) +
+//                   (pt_0 + pt_1) / static_cast<ScalarType>(2), a_paraboloid)
+//                   +
 //           coeffs[1] * signedDistance<ScalarType>(
 //                           (pt_0 + pt_1) / static_cast<ScalarType>(4) +
 //                               cp / static_cast<ScalarType>(2),
@@ -1328,12 +1371,13 @@ inline ReturnType computeType3ContributionWithGradient(
 //   {
 //     coeffs = coeffsV3andC3Exact<ScalarType, ScalarType>(weight);
 //   } else if (weight < static_cast<ScalarType>(
-//                           1.7))  // We use the 40th order Taylor series (w ->
-//                           1)
+//                           1.7))  // We use the 40th order Taylor series (w
+//                           -> 1)
 //   {
 //     coeffs = coeffsV3andC3SeriesOne<ScalarType, ScalarType>(weight);
 //   } else if (weight <
-//              static_cast<ScalarType>(1.0e9))  // We use the exact expressions
+//              static_cast<ScalarType>(1.0e9))  // We use the exact
+//              expressions
 //   {
 //     coeffs = coeffsV3andC3Exact<ScalarType, ScalarType>(weight);
 //   }
@@ -1360,37 +1404,44 @@ inline ReturnType computeType3ContributionWithGradient(
 //        signedDistance<ScalarType>(cp, a_paraboloid)});
 //   auto m1x_basis = std::array<ScalarType, 4>(
 //       {-SIX * (X0Z0 - X0Z2 - X2Z0 + X2Z2 - TWO * B * X2 * Y00 +
-//                TWO * B * X0 * Y02 + TWO * B * X2 * Y02 - TWO * B * X0 * Y22),
-//        TWO * (FIVE * X0Z0 + static_cast<ScalarType>(10) * X0Z1p + SIX * X0Z1P
+//                TWO * B * X0 * Y02 + TWO * B * X2 * Y02 - TWO * B * X0 *
+//                Y22),
+//        TWO * (FIVE * X0Z0 + static_cast<ScalarType>(10) * X0Z1p + SIX *
+//        X0Z1P
 //        +
 //               static_cast<ScalarType>(7) * X0Z2 +
 //               static_cast<ScalarType>(30) * A * X02 * X1 -
 //               static_cast<ScalarType>(11) * X1Z0 - FOUR * X1Z1p -
 //               static_cast<ScalarType>(11) * X1Z2 +
 //               static_cast<ScalarType>(7) * X2Z0 +
-//               static_cast<ScalarType>(10) * X2Z1p + SIX * X2Z1P + FIVE * X2Z2
-//               - static_cast<ScalarType>(14) * B * X1 * Y00 + FOUR * B * X2 *
-//               Y00 + static_cast<ScalarType>(14) * B * X0 * Y01 - FOUR * B *
-//               X1 * Y01 + static_cast<ScalarType>(10) * B * X2 * Y01 - FOUR *
-//               B * X0 * Y02 + static_cast<ScalarType>(10) * B * X1 * Y02 -
-//               FOUR * B * X2 * Y02 + FOUR * B * X0 * Y11 + FOUR * B * X2 * Y11
-//               + static_cast<ScalarType>(10) * B * X0 * Y12 - FOUR * B * X1 *
-//               Y12 + static_cast<ScalarType>(14) * B * X2 * Y12 + FOUR * B *
-//               X0 * Y22 - static_cast<ScalarType>(14) * B * X1 * Y22),
+//               static_cast<ScalarType>(10) * X2Z1p + SIX * X2Z1P + FIVE *
+//               X2Z2
+//               - static_cast<ScalarType>(14) * B * X1 * Y00 + FOUR * B * X2
+//               * Y00 + static_cast<ScalarType>(14) * B * X0 * Y01 - FOUR * B
+//               * X1 * Y01 + static_cast<ScalarType>(10) * B * X2 * Y01 -
+//               FOUR * B * X0 * Y02 + static_cast<ScalarType>(10) * B * X1 *
+//               Y02 - FOUR * B * X2 * Y02 + FOUR * B * X0 * Y11 + FOUR * B *
+//               X2 * Y11
+//               + static_cast<ScalarType>(10) * B * X0 * Y12 - FOUR * B * X1
+//               * Y12 + static_cast<ScalarType>(14) * B * X2 * Y12 + FOUR * B
+//               * X0 * Y22 - static_cast<ScalarType>(14) * B * X1 * Y22),
 //        TWO * (-FIVE * X0Z1p + static_cast<ScalarType>(18) * X0Z1P + X0Z2 +
-//               SIX * A * X02 * X1 - FIVE * X1Z0 - SIX * X1Z1p - SIX * X1Z1P -
-//               FIVE * X1Z2 + X2Z0 - FIVE * X2Z1p +
+//               SIX * A * X02 * X1 - FIVE * X1Z0 - SIX * X1Z1p - SIX * X1Z1P
+//               - FIVE * X1Z2 + X2Z0 - FIVE * X2Z1p +
 //               static_cast<ScalarType>(18) * X2Z1P -
-//               static_cast<ScalarType>(12) * B * X1 * Y01 + TWO * B * X2 * Y01
+//               static_cast<ScalarType>(12) * B * X1 * Y01 + TWO * B * X2 *
+//               Y01
 //               + TWO * B * X1 * Y02 + static_cast<ScalarType>(12) * B * X0 *
-//               Y11 + static_cast<ScalarType>(12) * B * X2 * Y11 + TWO * B * X0
+//               Y11 + static_cast<ScalarType>(12) * B * X2 * Y11 + TWO * B *
+//               X0
 //               * Y12 - static_cast<ScalarType>(12) * B * X1 * Y12),
 //        TWO * (X1Z1p - X1Z1P)});
 //   auto m1y_basis = std::array<ScalarType, 4>(
 //       {SIX * (-Y0Z0 + Y0Z2 + TWO * A * (X22 * Y0 + X00 * Y2 - X02 * (Y0 +
 //       Y2)) +
 //               Y2Z0 - Y2Z2),
-//        TWO * (FIVE * Y0Z0 + static_cast<ScalarType>(10) * Y0Z1p + SIX * Y0Z1P
+//        TWO * (FIVE * Y0Z0 + static_cast<ScalarType>(10) * Y0Z1p + SIX *
+//        Y0Z1P
 //        +
 //               static_cast<ScalarType>(7) * Y0Z2 +
 //               static_cast<ScalarType>(30) * B * Y02 * Y1 -
@@ -1409,9 +1460,8 @@ inline ReturnType computeType3ContributionWithGradient(
 //               static_cast<ScalarType>(10) * Y2Z1p + SIX * Y2Z1P + FIVE *
 //               Y2Z2),
 //        -TWO * (FIVE * Y0Z1p - static_cast<ScalarType>(18) * Y0Z1P - Y0Z2 -
-//                SIX * B * Y02 * Y1 + FIVE * Y1Z0 + SIX * Y1Z1p + SIX * Y1Z1P +
-//                FIVE * Y1Z2 -
-//                TWO * A *
+//                SIX * B * Y02 * Y1 + FIVE * Y1Z0 + SIX * Y1Z1p + SIX * Y1Z1P
+//                + FIVE * Y1Z2 - TWO * A *
 //                    (X12 * Y0 - SIX * X01 * Y1 + X02 * Y1 - SIX * X12 * Y1 +
 //                     X01 * Y2 + SIX * X11 * (Y0 + Y2)) -
 //                Y2Z0 + FIVE * Y2Z1p - static_cast<ScalarType>(18) * Y2Z1P),
@@ -1484,7 +1534,8 @@ inline ReturnType computeType3ContributionWithGradient(
 //                (BB * (static_cast<ScalarType>(7) * Y00 * Y11 +
 //                       static_cast<ScalarType>(10) * Y02 * Y11 -
 //                       static_cast<ScalarType>(35) * Y00 * Y12 +
-//                       static_cast<ScalarType>(7) * Y000 * (-THREE * Y1 + Y2)
+//                       static_cast<ScalarType>(7) * Y000 * (-THREE * Y1 +
+//                       Y2)
 //                       + static_cast<ScalarType>(10) * Y00 * Y22 -
 //                       static_cast<ScalarType>(35) * Y01 * Y22 +
 //                       static_cast<ScalarType>(7) * Y11 * Y22 +
@@ -1506,8 +1557,8 @@ inline ReturnType computeType3ContributionWithGradient(
 //                (X22 * Y00 + static_cast<ScalarType>(112) * X01 * Y01 -
 //                 static_cast<ScalarType>(28) * X02 * Y01 -
 //                 static_cast<ScalarType>(14) * X22 * Y01 -
-//                 static_cast<ScalarType>(28) * X01 * Y02 + FOUR * X02 * Y02 +
-//                 static_cast<ScalarType>(28) * X00 * Y11 -
+//                 static_cast<ScalarType>(28) * X01 * Y02 + FOUR * X02 * Y02
+//                 + static_cast<ScalarType>(28) * X00 * Y11 -
 //                 static_cast<ScalarType>(42) * X01 * Y11 +
 //                 static_cast<ScalarType>(46) * X02 * Y11 +
 //                 static_cast<ScalarType>(28) * X22 * Y11 -
@@ -1546,11 +1597,12 @@ inline ReturnType computeType3ContributionWithGradient(
 //                (static_cast<ScalarType>(2) * X12 * Y01 -
 //                 static_cast<ScalarType>(7) * X01 * Y11 + X02 * Y11 -
 //                 static_cast<ScalarType>(7) * X12 * Y11 +
-//                 X11 * (-static_cast<ScalarType>(7) * Y01 + Y02 + SIX * Y11 -
+//                 X11 * (-static_cast<ScalarType>(7) * Y01 + Y02 + SIX * Y11
+//                 -
 //                        static_cast<ScalarType>(7) * Y12) +
 //                 TWO * X01 * Y12) +
-//            static_cast<ScalarType>(14) * BB * Y111 * Y2 - FIVE * Z01p + Z02 -
-//            static_cast<ScalarType>(7) * Z1p1p - FIVE * Z1p2,
+//            static_cast<ScalarType>(14) * BB * Y111 * Y2 - FIVE * Z01p + Z02
+//            - static_cast<ScalarType>(7) * Z1p1p - FIVE * Z1p2,
 //        -(AA * X1111) - TWO * AB * X11 * Y11 - BB * Y1111 + Z1p1p});
 //   for (size_t i = 0; i < 3; ++i) {
 //     moments.volume() += coeffs[i] * m0_basis[i];

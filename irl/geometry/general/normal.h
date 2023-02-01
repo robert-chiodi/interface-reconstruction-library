@@ -163,6 +163,7 @@ class NormalBase : public Expr<NormalBase<ScalarType>> {
 
   /// \brief Const version of calculateMagnitude.
   ScalarType calculateMagnitude(void) const;
+  ScalarType calculateSquaredMagnitude(void) const;
 
   /// \brief NormalBaseize the normal
   void normalize(void);

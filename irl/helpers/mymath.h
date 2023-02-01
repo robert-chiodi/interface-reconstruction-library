@@ -124,6 +124,9 @@ inline ScalarType fabs(const ScalarType a_scalar);
 template <class ScalarType>
 inline ScalarType sqrt(const ScalarType a_scalar);
 
+template <class ScalarType>
+inline ScalarType invsqrt(const ScalarType a_scalar);
+
 template <class ScalarType, class PowerType>
 inline ScalarType pow(const ScalarType a_scalar, const PowerType a_power);
 

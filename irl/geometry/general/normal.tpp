@@ -278,9 +278,17 @@ inline ScalarType NormalBase<ScalarType>::calculateMagnitude(void) const {
   return magnitude((*this));
 }
 
+template <class ScalarType>
+inline ScalarType NormalBase<ScalarType>::calculateSquaredMagnitude(
+    void) const {
+  return squaredMagnitude((*this));
+}
+
 template <>
 inline void NormalBase<double>::normalize(void) {
-  const double inv_magnitude = 1.0 / safelyTiny(this->calculateMagnitude());
+  // const double inv_magnitude = 1.0 / safelyTiny(this->calculateMagnitude());
+  const double inv_magnitude =
+      invsqrt(safelyTiny(this->calculateSquaredMagnitude()));
   for (auto& elem : normal_m) {
     elem *= inv_magnitude;
   }

@@ -11,6 +11,7 @@
 #define IRL_GEOMETRY_GENERAL_POLYNOMIAL_H_
 
 #include <algorithm>
+#include "irl/parameters/defined_types.h"
 
 namespace IRL {
 
@@ -40,6 +41,9 @@ class PolynomialBase {
   auto end(void) { return coefficients_m.end(); }
   auto end(void) const { return this->cend(); }
   auto cend(void) const { return coefficients_m.cend(); }
+
+  void serialize(ByteBuffer* a_buffer) const;
+  void unpackSerialized(ByteBuffer* a_buffer);
 
   ~PolynomialBase(void) = default;
 

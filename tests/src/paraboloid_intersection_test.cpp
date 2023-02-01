@@ -3930,7 +3930,7 @@ TEST(ParaboloidIntersection, PtQuad) {
   std::cout << "    10^1/3 quad/double = " << test2 << std::endl;
   std::cout << "  10^1/3 double/double = " << test3 << std::endl;
 
-  const Quad_t alpha = 1.0q, beta = 1.0q;
+  const Quad_t alpha = 0.5q, beta = 0.5q;
   const Quad_t exact_volume = 1.0q / 2.0q - (alpha + beta) / 12.0q;
   const auto exact_m1 = PtBase<Quad_t>(
       0.0q, 0.0q,

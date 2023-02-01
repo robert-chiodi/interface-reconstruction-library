@@ -70,7 +70,7 @@ inline NormalBase<ScalarType> computeTangentVectorAtPoint(
   /* Function */
   NormalBase<ScalarType> surface_normal =
       getParaboloidSurfaceNormal(a_paraboloid, a_pt);
-  surface_normal.normalize();
+  // surface_normal.normalize();
   NormalBase<ScalarType> tangent_at_pt =
       crossProduct(a_plane_normal, surface_normal);
   if (squaredMagnitude(tangent_at_pt) < EPSILON * EPSILON) {
@@ -78,7 +78,7 @@ inline NormalBase<ScalarType> computeTangentVectorAtPoint(
   }
   const ScalarType normal_correction = tangent_at_pt * a_plane_normal;
   tangent_at_pt = tangent_at_pt - normal_correction * a_plane_normal;
-  tangent_at_pt.normalize();
+  // tangent_at_pt.normalize();
   return tangent_at_pt;
 }
 
@@ -235,7 +235,6 @@ ReturnType computeType3ContributionWithSplit(
   const Normal edge_vector = pt_1 - pt_0;
   Normal edge_vector_normalized = edge_vector;
   edge_vector_normalized.normalize();
-  edge_vector_normalized.normalize();
 
   if (squaredMagnitude(edge_vector) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
       fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
@@ -262,10 +261,13 @@ ReturnType computeType3ContributionWithSplit(
       average_tangent =
           Normal(ONEQUARTER * a_tangent_0 + THREEQUARTERS * a_tangent_1);
     }
-    average_tangent.normalize();
-    const ScalarType avg_tgt_dot_face_normal = average_tangent * a_plane_normal;
+    const ScalarType crude_invmag =
+        ONE / (fabs(average_tangent[0]) + fabs(average_tangent[1]) +
+               fabs(average_tangent[2]));
+    // average_tangent.normalize();
+    average_tangent *= crude_invmag;
     average_tangent =
-        average_tangent - avg_tgt_dot_face_normal * a_plane_normal;
+        average_tangent - (average_tangent * a_plane_normal) * a_plane_normal;
     Pt projected_pt = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
         a_paraboloid, average_tangent, average_pt);
     if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX) ||
@@ -1307,17 +1309,17 @@ ReturnType orientAndApplyType3Correction(
         surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
         a_surface->addArc(surface_arc);
       }
-      if (fabs(n_cross_t0 * tgt_1) < ANGLE_EPSILON &&
-          fabs(ONE - fabs(dotProduct(edge_vector, tgt_0))) < ANGLE_EPSILON) {
-        return ReturnType::fromScalarConstant(ZERO);
-      } else {
-        *a_requires_nudge = true;
-        a_nudge_direction = Normal(TWO * a_paraboloid.a() * pt_0[0],
-                                   TWO * a_paraboloid.b() * pt_0[1], ONE);
-        if (a_nudge_direction * face_normal > ZERO) a_nudge_direction *= -ONE;
-        a_nudge_direction.normalize();
-        return ReturnType::fromScalarConstant(ZERO);
-      }
+      // if (fabs(n_cross_t0 * tgt_1) < ANGLE_EPSILON &&
+      //     fabs(ONE - fabs(dotProduct(edge_vector, tgt_0))) < ANGLE_EPSILON) {
+      //   return ReturnType::fromScalarConstant(ZERO);
+      // } else {
+      *a_requires_nudge = true;
+      a_nudge_direction = Normal(TWO * a_paraboloid.a() * pt_0[0],
+                                 TWO * a_paraboloid.b() * pt_0[1], ONE);
+      if (a_nudge_direction * face_normal > ZERO) a_nudge_direction *= -ONE;
+      a_nudge_direction.normalize();
+      return ReturnType::fromScalarConstant(ZERO);
+      // }
     } else {
       if (fabs(n_cross_t0 * tgt_1) <
           ANGLE_EPSILON) {  // The tangents are (close to being) parallel
@@ -1386,7 +1388,10 @@ ReturnType orientAndApplyType3Correction(
       a_nudge_direction = face_normal;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    edge_0.normalize();
+    const ScalarType crude_invmag0 =
+        ONE / (fabs(edge_0[0]) + fabs(edge_0[1]) + fabs(edge_0[2]));
+    edge_0 *= crude_invmag0;
+    // edge_0.normalize();
     Normal edge_10 = a_end->getVertex()->getLocation().getPt() -
                      a_end->getPreviousVertex()->getLocation().getPt();
     Normal edge_11 =
@@ -1400,11 +1405,19 @@ ReturnType orientAndApplyType3Correction(
       a_nudge_direction = face_normal;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    edge_1.normalize();
-    bool tgt_0_parallel_edge_0 =
-        fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
-    bool tgt_1_parallel_edge_1 =
-        fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+    const ScalarType crude_invmag1 =
+        ONE / (fabs(edge_1[0]) + fabs(edge_1[1]) + fabs(edge_1[2]));
+    edge_1 *= crude_invmag0;
+    // edge_1.normalize();
+
+    // bool tgt_0_parallel_edge_0 =
+    //     fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
+    // bool tgt_1_parallel_edge_1 =
+    //     fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+    bool tgt_0_parallel_edge_0 = squaredMagnitude(crossProduct(tgt_0, edge_0)) <
+                                 ANGLE_EPSILON * ANGLE_EPSILON;
+    bool tgt_1_parallel_edge_1 = squaredMagnitude(crossProduct(tgt_1, edge_1)) <
+                                 ANGLE_EPSILON * ANGLE_EPSILON;
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge normal
     {
@@ -1416,9 +1429,17 @@ ReturnType orientAndApplyType3Correction(
       // Compute ellipse center an orient tangents accordingly
       const Pt conic_center = conicCenter<ScalarType>(face_plane, a_paraboloid);
       auto center_to_pt_0 = Normal(pt_0 - conic_center);
-      center_to_pt_0.normalize();
       auto center_to_pt_1 = Normal(pt_1 - conic_center);
-      center_to_pt_1.normalize();
+      const ScalarType crude_ctopt0 =
+          ONE / (fabs(center_to_pt_0[0]) + fabs(center_to_pt_0[1]) +
+                 fabs(center_to_pt_0[2]));
+      center_to_pt_0 *= crude_ctopt0;
+      const ScalarType crude_ctopt1 =
+          ONE / (fabs(center_to_pt_1[0]) + fabs(center_to_pt_1[1]) +
+                 fabs(center_to_pt_1[2]));
+      center_to_pt_1 *= crude_ctopt1;
+      // center_to_pt_0.normalize();
+      // center_to_pt_1.normalize();
       Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
       Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
       assert(fabs(tgt_0 * dummy_tgt_0) > ANGLE_EPSILON);
@@ -2049,28 +2070,42 @@ formParaboloidIntersectionBases(
 
   // Recalculate in face plane information
   for (auto& face : (*a_polytope)) {
-    auto normal = Normal(ZERO, ZERO, ZERO);
+    // auto normal = Normal(ZERO, ZERO, ZERO);
+    // const auto starting_half_edge = face->getStartingHalfEdge();
+    // auto current_half_edge = starting_half_edge;
+    // auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    // const auto& start_location =
+    //     starting_half_edge->getPreviousVertex()->getLocation().getPt();
+    // do {
+    //   normal += crossProduct(
+    //       current_half_edge->getVertex()->getLocation().getPt() -
+    //           start_location,
+    //       next_half_edge->getVertex()->getLocation().getPt() -
+    //       start_location);
+    //   current_half_edge = next_half_edge;
+    //   next_half_edge = next_half_edge->getNextHalfEdge();
+    // } while (next_half_edge != starting_half_edge);
     const auto starting_half_edge = face->getStartingHalfEdge();
-    auto current_half_edge = starting_half_edge;
-    auto next_half_edge = starting_half_edge->getNextHalfEdge();
-    const auto& start_location =
+    const auto& p0 =
         starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    do {
-      normal += crossProduct(
-          current_half_edge->getVertex()->getLocation().getPt() -
-              start_location,
-          next_half_edge->getVertex()->getLocation().getPt() - start_location);
-      current_half_edge = next_half_edge;
-      next_half_edge = next_half_edge->getNextHalfEdge();
-    } while (next_half_edge != starting_half_edge);
-    // std::cout << "Face area = " << magnitude(normal) << std::endl;
-    if (squaredMagnitude(normal) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+    const auto& p1 = starting_half_edge->getVertex()->getLocation().getPt();
+    const auto& p2 = starting_half_edge->getNextHalfEdge()
+                         ->getVertex()
+                         ->getLocation()
+                         .getPt();
+    auto normal = Normal(
+        (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] - p1[1]),
+        (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) * (p2[2] - p1[2]),
+        (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]));
+    ScalarType squaredMag = squaredMagnitude(normal);
+    if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
       normal = Normal(ZERO, ZERO, ZERO);
     } else {
-      normal.normalize();
+      const ScalarType crude_invmag =
+          ONE / (fabs(normal[0]) + fabs(normal[1]) + fabs(normal[2]));
+      normal *= crude_invmag;
     }
-    // std::cout << "Face normal = " << normal << std::endl;
-    face->setPlane(Plane(normal, normal * start_location));
+    face->setPlane(Plane(normal, normal * p0));
   }
 
   // Identify elliptic case
@@ -2802,9 +2837,7 @@ formParaboloidIntersectionBases(
           fabs(face_normal[2]) > MACHINE_EPSILON;
 
       // -----> NO SORTING
-      if (0)  // face.getNumberOfEdgeParallelIntersections() < 2 &&
-              // std::is_same<SurfaceOutputType, NoSurfaceOutput>::value)
-      {
+      if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
         const bool reverse = a_aligned_paraboloid.a() < ZERO;
         if (elliptic_face) {
           const auto& ref_pt = starting_half_edge->getVertex()->getLocation();

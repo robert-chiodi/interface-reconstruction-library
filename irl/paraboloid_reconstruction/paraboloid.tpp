@@ -77,8 +77,8 @@ ParaboloidBase<ScalarType>::getAlignedParaboloid(void) const {
 
 template <class ScalarType>
 inline void ParaboloidBase<ScalarType>::markAsRealReconstruction(void) {
-  place_infinite_shortcut_m[0] = true;
-  place_infinite_shortcut_m[1] = true;
+  place_infinite_shortcut_m[0] = false;
+  place_infinite_shortcut_m[1] = false;
 }
 
 template <class ScalarType>
@@ -103,6 +103,25 @@ inline bool ParaboloidBase<ScalarType>::isAlwaysBelow(void) const {
   return place_infinite_shortcut_m[1];
 }
 
+template <class ScalarType>
+inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
+  datum_m.serialize(a_buffer);
+  frame_m[0].serialize(a_buffer);
+  frame_m[1].serialize(a_buffer);
+  frame_m[2].serialize(a_buffer);
+  paraboloid_m.serialize(a_buffer);
+  a_buffer->pack(&place_infinite_shortcut_m, 2);
+}
+
+template <class ScalarType>
+inline void ParaboloidBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
+  datum_m.unpackSerialized(a_buffer);
+  frame_m[0].unpackSerialized(a_buffer);
+  frame_m[1].unpackSerialized(a_buffer);
+  frame_m[2].unpackSerialized(a_buffer);
+  paraboloid_m.unpackSerialized(a_buffer);
+  a_buffer->unpack(&place_infinite_shortcut_m, 2);
+}
 template <class ScalarType>
 inline PtBase<ScalarType> conicCenter(
     const PlaneBase<ScalarType>& a_plane,
@@ -166,24 +185,24 @@ inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
   // By preventing discriminant = 0, we avoid cases with intersections tangent
   // to the paraboloid
   if (discriminant > static_cast<ScalarType>(0)) {
-    if (a != static_cast<ScalarType>(0)) {
-      discriminant = sqrt(discriminant);
-      const ScalarType q =
-          -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
-      if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0)) {
-        return StackVector<ScalarType, 2>(
-            {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
-      } else if (q == static_cast<ScalarType>(0)) {
-        return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
-      }
-      const ScalarType sol1 = q / a;
-      const ScalarType sol2 = c / q;
-      return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
-                         : StackVector<ScalarType, 2>({sol2, sol1});
+    // if (a != static_cast<ScalarType>(0)) {
+    discriminant = sqrt(discriminant);
+    const ScalarType q =
+        -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
+    // if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0)) {
+    //   return StackVector<ScalarType, 2>(
+    //       {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
+    // } else if (q == static_cast<ScalarType>(0)) {
+    //   return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
+    // }
+    const ScalarType sol1 = q / safelyTiny(a);
+    const ScalarType sol2 = c / safelyTiny(q);
+    return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
+                       : StackVector<ScalarType, 2>({sol2, sol1});
 
-    } else {
-      return StackVector<ScalarType, 2>({-c / b});
-    }
+    // } else {
+    //   return StackVector<ScalarType, 2>({-c / b});
+    // }
   }
   return StackVector<ScalarType, 2>();
 };
