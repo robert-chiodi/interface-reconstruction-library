@@ -203,14 +203,15 @@ inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
       discriminant = sqrt(discriminant);
       const ScalarType q =
           -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
-      if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0)) {
-        return StackVector<ScalarType, 2>(
-            {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
-      } else if (q == static_cast<ScalarType>(0)) {
-        return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
-      }
-      const ScalarType sol1 = q / a;
-      const ScalarType sol2 = c / q;
+      // if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0))
+      // {
+      //   return StackVector<ScalarType, 2>(
+      //       {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
+      // } else if (q == static_cast<ScalarType>(0)) {
+      //   return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
+      // }
+      const ScalarType sol1 = q / safelyTiny(a);
+      const ScalarType sol2 = c / safelyTiny(q);
       return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
                          : StackVector<ScalarType, 2>({sol2, sol1});
 

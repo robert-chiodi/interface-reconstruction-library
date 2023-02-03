@@ -304,13 +304,17 @@ inline void NormalBase<Quad_t>::normalize(void) {
 
 template <>
 inline void NormalBase<double>::approximatelyNormalize(void) {
-  // const double inv_magnitude =
-  //     1.0 /
-  //     safelyTiny(fabs(normal_m[0]) + fabs(normal_m[1]) + fabs(normal_m[2]));
-  const double inv_magnitude = approxinvsqrt(this->calculateSquaredMagnitude());
+  const double cude_inv_magnitude =
+      1.0 /
+      safelyTiny(fabs(normal_m[0]) + fabs(normal_m[1]) + fabs(normal_m[2]));
   for (auto& elem : normal_m) {
-    elem *= inv_magnitude;
+    elem *= cude_inv_magnitude;
   }
+  // const double inv_magnitude =
+  //     approxinvsqrt(safelyTiny(this->calculateSquaredMagnitude()));
+  // for (auto& elem : normal_m) {
+  //   elem *= inv_magnitude;
+  // }
 }
 
 template <>
@@ -319,7 +323,8 @@ inline void NormalBase<Quad_t>::approximatelyNormalize(void) {
   //     1.0q /
   //     safelyTiny(fabsq(normal_m[0]) + fabsq(normal_m[1]) +
   //     fabsq(normal_m[2]));
-  const Quad_t inv_magnitude = approxinvsqrt(this->calculateSquaredMagnitude());
+  const Quad_t inv_magnitude =
+      invsqrt(safelyTiny(this->calculateSquaredMagnitude()));
   for (auto& elem : normal_m) {
     elem *= inv_magnitude;
   }

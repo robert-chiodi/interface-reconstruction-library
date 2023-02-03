@@ -230,18 +230,22 @@ ReturnType computeType3ContributionWithSplit(
   const Pt& pt_ref = a_pt_ref.getPt();
   const Pt& pt_0 = a_pt_0.getPt();
   const Pt& pt_1 = a_pt_1.getPt();
+  Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
+  normal_0.approximatelyNormalize();
+  Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
+  normal_1.approximatelyNormalize();
 
   const Normal edge_vector = pt_1 - pt_0;
   Normal edge_vector_normalized = edge_vector;
-  edge_vector_normalized.normalize();
+  edge_vector_normalized.approximatelyNormalize();
 
   if (squaredMagnitude(edge_vector) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
-      //     squaredMagnitude(crossProduct(a_tangent_0, a_tangent_1)) <
-      //         ANGLE_EPSILON * ANGLE_EPSILON &&
-      //     a_tangent_0 * edge_vector_normalized > ZERO &&
-      //     a_tangent_1 * edge_vector_normalized < ZERO) {
-      fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
-      fabs(ONE + a_tangent_1 * edge_vector_normalized) < ANGLE_EPSILON) {
+      fabs(normal_0 * edge_vector_normalized) < ANGLE_EPSILON &&
+      fabs(normal_1 * edge_vector_normalized) < ANGLE_EPSILON &&
+      a_tangent_0 * edge_vector_normalized > ZERO &&
+      a_tangent_1 * edge_vector_normalized < ZERO) {
+    // fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
+    // fabs(ONE + a_tangent_1 * edge_vector_normalized) < ANGLE_EPSILON) {
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       auto surface_arc = RationalBezierArc(
           pt_0.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
@@ -725,8 +729,8 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
         error = true;
       }
     } else {
-      if (moments < -999.9 || fabs(moments.volume() * inv_volume_scale -
-                                   0.120454763079051) < 1.0e-9) {
+      if (moments < -999.9) {  // || fabs(moments.volume() * inv_volume_scale -
+                               //     0.0036361026083212) < 1.0e-9) {
         error = true;
       }
     }
@@ -1312,6 +1316,10 @@ ReturnType orientAndApplyType3Correction(
   const auto edge_vector = Normal(pt_1 - pt_0);
   const auto& face_plane = a_end->getFace()->getPlane();
   const auto& face_normal = face_plane.normal();
+  Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
+  normal_0.approximatelyNormalize();
+  Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
+  normal_1.approximatelyNormalize();
   Normal tgt_0 =
       computeTangentVectorAtPoint<ScalarType>(a_paraboloid, face_normal, pt_0);
   Normal tgt_1 =
@@ -1413,10 +1421,7 @@ ReturnType orientAndApplyType3Correction(
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    const ScalarType crude_invmag0 =
-        ONE / (fabs(edge_0[0]) + fabs(edge_0[1]) + fabs(edge_0[2]));
-    edge_0 *= crude_invmag0;
-    edge_0.normalize();
+    edge_0.approximatelyNormalize();
     Normal edge_10 = a_end->getVertex()->getLocation().getPt() -
                      a_end->getPreviousVertex()->getLocation().getPt();
     Normal edge_11 =
@@ -1429,21 +1434,15 @@ ReturnType orientAndApplyType3Correction(
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    const ScalarType crude_invmag1 =
-        ONE / (fabs(edge_1[0]) + fabs(edge_1[1]) + fabs(edge_1[2]));
-    edge_1 *= crude_invmag0;
-    edge_1.normalize();
+    edge_1.approximatelyNormalize();
 
-    bool tgt_0_parallel_edge_0 =
-        fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
-    bool tgt_1_parallel_edge_1 =
-        fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
-    // bool tgt_0_parallel_edge_0 = squaredMagnitude(crossProduct(tgt_0,
-    // edge_0)) <
-    //                              ANGLE_EPSILON * ANGLE_EPSILON;
-    // bool tgt_1_parallel_edge_1 = squaredMagnitude(crossProduct(tgt_1,
-    // edge_1)) <
-    //                              ANGLE_EPSILON * ANGLE_EPSILON;
+    // bool tgt_0_parallel_edge_0 =
+    //     fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
+    // bool tgt_1_parallel_edge_1 =
+    //     fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+    bool tgt_0_parallel_edge_0 = fabs(normal_0 * edge_0) < ANGLE_EPSILON;
+    bool tgt_1_parallel_edge_1 = fabs(normal_1 * edge_1) < ANGLE_EPSILON;
+
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge
                                  // normal
@@ -1457,14 +1456,6 @@ ReturnType orientAndApplyType3Correction(
       const Pt conic_center = conicCenter<ScalarType>(face_plane, a_paraboloid);
       auto center_to_pt_0 = Normal(pt_0 - conic_center);
       auto center_to_pt_1 = Normal(pt_1 - conic_center);
-      const ScalarType crude_ctopt0 =
-          ONE / (fabs(center_to_pt_0[0]) + fabs(center_to_pt_0[1]) +
-                 fabs(center_to_pt_0[2]));
-      center_to_pt_0 *= crude_ctopt0;
-      const ScalarType crude_ctopt1 =
-          ONE / (fabs(center_to_pt_1[0]) + fabs(center_to_pt_1[1]) +
-                 fabs(center_to_pt_1[2]));
-      center_to_pt_1 *= crude_ctopt1;
       center_to_pt_0.approximatelyNormalize();
       center_to_pt_1.approximatelyNormalize();
       Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
@@ -1689,7 +1680,7 @@ ReturnType orientAndApplyType3CorrectionWithGradients(
             static_cast<ScalarType>(1.0e6) * EPSILON * EPSILON) {
           avg_tgt = Normal(ONEQUARTER * tgt_0 + THREEQUARTERS * tgt_1);
         }
-        avg_tgt.normalize();
+        avg_tgt.approximatelyNormalize();
         Pt proj_test = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
             a_paraboloid, avg_tgt, avg_pt);
         // Check if test projected point is inside the face
@@ -2090,40 +2081,40 @@ formParaboloidIntersectionBases(
 
   // Recalculate in face plane information
   for (auto& face : (*a_polytope)) {
-    auto normal = Normal(ZERO, ZERO, ZERO);
-    const auto starting_half_edge = face->getStartingHalfEdge();
-    auto current_half_edge = starting_half_edge;
-    auto next_half_edge = starting_half_edge->getNextHalfEdge();
-    const auto& start_location =
-        starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    do {
-      normal += crossProduct(
-          current_half_edge->getVertex()->getLocation().getPt() -
-              start_location,
-          next_half_edge->getVertex()->getLocation().getPt() - start_location);
-      current_half_edge = next_half_edge;
-      next_half_edge = next_half_edge->getNextHalfEdge();
-    } while (next_half_edge != starting_half_edge);
+    // auto normal = Normal(ZERO, ZERO, ZERO);
     // const auto starting_half_edge = face->getStartingHalfEdge();
-    // const auto& p0 =
+    // auto current_half_edge = starting_half_edge;
+    // auto next_half_edge = starting_half_edge->getNextHalfEdge();
+    // const auto& start_location =
     //     starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    // const auto& p1 = starting_half_edge->getVertex()->getLocation().getPt();
-    // const auto& p2 = starting_half_edge->getNextHalfEdge()
-    //                      ->getVertex()
-    //                      ->getLocation()
-    //                      .getPt();
-    // auto normal = Normal(
-    //     (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] -
-    //     p1[1]), (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) * (p2[2]
-    //     - p1[2]), (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) *
-    //     (p2[0] - p1[0]));
+    // do {
+    //   normal += crossProduct(
+    //       current_half_edge->getVertex()->getLocation().getPt() -
+    //           start_location,
+    //       next_half_edge->getVertex()->getLocation().getPt() -
+    //       start_location);
+    //   current_half_edge = next_half_edge;
+    //   next_half_edge = next_half_edge->getNextHalfEdge();
+    // } while (next_half_edge != starting_half_edge);
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    const auto& p0 =
+        starting_half_edge->getPreviousVertex()->getLocation().getPt();
+    const auto& p1 = starting_half_edge->getVertex()->getLocation().getPt();
+    const auto& p2 = starting_half_edge->getNextHalfEdge()
+                         ->getVertex()
+                         ->getLocation()
+                         .getPt();
+    auto normal = Normal(
+        (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] - p1[1]),
+        (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) * (p2[2] - p1[2]),
+        (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]));
     ScalarType squaredMag = squaredMagnitude(normal);
     if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
       normal = Normal(ZERO, ZERO, ZERO);
     } else {
-      normal.approximatelyNormalize();
+      normal.normalize();
     }
-    face->setPlane(Plane(normal, normal * start_location));
+    face->setPlane(Plane(normal, normal * p0));
   }
 
   // Identify elliptic case

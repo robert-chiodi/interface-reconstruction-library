@@ -27,7 +27,6 @@
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Surface_sweep_2_algorithms.h>
 #include <CGAL/lloyd_optimize_mesh_2.h>
-#include "external/CDT/CDT/include/CDT.h"
 #endif
 
 #include "irl/geometry/general/normal.h"
