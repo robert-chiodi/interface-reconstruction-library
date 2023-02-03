@@ -182,27 +182,41 @@ inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
                                                  const ScalarType b,
                                                  const ScalarType c) {
   ScalarType discriminant = b * b - static_cast<ScalarType>(4) * a * c;
-  // By preventing discriminant = 0, we avoid cases with intersections tangent
-  // to the paraboloid
-  if (discriminant > static_cast<ScalarType>(0)) {
-    // if (a != static_cast<ScalarType>(0)) {
-    discriminant = sqrt(discriminant);
-    const ScalarType q =
-        -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
-    // if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0)) {
-    //   return StackVector<ScalarType, 2>(
-    //       {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
-    // } else if (q == static_cast<ScalarType>(0)) {
-    //   return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
-    // }
-    const ScalarType sol1 = q / safelyTiny(a);
-    const ScalarType sol2 = c / safelyTiny(q);
-    return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
-                       : StackVector<ScalarType, 2>({sol2, sol1});
+  // if (discriminant > static_cast<ScalarType>(0)) {
+  //   discriminant = sqrt(discriminant);
+  //   const ScalarType q =
+  //       -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
+  //   const ScalarType sol1 = q / safelyTiny(a);
+  //   const ScalarType sol2 = c / safelyTiny(q);
+  //   // if (!isnan(sol1) && !isnan(sol2) &&
+  //   //     !(fabs(q) < machine_epsilon<ScalarType>() &&
+  //   //       fabs(a) < machine_epsilon<ScalarType>()) &&
+  //   //     !(fabs(c) < machine_epsilon<ScalarType>() &&
+  //   //       fabs(q) < machine_epsilon<ScalarType>())) {
+  //   return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
+  //                      : StackVector<ScalarType, 2>({sol2, sol1});
+  //   // }
+  // }
 
-    // } else {
-    //   return StackVector<ScalarType, 2>({-c / b});
-    // }
+  if (discriminant > static_cast<ScalarType>(0)) {
+    if (a != static_cast<ScalarType>(0)) {
+      discriminant = sqrt(discriminant);
+      const ScalarType q =
+          -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
+      if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0)) {
+        return StackVector<ScalarType, 2>(
+            {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
+      } else if (q == static_cast<ScalarType>(0)) {
+        return StackVector<ScalarType, 2>({static_cast<ScalarType>(0)});
+      }
+      const ScalarType sol1 = q / a;
+      const ScalarType sol2 = c / q;
+      return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
+                         : StackVector<ScalarType, 2>({sol2, sol1});
+
+    } else {
+      return StackVector<ScalarType, 2>({-c / b});
+    }
   }
   return StackVector<ScalarType, 2>();
 };
@@ -323,7 +337,8 @@ inline PtBase<ScalarType> projectPtAlongHalfLineOntoParaboloid(
   // check if starting point is on paraboloid (then solution = 0)
   // if (std::fabs(c) < DBL_EPSILON) {
   //   return Pt(static_cast<ScalarType>(DBL_MAX),
-  //   static_cast<ScalarType>(DBL_MAX), static_cast<ScalarType>(DBL_MAX));
+  //             static_cast<ScalarType>(DBL_MAX),
+  //             static_cast<ScalarType>(DBL_MAX));
   // } else {
   const StackVector<ScalarType, 2> solutions =
       solveQuadratic<ScalarType>(a, b, c);

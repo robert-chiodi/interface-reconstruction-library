@@ -167,6 +167,7 @@ class NormalBase : public Expr<NormalBase<ScalarType>> {
 
   /// \brief NormalBaseize the normal
   void normalize(void);
+  void approximatelyNormalize(void);
 
   iterator begin(void) noexcept;
   const_iterator begin(void) const noexcept;

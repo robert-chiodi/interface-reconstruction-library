@@ -94,8 +94,7 @@ ReturnType computeType3ContributionWithSplit(
     const PtType& a_pt_0, const PtType& a_pt_1,
     const NormalBase<ScalarType>& a_tangent_0,
     const NormalBase<ScalarType>& a_tangent_1, bool* a_requires_nudge,
-    NormalBase<ScalarType>& a_nudge_direction, UnsignedIndex_t* a_split_counter,
-    SurfaceOutputType* a_surface = nullptr);
+    UnsignedIndex_t* a_split_counter, SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class ScalarType, class SurfaceOutputType,
           class PtType>
@@ -118,7 +117,6 @@ ReturnType computeNewEdgeSegmentContribution(
     const PtType& a_ref_pt, const HalfEdgeType a_entry_half_edge,
     const HalfEdgeType a_exit_half_edge, const bool skip_first,
     const bool a_ignore_type3, bool* a_requires_nudge,
-    NormalBase<ScalarType>& a_nudge_direction,
     SurfaceOutputType* a_surface = nullptr);
 
 template <class PtType, class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
@@ -131,8 +129,7 @@ void placeSingleIntercept(const PtType& a_intersection_location,
 template <class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType, class VertexType>
 void placeDoubleIntercept(
-    const StackVector<std::pair<VertexType, typename HalfEdgeType::value_type>,
-                      2>& a_intersection_location,
+    const StackVector<VertexType, 2>& a_intersection_location,
     HalfEdgeType* a_half_edge_with_intersection,
     SegmentedHalfEdgePolytopeType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope);
@@ -140,9 +137,8 @@ void placeDoubleIntercept(
 template <class PtType, class ScalarType>
 void checkAndFindIntercepts(
     const AlignedParaboloidBase<ScalarType>& a_paraboloid, const PtType& a_pt_0,
-    const PtType& a_pt_1,
-    StackVector<std::pair<PtType, ScalarType>, 2>* a_intercepts,
-    const ScalarType a_nudge_epsilon);
+    const PtType& a_pt_1, StackVector<PtType, 2>* a_intercepts,
+    const ScalarType a_nudge_epsilon, const bool a_elliptic);
 
 template <class VertexType>
 bool vertexBelow(
@@ -169,15 +165,13 @@ template <class ReturnType, class ScalarType, class HalfEdgeType,
 ReturnType orientAndApplyType3Correction(
     const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     HalfEdgeType* a_start, HalfEdgeType* a_end, bool* a_requires_nudge,
-    NormalBase<ScalarType>& a_nudge_direction,
     SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class ScalarType, class HalfEdgeType,
           class SurfaceOutputType>
 ReturnType orientAndApplyType3CorrectionWithGradients(
     const AlignedParaboloid& a_paraboloid, HalfEdgeType* a_start,
-    HalfEdgeType* a_end, SurfaceOutputType* a_surface, bool* a_requires_nudge,
-    Normal& a_nudge_direction);
+    HalfEdgeType* a_end, SurfaceOutputType* a_surface, bool* a_requires_nudge);
 
 template <class ScalarType, class HalfEdgeType, class PtType>
 Normal determineNudgeDirection(
@@ -189,12 +183,15 @@ enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, void>
 resetPolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                 HalfEdgePolytopeType* a_complete_polytope);
 
+template <class ScalarType>
+AlignedParaboloidBase<Quad_t> nudgeParaboloid(
+    AlignedParaboloidBase<ScalarType>& a_paraboloid,
+    const UnsignedIndex_t a_nudge_iter);
+
 template <class ScalarType, class SegmentedHalfEdgePolyhedronType,
           class HalfEdgePolytopeType, class SurfaceOutputType>
 void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                      HalfEdgePolytopeType* a_complete_polytope,
-                     const NormalBase<ScalarType> a_nudge_direction,
-                     const ScalarType a_nudge_epsilon,
                      const UnsignedIndex_t a_nudge_iter,
                      SurfaceOutputType* a_surface);
 template <class C>

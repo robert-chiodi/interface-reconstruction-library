@@ -14,7 +14,7 @@
 #include <iomanip>
 
 #include "external/NumericalIntegration/NumericalIntegration.h"
-// #define IRL_NO_USE_TRIANGLE
+#define IRL_NO_USE_TRIANGLE
 
 namespace IRL {
 

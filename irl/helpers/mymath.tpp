@@ -10,6 +10,12 @@
 #ifndef IRL_HELPERS_MYMATH_TPP_
 #define IRL_HELPERS_MYMATH_TPP_
 
+#ifdef __x86_64__
+#include <immintrin.h>
+#else
+#include "sse2neon.h"
+#endif
+
 namespace IRL {
 
 inline constexpr double deg2Rad(const double a_degree) {
@@ -89,6 +95,16 @@ inline std::ostream& operator<<(std::ostream& out, const Quad_t a_scalar) {
 }
 
 template <>
+inline bool isnan(double a_scalar) {
+  return std::isnan(a_scalar);
+}
+
+template <>
+inline bool isnan(Quad_t a_scalar) {
+  return isnanq(a_scalar) == 1;
+}
+
+template <>
 inline double machine_epsilon(void) {
   return DBL_EPSILON;
 }
@@ -136,6 +152,18 @@ inline double sqrt(const double a_scalar) {
 template <>
 inline Quad_t sqrt(const Quad_t a_scalar) {
   return sqrtq(a_scalar);
+}
+
+template <>
+inline double approxinvsqrt(const double a_scalar) {
+  __m128 temp = _mm_set_ss(static_cast<float>(a_scalar));
+  temp = _mm_rsqrt_ss(temp);
+  return static_cast<double>(_mm_cvtss_f32(temp));
+}
+
+template <>
+inline Quad_t approxinvsqrt(const Quad_t a_scalar) {
+  return 1.0q / sqrtq(a_scalar);
 }
 
 template <>

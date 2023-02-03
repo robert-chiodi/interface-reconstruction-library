@@ -395,28 +395,6 @@ inline std::array<ContainerType, 3> coeffsV3Exact(
                 S
           : ArctanhMoments<ContainerType>((a_weight - ContainerType(ONE)) / S) /
                 S;
-  //   ContainerType T;
-  //   if constexpr (has_embedded_gradient<ContainerType>::value) {
-  //   } else {
-  //     if (a_weight > static_cast<ScalarType>(0.35) &&
-  //         a_weight < static_cast<ScalarType>(1.7)) {
-  //       const Quad_t S = (a_weight < ONE)
-  //                            ? sqrt(1.0q - static_cast<Quad_t>(a_weight) *
-  //                                              static_cast<Quad_t>(a_weight))
-  //                            : sqrt(static_cast<Quad_t>(a_weight) *
-  //                                       static_cast<Quad_t>(a_weight) -
-  //                                   1.0q);
-  //       T = static_cast<ScalarType>(
-  //           (a_weight < ONE)
-  //               ? atan((1.0q - static_cast<Quad_t>(a_weight)) / S) / S
-  //               : atanh((static_cast<Quad_t>(a_weight) - 1.0q) / S) / S);
-  //     } else {
-  //       const auto S = (a_weight < ONE) ? sqrt(ONE - a_weight * a_weight)
-  //                                       : sqrt(a_weight * a_weight - ONE);
-  //       T = (a_weight < ONE) ? atan((ONE - a_weight) / S) / S
-  //                            : atanh((a_weight - ONE) / S) / S;
-  //     }
-  //   }
   return std::array<ContainerType, 3>(
       {(TWO * w6 - THREE * w4 + static_cast<ScalarType>(31) * w2 -
         (static_cast<ScalarType>(42) * w3 +

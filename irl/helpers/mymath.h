@@ -110,6 +110,9 @@ inline typename DataType::value_type scalarTripleProduct(
 inline std::ostream& operator<<(std::ostream& out, const Quad_t a_scalar);
 
 template <class ScalarType>
+inline bool isnan(ScalarType a_scalar);
+
+template <class ScalarType>
 inline ScalarType machine_epsilon(void);
 
 template <class ScalarType>
@@ -126,6 +129,9 @@ inline ScalarType sqrt(const ScalarType a_scalar);
 
 template <class ScalarType>
 inline ScalarType invsqrt(const ScalarType a_scalar);
+
+template <class ScalarType>
+inline ScalarType approxinvsqrt(const ScalarType a_scalar);
 
 template <class ScalarType, class PowerType>
 inline ScalarType pow(const ScalarType a_scalar, const PowerType a_power);
