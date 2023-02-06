@@ -63,6 +63,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   const ScalarType ONE = static_cast<ScalarType>(1);
   const ScalarType TWO = static_cast<ScalarType>(2);
   const ScalarType HALF = ONE / TWO;
+  const ScalarType ONEANDHALF = ONE + HALF;
   const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
 
   /* Function */
@@ -72,7 +73,82 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   start_point_id_m = reinterpret_cast<std::uintptr_t>(&a_start_pt);
   end_point_id_m = reinterpret_cast<std::uintptr_t>(&a_end_pt);
 
-  // Compute control point
+  // if constexpr (std::is_same_v<ScalarType, double>) {
+  //   /* Compute control point using 3 plane equations */
+  //   const NormalBase<ScalarType> start_normal =
+  //       getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+  //   const NormalBase<ScalarType> end_normal =
+  //       getParaboloidSurfaceNormal(a_paraboloid, a_end_pt);
+  //   Eigen::Matrix3f A;
+  //   Eigen::Vector3f b;
+  //   A << start_normal[0], start_normal[1], start_normal[2], end_normal[0],
+  //       end_normal[1], end_normal[2], a_plane_normal[0], a_plane_normal[1],
+  //       a_plane_normal[2];
+  //   b << start_normal * a_start_pt, end_normal * a_end_pt,
+  //       a_plane_normal * a_start_pt;
+  //   Eigen::Vector3f x = A.colPivHouseholderQr().solve(b);
+  //   if (!b.isApprox(A * x, 100.0 * DBL_EPSILON)) {
+  //     control_point_m = HALF * (start_point_m + end_point_m);
+  //     weight_m = -static_cast<ScalarType>(DBL_MAX);
+  //   } else {
+  //     control_point_m = PtBase<ScalarType>(x(0), x(1), x(2));
+
+  // double determinant =
+  //     start_normal[0] *
+  //         (end_normal[1] * a_plane_normal[2] - a_plane_normal[1]) -
+  //     start_normal[1] *
+  //         (end_normal[0] * a_plane_normal[2] - a_plane_normal[0]) +
+  //     (end_normal[0] * a_plane_normal[1] - end_normal[1] *
+  //     a_plane_normal[0]);
+  // double b0 = start_normal * a_start_pt;
+  // double b1 = end_normal * a_end_pt;
+  // double b2 = a_plane_normal * a_start_pt;
+
+  // if (fabs(determinant) < DBL_EPSILON) {
+  //   control_point_m = HALF * (start_point_m + end_point_m);
+  //   weight_m = -static_cast<ScalarType>(DBL_MAX);
+  // } else {
+  //   double invdet = ONE / determinant;
+  //   double x =
+  //       invdet *
+  //       (b0 * (end_normal[1] * a_plane_normal[2] - a_plane_normal[1]) -
+  //        b1 * (start_normal[1] * a_plane_normal[2] - a_plane_normal[1]) +
+  //        b2 * (start_normal[1] - end_normal[1]));
+  //   double y =
+  //       invdet *
+  //       (-b0 * (end_normal[0] * a_plane_normal[2] - a_plane_normal[0]) +
+  //        b1 * (start_normal[0] * a_plane_normal[2] - a_plane_normal[0]) -
+  //        b2 * (start_normal[0] - end_normal[0]));
+  //   double z = invdet * (b0 * (end_normal[0] * a_plane_normal[1] -
+  //                              a_plane_normal[0] * end_normal[1]) -
+  //                        b1 * (start_normal[0] * a_plane_normal[1] -
+  //                              a_plane_normal[0] * start_normal[1]) +
+  //                        b2 * (start_normal[0] * end_normal[1] -
+  //                              end_normal[0] * start_normal[1]));
+
+  //     /* By caculating the end-point curvature
+  //  This calculate the curvature of the conic with (Hartmann1996)
+  //  and uses it to compute the weight (Farin1992)*/
+  //     const NormalBase<ScalarType> start_normal =
+  //         getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+  //     const NormalBase<ScalarType> start_cross_prod =
+  //         crossProduct(a_plane_normal, start_normal);
+  //     const ScalarType cross_sq_0 = start_cross_prod[0] *
+  //     start_cross_prod[0]; const ScalarType cross_sq_1 = start_cross_prod[1]
+  //     * start_cross_prod[1]; const ScalarType cross_sq_2 =
+  //     start_cross_prod[2] * start_cross_prod[2]; const ScalarType D =
+  //     safelyTiny(
+  //         fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() *
+  //         cross_sq_1));
+  //     const ScalarType R =
+  //         (cross_sq_0 + cross_sq_1 + cross_sq_2) /
+  //         safelyTiny(squaredMagnitude(control_point_m - a_start_pt));
+  //     const ScalarType A = squaredMagnitude(
+  //         crossProduct(a_end_pt - a_start_pt, control_point_m - a_end_pt));
+  //     weight_m = HALF * sqrt(sqrt(A * R * R * R) / D);
+  //   }
+  // } else {
+  /* Compute control point using 2 tangents */
   const NormalBase<ScalarType> edge_vector = end_point_m - start_point_m;
   const PtBase<ScalarType> average_pt = HALF * (start_point_m + end_point_m);
   const NormalBase<ScalarType> n_cross_t0 =
@@ -90,51 +166,73 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
         NormalBase<ScalarType>(control_point_m - start_point_m) *
         a_plane_normal;
     control_point_m = control_point_m - ct_correction * a_plane_normal;
-    auto mid_to_control = NormalBase<ScalarType>(control_point_m - average_pt);
-    if (squaredMagnitude(mid_to_control) <
-        ONEHUNDRED * ONEHUNDRED * EPSILON * EPSILON) {
-      weight_m = static_cast<ScalarType>(DBL_MAX);
-    } else {
-      const ScalarType crude_invmag =
-          ONE / (fabs(mid_to_control[0]) + fabs(mid_to_control[1]) +
-                 fabs(mid_to_control[2]));
-      mid_to_control *= crude_invmag;
-      mid_to_control.approximatelyNormalize();
-      const ScalarType normal_correction = mid_to_control * a_plane_normal;
-      mid_to_control = mid_to_control - normal_correction * a_plane_normal;
-      const auto projected_pt =
-          projectPtAlongHalfLineOntoParaboloid<ScalarType>(
-              a_paraboloid, mid_to_control, average_pt);
-      weight_m = ONE;
-      if (squaredMagnitude(projected_pt - control_point_m) <
-          ONEHUNDRED * ONEHUNDRED * EPSILON * EPSILON) {
-        weight_m = static_cast<ScalarType>(DBL_MAX);
-      } else if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX)) {
-        if (fabs(a_paraboloid.a() * average_pt[0] * average_pt[0] +
-                 a_paraboloid.b() * average_pt[1] * average_pt[1] +
-                 average_pt[2]) < ONEHUNDRED * EPSILON) {
-          weight_m = ZERO;
-        } else {
-          weight_m = -static_cast<ScalarType>(DBL_MAX);
-        }
-      } else {
-        ScalarType previous_best = ZERO;
-        ScalarType sign = ONE;
-        for (UnsignedIndex_t d = 0; d < 3; ++d) {
-          const ScalarType denominator = projected_pt[d] - control_point_m[d];
-          if (fabs(denominator) > previous_best) {
-            previous_best = fabs(denominator);
-            weight_m =
-                (start_point_m[d] + end_point_m[d] - TWO * projected_pt[d]) /
-                (TWO * denominator);
-          }
-        }
-        if (previous_best < EPSILON) {
-          weight_m = static_cast<ScalarType>(DBL_MAX);
-        }
-        weight_m = maximum(weight_m, ZERO);
-      }
-    }
+
+    /* By caculating the end-point curvature
+ This calculate the curvature of the conic with (Hartmann1996)
+ and uses it to compute the weight (Farin1992)*/
+    const NormalBase<ScalarType> start_normal =
+        getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+    const NormalBase<ScalarType> start_cross_prod =
+        crossProduct(a_plane_normal, start_normal);
+    const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
+    const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
+    const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
+    const ScalarType D = safelyTiny(
+        fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1));
+    const ScalarType R =
+        (cross_sq_0 + cross_sq_1 + cross_sq_2) /
+        safelyTiny(squaredMagnitude(control_point_m - a_start_pt));
+    const ScalarType A = squaredMagnitude(
+        crossProduct(a_end_pt - a_start_pt, control_point_m - a_end_pt));
+    weight_m = HALF * sqrt(sqrt(A * R * R * R) / D);
+
+    // /* By caculating position on arc at t=1/2 */
+    // auto mid_to_control = NormalBase<ScalarType>(control_point_m -
+    // average_pt); if (squaredMagnitude(mid_to_control) <
+    //     ONEHUNDRED * ONEHUNDRED * EPSILON * EPSILON) {
+    //   weight_m = static_cast<ScalarType>(DBL_MAX);
+    // } else {
+    //   const ScalarType crude_invmag =
+    //       ONE / (fabs(mid_to_control[0]) + fabs(mid_to_control[1]) +
+    //              fabs(mid_to_control[2]));
+    //   mid_to_control *= crude_invmag;
+    //   mid_to_control.approximatelyNormalize();
+    //   const ScalarType normal_correction = mid_to_control * a_plane_normal;
+    //   mid_to_control = mid_to_control - normal_correction * a_plane_normal;
+    //   const auto projected_pt =
+    //       projectPtAlongHalfLineOntoParaboloid<ScalarType>(
+    //           a_paraboloid, mid_to_control, average_pt);
+    //   weight_m = ONE;
+    //   if (squaredMagnitude(projected_pt - control_point_m) <
+    //       ONEHUNDRED * ONEHUNDRED * EPSILON * EPSILON) {
+    //     weight_m = static_cast<ScalarType>(DBL_MAX);
+    //   } else if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX)) {
+    //     if (fabs(a_paraboloid.a() * average_pt[0] * average_pt[0] +
+    //              a_paraboloid.b() * average_pt[1] * average_pt[1] +
+    //              average_pt[2]) < ONEHUNDRED * EPSILON) {
+    //       weight_m = ZERO;
+    //     } else {
+    //       weight_m = -static_cast<ScalarType>(DBL_MAX);
+    //     }
+    //   } else {
+    //     ScalarType previous_best = ZERO;
+    //     ScalarType sign = ONE;
+    //     for (UnsignedIndex_t d = 0; d < 3; ++d) {
+    //       const ScalarType denominator = projected_pt[d] -
+    //       control_point_m[d]; if (fabs(denominator) > previous_best) {
+    //         previous_best = fabs(denominator);
+    //         weight_m =
+    //             (start_point_m[d] + end_point_m[d] - TWO * projected_pt[d]) /
+    //             (TWO * denominator);
+    //       }
+    //     }
+    //     if (previous_best < EPSILON) {
+    //       weight_m = static_cast<ScalarType>(DBL_MAX);
+    //     }
+    //     weight_m = maximum(weight_m, ZERO);
+    //   }
+    // }
+    // }
   }
 }
 
