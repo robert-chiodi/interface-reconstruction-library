@@ -178,6 +178,42 @@ inline PtTypeWithGradient getParaboloidSurfaceNormalWithGradient(
 // Returns solution to quadratic equation solve.
 // The smallest solution will always be first.
 template <class ScalarType>
+inline StackVector<ScalarType, 2> solveQuadraticBetween0And1(
+    const ScalarType a, const ScalarType b, const ScalarType c) {
+  ScalarType discriminant = b * b - static_cast<ScalarType>(4) * a * c;
+
+  if (discriminant > static_cast<ScalarType>(0)) {
+    if (a != static_cast<ScalarType>(0)) {
+      /* First fast try in 32-bit precision */
+      const ScalarType approx_discriminant = approxsqrt(discriminant);
+      const ScalarType approx_q = -static_cast<ScalarType>(0.5) *
+                                  (b + copysign(approx_discriminant, b));
+      const ScalarType approx_sol1 = approx_q / safelyTiny(a);
+      const ScalarType approx_sol2 = c / safelyTiny(approx_q);
+      if ((approx_sol1 < -0.01 || approx_sol1 > 1.01) &&
+          (approx_sol2 < -0.01 || approx_sol2 > 1.01)) {
+        return StackVector<ScalarType, 2>();
+      }
+
+      /* Real calculation */
+      discriminant = sqrt(discriminant);
+      const ScalarType q =
+          -static_cast<ScalarType>(0.5) * (b + copysign(discriminant, b));
+      const ScalarType sol1 = q / safelyTiny(a);
+      const ScalarType sol2 = c / safelyTiny(q);
+      return sol1 < sol2 ? StackVector<ScalarType, 2>({sol1, sol2})
+                         : StackVector<ScalarType, 2>({sol2, sol1});
+
+    } else {
+      return StackVector<ScalarType, 2>({-c / b});
+    }
+  }
+  return StackVector<ScalarType, 2>();
+};
+
+// Returns solution to quadratic equation solve.
+// The smallest solution will always be first.
+template <class ScalarType>
 inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
                                                  const ScalarType b,
                                                  const ScalarType c) {
@@ -202,8 +238,9 @@ inline StackVector<ScalarType, 2> solveQuadratic(const ScalarType a,
     if (a != static_cast<ScalarType>(0)) {
       discriminant = sqrt(discriminant);
       const ScalarType q =
-          -(b + copysign(discriminant, b)) / static_cast<ScalarType>(2);
-      // if (b == static_cast<ScalarType>(0) && c == static_cast<ScalarType>(0))
+          -static_cast<ScalarType>(0.5) * (b + copysign(discriminant, b));
+      // if (b == static_cast<ScalarType>(0) && c ==
+      // static_cast<ScalarType>(0))
       // {
       //   return StackVector<ScalarType, 2>(
       //       {static_cast<ScalarType>(0), static_cast<ScalarType>(0)});
@@ -360,17 +397,19 @@ inline PtBase<ScalarType> projectPtAlongHalfLineOntoParaboloid(
   } else {
     // assert(maximum(solutions[0], solutions[1]) >=
     // static_cast<ScalarType>(0));
-    const ScalarType distance_along_line =
-        solutions[0] > static_cast<ScalarType>(0) &&
-                solutions[1] > static_cast<ScalarType>(0)
-            ? minimum(solutions[0], solutions[1])
-            : maximum(solutions[0], solutions[1]);
-    if (distance_along_line < static_cast<ScalarType>(0)) {
+    if ((solutions[0] > static_cast<ScalarType>(0) &&
+         solutions[1] > static_cast<ScalarType>(0)) ||
+        (solutions[0] <= static_cast<ScalarType>(0) &&
+         solutions[1] <= static_cast<ScalarType>(0))) {
       return PtBase<ScalarType>(static_cast<ScalarType>(DBL_MAX),
                                 static_cast<ScalarType>(DBL_MAX),
                                 static_cast<ScalarType>(DBL_MAX));
+
+    } else {
+      const ScalarType distance_along_line =
+          maximum(solutions[0], solutions[1]);
+      return a_starting_pt + a_line * distance_along_line;
     }
-    return a_starting_pt + a_line * distance_along_line;
   }
   // }
 }

@@ -49,7 +49,7 @@ inline const ScalarType angle_epsilon(void);
 
 template <>
 inline const double angle_epsilon(void) {
-  return 1.0e4 * DBL_EPSILON;
+  return 1.0e6 * DBL_EPSILON;
 }
 
 template <>
@@ -78,7 +78,7 @@ inline NormalBase<ScalarType> computeTangentVectorAtPoint(
   }
   const ScalarType normal_correction = tangent_at_pt * a_plane_normal;
   tangent_at_pt = tangent_at_pt - normal_correction * a_plane_normal;
-  tangent_at_pt.normalize();
+  // tangent_at_pt.normalize();
   return tangent_at_pt;
 }
 
@@ -156,6 +156,7 @@ inline NormalBase<ScalarType> computeAndCorrectTangentVectorAtPt(
   /* Function */
   NormalBase<ScalarType> tangent = computeTangentVectorAtPoint<ScalarType>(
       a_paraboloid, a_plane_normal, a_intersection_pt);
+  tangent.normalize();
   const NormalBase<ScalarType> edge_normal =
       crossProduct(a_plane_normal, a_end_pt - a_intersection_pt);
   if ((a_end_tangent * edge_normal > ZERO) == (tangent * edge_normal > ZERO)) {
@@ -230,22 +231,22 @@ ReturnType computeType3ContributionWithSplit(
   const Pt& pt_ref = a_pt_ref.getPt();
   const Pt& pt_0 = a_pt_0.getPt();
   const Pt& pt_1 = a_pt_1.getPt();
-  Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
-  normal_0.approximatelyNormalize();
-  Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
-  normal_1.approximatelyNormalize();
+  // Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
+  // normal_0.approximatelyNormalize();
+  // Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
+  // normal_1.approximatelyNormalize();
 
   const Normal edge_vector = pt_1 - pt_0;
   Normal edge_vector_normalized = edge_vector;
-  edge_vector_normalized.approximatelyNormalize();
+  edge_vector_normalized.normalize();
 
   if (squaredMagnitude(edge_vector) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
-      fabs(normal_0 * edge_vector_normalized) < ANGLE_EPSILON &&
-      fabs(normal_1 * edge_vector_normalized) < ANGLE_EPSILON &&
-      a_tangent_0 * edge_vector_normalized > ZERO &&
-      a_tangent_1 * edge_vector_normalized < ZERO) {
-    // fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
-    // fabs(ONE + a_tangent_1 * edge_vector_normalized) < ANGLE_EPSILON) {
+      // fabs(normal_0 * edge_vector_normalized) < ANGLE_EPSILON &&
+      // fabs(normal_1 * edge_vector_normalized) < ANGLE_EPSILON &&
+      // a_tangent_0 * edge_vector_normalized > ZERO &&
+      // a_tangent_1 * edge_vector_normalized < ZERO) {
+      fabs(ONE - a_tangent_0 * edge_vector_normalized) < ANGLE_EPSILON &&
+      fabs(ONE + a_tangent_1 * edge_vector_normalized) < ANGLE_EPSILON) {
     if constexpr (!std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
       auto surface_arc = RationalBezierArc(
           pt_0.toDoublePt(), 0.5 * (pt_0.toDoublePt() + pt_1.toDoublePt()),
@@ -265,17 +266,23 @@ ReturnType computeType3ContributionWithSplit(
     const Pt average_pt = HALF * (pt_0 + pt_1);
     auto average_tangent = Normal(HALF * (a_tangent_0 + a_tangent_1));
     if (squaredMagnitude(average_tangent) < DISTANCE_EPSILON) {
-      average_tangent =
-          Normal(ONEQUARTER * a_tangent_0 + THREEQUARTERS * a_tangent_1);
+      // average_tangent =
+      //     Normal(ONEQUARTER * a_tangent_0 + THREEQUARTERS * a_tangent_1);
+      average_tangent = crossProduct(edge_vector_normalized, a_plane_normal);
     }
     const ScalarType normal_correction = average_tangent * a_plane_normal;
     average_tangent = average_tangent - normal_correction * a_plane_normal;
     average_tangent.approximatelyNormalize();
     Pt projected_pt = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
         a_paraboloid, average_tangent, average_pt);
-    if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX) ||
-        *a_split_counter > 10) {
+    if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX)) {
       *a_requires_nudge = true;
+      return ReturnType::fromScalarConstant(ZERO);
+    }
+    if (*a_split_counter > 10) {
+      if constexpr (std::is_same_v<ScalarType, double>) {
+        *a_requires_nudge = true;
+      }
       return ReturnType::fromScalarConstant(ZERO);
     }
     Normal tangent_projected_pt =
@@ -1316,10 +1323,10 @@ ReturnType orientAndApplyType3Correction(
   const auto edge_vector = Normal(pt_1 - pt_0);
   const auto& face_plane = a_end->getFace()->getPlane();
   const auto& face_normal = face_plane.normal();
-  Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
-  normal_0.approximatelyNormalize();
-  Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
-  normal_1.approximatelyNormalize();
+  // Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
+  // normal_0.approximatelyNormalize();
+  // Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
+  // normal_1.approximatelyNormalize();
   Normal tgt_0 =
       computeTangentVectorAtPoint<ScalarType>(a_paraboloid, face_normal, pt_0);
   Normal tgt_1 =
@@ -1408,6 +1415,8 @@ ReturnType orientAndApplyType3Correction(
     }
   } else  // The arc is from an ellipse
   {
+    tgt_0.normalize();
+    tgt_1.normalize();
     // Compute edge vectors and check if tangent is parallel to edge
     Normal edge_00 = a_start->getVertex()->getLocation().getPt() -
                      a_start->getPreviousVertex()->getLocation().getPt();
@@ -1421,7 +1430,7 @@ ReturnType orientAndApplyType3Correction(
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    edge_0.approximatelyNormalize();
+    edge_0.normalize();
     Normal edge_10 = a_end->getVertex()->getLocation().getPt() -
                      a_end->getPreviousVertex()->getLocation().getPt();
     Normal edge_11 =
@@ -1434,14 +1443,14 @@ ReturnType orientAndApplyType3Correction(
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
     }
-    edge_1.approximatelyNormalize();
+    edge_1.normalize();
 
-    // bool tgt_0_parallel_edge_0 =
-    //     fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
-    // bool tgt_1_parallel_edge_1 =
-    //     fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
-    bool tgt_0_parallel_edge_0 = fabs(normal_0 * edge_0) < ANGLE_EPSILON;
-    bool tgt_1_parallel_edge_1 = fabs(normal_1 * edge_1) < ANGLE_EPSILON;
+    bool tgt_0_parallel_edge_0 =
+        fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
+    bool tgt_1_parallel_edge_1 =
+        fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+    // bool tgt_0_parallel_edge_0 = fabs(normal_0 * edge_0) < ANGLE_EPSILON;
+    // bool tgt_1_parallel_edge_1 = fabs(normal_1 * edge_1) < ANGLE_EPSILON;
 
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge
@@ -1452,12 +1461,27 @@ ReturnType orientAndApplyType3Correction(
       tgt_0 = (edge_normal_0 * tgt_0 < ZERO) ? -tgt_0 : tgt_0;
       tgt_1 = (edge_normal_1 * tgt_1 < ZERO) ? -tgt_1 : tgt_1;
     } else {
-      // Compute ellipse center an orient tangents accordingly
+      if constexpr (std::is_same_v<ScalarType, double>) {
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
+      }
       const Pt conic_center = conicCenter<ScalarType>(face_plane, a_paraboloid);
+      if (squaredMagnitude(pt_0 - conic_center) <
+              DISTANCE_EPSILON * DISTANCE_EPSILON ||
+          squaredMagnitude(pt_1 - conic_center) <
+              DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        return ReturnType::fromScalarConstant(ZERO);
+      }
+      if (squaredMagnitude(pt_0) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
+          squaredMagnitude(pt_1) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
+          face_plane.distance() < DISTANCE_EPSILON) {
+        return ReturnType::fromScalarConstant(ZERO);
+      }
+      // Compute ellipse center an orient tangents accordingly
       auto center_to_pt_0 = Normal(pt_0 - conic_center);
       auto center_to_pt_1 = Normal(pt_1 - conic_center);
-      center_to_pt_0.approximatelyNormalize();
-      center_to_pt_1.approximatelyNormalize();
+      center_to_pt_0.normalize();
+      center_to_pt_1.normalize();
       Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
       Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
       assert(fabs(tgt_0 * dummy_tgt_0) > ANGLE_EPSILON);
@@ -1479,6 +1503,7 @@ ReturnType orientAndApplyType3Correction(
           tgt_1 = -tgt_1;
         }
       } else {
+        std::cout << "Orienting based on conic center " << std::endl;
         if (a_paraboloid.a() < ZERO) {
           tgt_0 = -tgt_0;
           tgt_1 = -tgt_1;
@@ -1782,9 +1807,9 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   std::mt19937 gen(a_nudge_iter);
   std::uniform_real_distribution distr(-1.0, 1.0);
 
-  const Quad_t nudge_epsilon = 1.0e6q * distance_epsilon<Quad_t>();
+  const Quad_t nudge_epsilon = 1.0e8q * distance_epsilon<Quad_t>();
 
-  // std::cout << " NUDGE " << a_nudge_iter << std::endl;
+  std::cout << " NUDGE " << a_nudge_iter << std::endl;
 
   auto center = a_polytope->calculateCentroid();
   auto converted_center = PtBase<Quad_t>(static_cast<Quad_t>(center[0]),
@@ -2177,17 +2202,30 @@ formParaboloidIntersectionBases(
           const pt_type& a_edge_0, const pt_type& a_edge_1,
           const pt_type& a_intersection,
           const Normal& a_plane_normal) -> UnsignedIndex_t {
-    if (!elliptic) {
-      return 0;
-    }
-    const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
-    const auto edge_direction = Normal::fromPtNormalized(line);
-    const auto tangent = computeTangentVectorAtPoint<ScalarType>(
-        a_aligned_paraboloid, a_plane_normal, a_intersection.getPt());
-    return fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
-                   angle_epsilon<ScalarType>()
-               ? 1
-               : 0;
+    // if (!elliptic) {
+    return 0;
+    // }
+    // const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
+    // const auto edge_direction = Normal::fromPtNormalized(line);
+    // auto tangent = computeTangentVectorAtPoint<ScalarType>(
+    //     a_aligned_paraboloid, a_plane_normal, a_intersection.getPt());
+    // tangent.normalize();
+    // return fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent))
+    // <
+    //                angle_epsilon<ScalarType>()
+    //            ? 1
+    //            : 0;
+    // auto edge_direction = Normal::fromPt(line);
+    // edge_direction.approximatelyNormalize();
+    // auto surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
+    //                                                  a_intersection.getPt());
+    // surface_normal.approximatelyNormalize();
+    // std::cout << " edge * normal = " << edge_direction * surface_normal
+    //           << std::endl;
+    // return fabs(edge_direction * surface_normal) <
+    // angle_epsilon<ScalarType>()
+    //            ? 1
+    //            : 0;
   };
 
   auto edge_parallel_to_paraboloid2 =
@@ -2195,26 +2233,66 @@ formParaboloidIntersectionBases(
           const pt_type& a_edge_0, const pt_type& a_edge_1,
           const pt_type& a_intersection_0, const pt_type& a_intersection_1,
           const Normal& a_plane_normal) -> UnsignedIndex_t {
-    if (!elliptic) {
-      return 0;
-    }
-    UnsignedIndex_t parallel = 0;
+    // if (!elliptic) {
+    return 0;
+    // }
+    // UnsignedIndex_t parallel = 0;
 
-    const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
-    const auto edge_direction = Normal::fromPtNormalized(line);
-    auto tangent = computeTangentVectorAtPoint<ScalarType>(
-        a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
-    if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
-        angle_epsilon<ScalarType>()) {
-      ++parallel;
-    }
-    tangent = computeTangentVectorAtPoint<ScalarType>(
-        a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
-    if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
-        angle_epsilon<ScalarType>()) {
-      ++parallel;
-    }
-    return parallel;
+    // const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
+    // const auto edge_direction = Normal::fromPtNormalized(line);
+    // auto tangent = computeTangentVectorAtPoint<ScalarType>(
+    //     a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
+    // tangent.normalize();
+    // if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
+    //     angle_epsilon<ScalarType>()) {
+    //   ++parallel;
+    // }
+    // tangent = computeTangentVectorAtPoint<ScalarType>(
+    //     a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
+    // tangent.normalize();
+    // if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
+    //     angle_epsilon<ScalarType>()) {
+    //   ++parallel;
+    // }
+    // auto edge_direction = Normal::fromPt(line);
+    // edge_direction.approximatelyNormalize();
+    // auto surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
+    //                                                  a_intersection_0.getPt());
+    // surface_normal.approximatelyNormalize();
+    // std::cout << " edge * normal0 = " << edge_direction * surface_normal
+    //           << std::endl;
+    // if (fabs(edge_direction * surface_normal) < angle_epsilon<ScalarType>())
+    // {
+    //   ++parallel;
+    // }
+    // surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
+    //                                             a_intersection_1.getPt());
+    // surface_normal.approximatelyNormalize();
+    // std::cout << " edge * normal1 = " << edge_direction * surface_normal
+    //           << std::endl;
+    // if (fabs(edge_direction * surface_normal) < angle_epsilon<ScalarType>())
+    // {
+    //   ++parallel;
+    // }
+    // {
+    //   const auto edge_direction = Normal::fromPtNormalized(line);
+    //   auto tangent = computeTangentVectorAtPoint<ScalarType>(
+    //       a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
+    //   tangent.normalize();
+    //   std::cout << " 1 - edge x tangent0 = "
+    //             << fabs(static_cast<ScalarType>(1) -
+    //                     fabs(edge_direction * tangent))
+    //             << std::endl;
+    //   tangent = computeTangentVectorAtPoint<ScalarType>(
+    //       a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
+    //   tangent.normalize();
+    //   std::cout << " 1 - edge x tangent1 = "
+    //             << fabs(static_cast<ScalarType>(1) -
+    //                     fabs(edge_direction * tangent))
+    //             << std::endl;
+    // }
+
+    // return parallel;
   };
 
   // Compute gradients of polyhedron corners (if gradients are requested)
@@ -2721,7 +2799,8 @@ formParaboloidIntersectionBases(
     }
     auto starting_half_edge = face.getStartingHalfEdge();
     const auto intersection_size = face.getNumberOfIntersections();
-    if (intersection_size % 2 == 1) {
+    if (intersection_size % 2 == 1 ||
+        face.getNumberOfEdgeParallelIntersections() > 1) {
       resetPolyhedron(a_polytope, a_complete_polytope);
 
       AlignedParaboloidBase<Quad_t> nudged_aligned_paraboloid =

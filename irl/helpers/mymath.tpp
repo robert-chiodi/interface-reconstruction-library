@@ -155,6 +155,18 @@ inline Quad_t sqrt(const Quad_t a_scalar) {
 }
 
 template <>
+inline double approxsqrt(const double a_scalar) {
+  __m128 temp = _mm_set_ss(static_cast<float>(a_scalar));
+  temp = _mm_sqrt_ss(temp);
+  return static_cast<double>(_mm_cvtss_f32(temp));
+}
+
+template <>
+inline Quad_t approxsqrt(const Quad_t a_scalar) {
+  return sqrtq(a_scalar);
+}
+
+template <>
 inline double approxinvsqrt(const double a_scalar) {
   __m128 temp = _mm_set_ss(static_cast<float>(a_scalar));
   temp = _mm_rsqrt_ss(temp);
