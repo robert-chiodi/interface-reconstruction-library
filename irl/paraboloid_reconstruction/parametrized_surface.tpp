@@ -857,7 +857,7 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
   if (valid_curves) {
 #ifdef IRL_NO_USE_TRIANGLE
 
-    typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+    typedef CGAL::Exact_predicates_exact_constructions_kernel K;
     typedef CGAL::Exact_predicates_exact_constructions_kernel Kexact;
     typedef CGAL::Delaunay_mesh_vertex_base_2<K> Vb;
     typedef CGAL::Delaunay_mesh_face_base_2<K> Fb;

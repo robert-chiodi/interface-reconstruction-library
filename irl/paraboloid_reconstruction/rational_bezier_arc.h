@@ -40,6 +40,12 @@ class RationalBezierArcBase {
                         std::uintptr_t a_start_id, std::uintptr_t a_end_id,
                         const ScalarType a_weight);
 
+  RationalBezierArcBase(const PtBase<ScalarType>& a_start_pt,
+                        const NormalBase<ScalarType>& a_control_pt,
+                        const PtBase<ScalarType>& a_end_pt,
+                        const NormalBase<ScalarType>& a_plane_normal,
+                        const AlignedParaboloidBase<ScalarType>& a_paraboloid);
+
   /// \brief Constructor that initializes the rational Bèzier arc by computing
   /// the rational weight
   RationalBezierArcBase(const PtBase<ScalarType>& a_start_pt,

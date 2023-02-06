@@ -258,9 +258,9 @@ ReturnType computeType3ContributionWithSplit(
     return ReturnType::fromScalarConstant(ZERO);
   }
 
-  bool split = ((a_tangent_0 * edge_vector_normalized) < ZERO ||
-                (a_tangent_1 * edge_vector_normalized) > ZERO ||
-                (a_tangent_0 * a_tangent_1) > NINETENTH);
+  bool split = ((a_tangent_0 * a_tangent_1) > NINETENTH ||
+                (a_tangent_0 * edge_vector_normalized) < ZERO ||
+                (a_tangent_1 * edge_vector_normalized) > ZERO);
   if (split) {
     (*a_split_counter)++;
     const Pt average_pt = HALF * (pt_0 + pt_1);
@@ -1323,10 +1323,10 @@ ReturnType orientAndApplyType3Correction(
   const auto edge_vector = Normal(pt_1 - pt_0);
   const auto& face_plane = a_end->getFace()->getPlane();
   const auto& face_normal = face_plane.normal();
-  // Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
-  // normal_0.approximatelyNormalize();
-  // Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
-  // normal_1.approximatelyNormalize();
+  Normal normal_0 = getParaboloidSurfaceNormal(a_paraboloid, pt_0);
+  normal_0.approximatelyNormalize();
+  Normal normal_1 = getParaboloidSurfaceNormal(a_paraboloid, pt_1);
+  normal_1.approximatelyNormalize();
   Normal tgt_0 =
       computeTangentVectorAtPoint<ScalarType>(a_paraboloid, face_normal, pt_0);
   Normal tgt_1 =
@@ -1392,7 +1392,7 @@ ReturnType orientAndApplyType3Correction(
 
         // Construct Bezier arc from tangents
         const auto arc = RationalBezierArcBase<ScalarType>(
-            pt_1, tgt_1, pt_0, tgt_0, face_normal, a_paraboloid);
+            pt_1, control_pt, pt_0, face_normal, a_paraboloid);
         if constexpr (!std::is_same<SurfaceOutputType,
                                     NoSurfaceOutput>::value) {
           auto surface_arc = RationalBezierArc(
@@ -1405,10 +1405,10 @@ ReturnType orientAndApplyType3Correction(
               reinterpret_cast<std::uintptr_t>(&pt_0));
           a_surface->addArc(surface_arc);
         }
-        if (arc.weight() < ZERO) {
-          *a_requires_nudge = true;
-          return ReturnType::fromScalarConstant(ZERO);
-        }
+        // if (arc.weight() < ZERO) {
+        //   *a_requires_nudge = true;
+        //   return ReturnType::fromScalarConstant(ZERO);
+        // }
         return computeType3Contribution<ReturnType, ScalarType>(a_paraboloid,
                                                                 arc);
       }
@@ -1417,40 +1417,39 @@ ReturnType orientAndApplyType3Correction(
   {
     tgt_0.normalize();
     tgt_1.normalize();
-    // Compute edge vectors and check if tangent is parallel to edge
-    Normal edge_00 = a_start->getVertex()->getLocation().getPt() -
-                     a_start->getPreviousVertex()->getLocation().getPt();
-    Normal edge_01 =
-        a_start->getNextHalfEdge()->getVertex()->getLocation().getPt() -
-        a_start->getVertex()->getLocation().getPt();
-    Normal edge_0 = (squaredMagnitude(edge_00) > squaredMagnitude(edge_01))
-                        ? edge_00
-                        : edge_01;
-    if (squaredMagnitude(edge_0) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      *a_requires_nudge = true;
-      return ReturnType::fromScalarConstant(ZERO);
-    }
-    edge_0.normalize();
-    Normal edge_10 = a_end->getVertex()->getLocation().getPt() -
-                     a_end->getPreviousVertex()->getLocation().getPt();
-    Normal edge_11 =
-        a_end->getNextHalfEdge()->getVertex()->getLocation().getPt() -
-        a_end->getVertex()->getLocation().getPt();
-    Normal edge_1 = (squaredMagnitude(edge_10) > squaredMagnitude(edge_11))
-                        ? edge_10
-                        : edge_11;
-    if (squaredMagnitude(edge_1) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      *a_requires_nudge = true;
-      return ReturnType::fromScalarConstant(ZERO);
-    }
-    edge_1.normalize();
 
-    bool tgt_0_parallel_edge_0 =
-        fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
-    bool tgt_1_parallel_edge_1 =
-        fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
-    // bool tgt_0_parallel_edge_0 = fabs(normal_0 * edge_0) < ANGLE_EPSILON;
-    // bool tgt_1_parallel_edge_1 = fabs(normal_1 * edge_1) < ANGLE_EPSILON;
+    // Compute edge vectors and check if tangent is parallel to edge
+    Normal edge_0 = a_start->getVertex()->getLocation().getPt() -
+                    a_start->getPreviousVertex()->getLocation().getPt();
+    if (squaredMagnitude(edge_0) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      Normal edge_01 =
+          a_start->getNextHalfEdge()->getVertex()->getLocation().getPt() -
+          a_start->getVertex()->getLocation().getPt();
+      edge_0 = (squaredMagnitude(edge_0) > squaredMagnitude(edge_01)) ? edge_0
+                                                                      : edge_01;
+      if (squaredMagnitude(edge_0) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
+      }
+    }
+    edge_0.approximatelyNormalize();
+    Normal edge_1 = a_end->getVertex()->getLocation().getPt() -
+                    a_end->getPreviousVertex()->getLocation().getPt();
+    if (squaredMagnitude(edge_1) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      Normal edge_11 =
+          a_end->getNextHalfEdge()->getVertex()->getLocation().getPt() -
+          a_end->getVertex()->getLocation().getPt();
+      edge_1 = (squaredMagnitude(edge_1) > squaredMagnitude(edge_11)) ? edge_1
+                                                                      : edge_11;
+      if (squaredMagnitude(edge_1) < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
+      }
+    }
+    edge_1.approximatelyNormalize();
+
+    bool tgt_0_parallel_edge_0 = fabs(normal_0 * edge_0) < 0.01;
+    bool tgt_1_parallel_edge_1 = fabs(normal_1 * edge_1) < 0.01;
 
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the edge
@@ -1461,52 +1460,67 @@ ReturnType orientAndApplyType3Correction(
       tgt_0 = (edge_normal_0 * tgt_0 < ZERO) ? -tgt_0 : tgt_0;
       tgt_1 = (edge_normal_1 * tgt_1 < ZERO) ? -tgt_1 : tgt_1;
     } else {
-      if constexpr (std::is_same_v<ScalarType, double>) {
-        *a_requires_nudge = true;
-        return ReturnType::fromScalarConstant(ZERO);
-      }
-      const Pt conic_center = conicCenter<ScalarType>(face_plane, a_paraboloid);
-      if (squaredMagnitude(pt_0 - conic_center) <
-              DISTANCE_EPSILON * DISTANCE_EPSILON ||
-          squaredMagnitude(pt_1 - conic_center) <
-              DISTANCE_EPSILON * DISTANCE_EPSILON) {
-        return ReturnType::fromScalarConstant(ZERO);
-      }
-      if (squaredMagnitude(pt_0) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
-          squaredMagnitude(pt_1) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
-          face_plane.distance() < DISTANCE_EPSILON) {
-        return ReturnType::fromScalarConstant(ZERO);
-      }
-      // Compute ellipse center an orient tangents accordingly
-      auto center_to_pt_0 = Normal(pt_0 - conic_center);
-      auto center_to_pt_1 = Normal(pt_1 - conic_center);
-      center_to_pt_0.normalize();
-      center_to_pt_1.normalize();
-      Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
-      Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
-      assert(fabs(tgt_0 * dummy_tgt_0) > ANGLE_EPSILON);
-      assert(fabs(tgt_1 * dummy_tgt_1) > ANGLE_EPSILON);
-      tgt_0 = (tgt_0 * dummy_tgt_0) < ZERO ? -tgt_0 : tgt_0;
-      tgt_1 = (tgt_1 * dummy_tgt_1) > ZERO ? -tgt_1 : tgt_1;
-      // At this point, the tangents form a valid arc (but they may be
-      // oriented in the wrong direction)
-      if (!tgt_0_parallel_edge_0) {
+      edge_0.normalize();
+      edge_1.normalize();
+      tgt_0_parallel_edge_0 = fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
+      tgt_1_parallel_edge_1 = fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+      if (!tgt_0_parallel_edge_0 &&
+          !tgt_1_parallel_edge_1)  // We orient the tangent with the edge
+                                   // normal
+      {
         const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
-        if (edge_normal_0 * tgt_0 < ZERO) {
-          tgt_0 = -tgt_0;
-          tgt_1 = -tgt_1;
-        }
-      } else if (!tgt_1_parallel_edge_1) {
         const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
-        if (edge_normal_1 * tgt_1 < ZERO) {
-          tgt_0 = -tgt_0;
-          tgt_1 = -tgt_1;
-        }
+        tgt_0 = (edge_normal_0 * tgt_0 < ZERO) ? -tgt_0 : tgt_0;
+        tgt_1 = (edge_normal_1 * tgt_1 < ZERO) ? -tgt_1 : tgt_1;
       } else {
-        std::cout << "Orienting based on conic center " << std::endl;
-        if (a_paraboloid.a() < ZERO) {
-          tgt_0 = -tgt_0;
-          tgt_1 = -tgt_1;
+        if constexpr (std::is_same_v<ScalarType, double>) {
+          *a_requires_nudge = true;
+          return ReturnType::fromScalarConstant(ZERO);
+        }
+        const Pt conic_center =
+            conicCenter<ScalarType>(face_plane, a_paraboloid);
+        if (squaredMagnitude(pt_0 - conic_center) <
+                DISTANCE_EPSILON * DISTANCE_EPSILON ||
+            squaredMagnitude(pt_1 - conic_center) <
+                DISTANCE_EPSILON * DISTANCE_EPSILON) {
+          return ReturnType::fromScalarConstant(ZERO);
+        }
+        if (squaredMagnitude(pt_0) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
+            squaredMagnitude(pt_1) < DISTANCE_EPSILON * DISTANCE_EPSILON &&
+            face_plane.distance() < DISTANCE_EPSILON) {
+          return ReturnType::fromScalarConstant(ZERO);
+        }
+        // Compute ellipse center an orient tangents accordingly
+        auto center_to_pt_0 = Normal(pt_0 - conic_center);
+        auto center_to_pt_1 = Normal(pt_1 - conic_center);
+        center_to_pt_0.normalize();
+        center_to_pt_1.normalize();
+        Normal dummy_tgt_0 = crossProduct(face_normal, center_to_pt_0);
+        Normal dummy_tgt_1 = crossProduct(face_normal, center_to_pt_1);
+        assert(fabs(tgt_0 * dummy_tgt_0) > ANGLE_EPSILON);
+        assert(fabs(tgt_1 * dummy_tgt_1) > ANGLE_EPSILON);
+        tgt_0 = (tgt_0 * dummy_tgt_0) < ZERO ? -tgt_0 : tgt_0;
+        tgt_1 = (tgt_1 * dummy_tgt_1) > ZERO ? -tgt_1 : tgt_1;
+        // At this point, the tangents form a valid arc (but they may be
+        // oriented in the wrong direction)
+        if (!tgt_0_parallel_edge_0) {
+          const Normal edge_normal_0 = crossProduct(face_normal, edge_0);
+          if (edge_normal_0 * tgt_0 < ZERO) {
+            tgt_0 = -tgt_0;
+            tgt_1 = -tgt_1;
+          }
+        } else if (!tgt_1_parallel_edge_1) {
+          const Normal edge_normal_1 = crossProduct(face_normal, edge_1);
+          if (edge_normal_1 * tgt_1 < ZERO) {
+            tgt_0 = -tgt_0;
+            tgt_1 = -tgt_1;
+          }
+        } else {
+          std::cout << "Orienting based on conic center " << std::endl;
+          if (a_paraboloid.a() < ZERO) {
+            tgt_0 = -tgt_0;
+            tgt_1 = -tgt_1;
+          }
         }
       }
     }
@@ -1809,7 +1823,7 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   const Quad_t nudge_epsilon = 1.0e8q * distance_epsilon<Quad_t>();
 
-  std::cout << " NUDGE " << a_nudge_iter << std::endl;
+  // std::cout << " NUDGE " << a_nudge_iter << std::endl;
 
   auto center = a_polytope->calculateCentroid();
   auto converted_center = PtBase<Quad_t>(static_cast<Quad_t>(center[0]),
@@ -2106,21 +2120,6 @@ formParaboloidIntersectionBases(
 
   // Recalculate in face plane information
   for (auto& face : (*a_polytope)) {
-    // auto normal = Normal(ZERO, ZERO, ZERO);
-    // const auto starting_half_edge = face->getStartingHalfEdge();
-    // auto current_half_edge = starting_half_edge;
-    // auto next_half_edge = starting_half_edge->getNextHalfEdge();
-    // const auto& start_location =
-    //     starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    // do {
-    //   normal += crossProduct(
-    //       current_half_edge->getVertex()->getLocation().getPt() -
-    //           start_location,
-    //       next_half_edge->getVertex()->getLocation().getPt() -
-    //       start_location);
-    //   current_half_edge = next_half_edge;
-    //   next_half_edge = next_half_edge->getNextHalfEdge();
-    // } while (next_half_edge != starting_half_edge);
     const auto starting_half_edge = face->getStartingHalfEdge();
     const auto& p0 =
         starting_half_edge->getPreviousVertex()->getLocation().getPt();
@@ -2137,7 +2136,7 @@ formParaboloidIntersectionBases(
     if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
       normal = Normal(ZERO, ZERO, ZERO);
     } else {
-      normal.normalize();
+      normal /= sqrt(squaredMag);
     }
     face->setPlane(Plane(normal, normal * p0));
   }
@@ -2196,104 +2195,6 @@ formParaboloidIntersectionBases(
   //      !elliptic || (elliptic && a_aligned_paraboloid.a() > 0.0);
   const bool check_from_unclipped = true;
   //      !elliptic || (elliptic && !check_from_clipped);
-
-  auto edge_parallel_to_paraboloid =
-      [&a_aligned_paraboloid, elliptic](
-          const pt_type& a_edge_0, const pt_type& a_edge_1,
-          const pt_type& a_intersection,
-          const Normal& a_plane_normal) -> UnsignedIndex_t {
-    // if (!elliptic) {
-    return 0;
-    // }
-    // const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
-    // const auto edge_direction = Normal::fromPtNormalized(line);
-    // auto tangent = computeTangentVectorAtPoint<ScalarType>(
-    //     a_aligned_paraboloid, a_plane_normal, a_intersection.getPt());
-    // tangent.normalize();
-    // return fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent))
-    // <
-    //                angle_epsilon<ScalarType>()
-    //            ? 1
-    //            : 0;
-    // auto edge_direction = Normal::fromPt(line);
-    // edge_direction.approximatelyNormalize();
-    // auto surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
-    //                                                  a_intersection.getPt());
-    // surface_normal.approximatelyNormalize();
-    // std::cout << " edge * normal = " << edge_direction * surface_normal
-    //           << std::endl;
-    // return fabs(edge_direction * surface_normal) <
-    // angle_epsilon<ScalarType>()
-    //            ? 1
-    //            : 0;
-  };
-
-  auto edge_parallel_to_paraboloid2 =
-      [&a_aligned_paraboloid, elliptic](
-          const pt_type& a_edge_0, const pt_type& a_edge_1,
-          const pt_type& a_intersection_0, const pt_type& a_intersection_1,
-          const Normal& a_plane_normal) -> UnsignedIndex_t {
-    // if (!elliptic) {
-    return 0;
-    // }
-    // UnsignedIndex_t parallel = 0;
-
-    // const Pt line = a_edge_1.getPt() - a_edge_0.getPt();
-    // const auto edge_direction = Normal::fromPtNormalized(line);
-    // auto tangent = computeTangentVectorAtPoint<ScalarType>(
-    //     a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
-    // tangent.normalize();
-    // if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
-    //     angle_epsilon<ScalarType>()) {
-    //   ++parallel;
-    // }
-    // tangent = computeTangentVectorAtPoint<ScalarType>(
-    //     a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
-    // tangent.normalize();
-    // if (fabs(static_cast<ScalarType>(1) - fabs(edge_direction * tangent)) <
-    //     angle_epsilon<ScalarType>()) {
-    //   ++parallel;
-    // }
-    // auto edge_direction = Normal::fromPt(line);
-    // edge_direction.approximatelyNormalize();
-    // auto surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
-    //                                                  a_intersection_0.getPt());
-    // surface_normal.approximatelyNormalize();
-    // std::cout << " edge * normal0 = " << edge_direction * surface_normal
-    //           << std::endl;
-    // if (fabs(edge_direction * surface_normal) < angle_epsilon<ScalarType>())
-    // {
-    //   ++parallel;
-    // }
-    // surface_normal = getParaboloidSurfaceNormal(a_aligned_paraboloid,
-    //                                             a_intersection_1.getPt());
-    // surface_normal.approximatelyNormalize();
-    // std::cout << " edge * normal1 = " << edge_direction * surface_normal
-    //           << std::endl;
-    // if (fabs(edge_direction * surface_normal) < angle_epsilon<ScalarType>())
-    // {
-    //   ++parallel;
-    // }
-    // {
-    //   const auto edge_direction = Normal::fromPtNormalized(line);
-    //   auto tangent = computeTangentVectorAtPoint<ScalarType>(
-    //       a_aligned_paraboloid, a_plane_normal, a_intersection_0.getPt());
-    //   tangent.normalize();
-    //   std::cout << " 1 - edge x tangent0 = "
-    //             << fabs(static_cast<ScalarType>(1) -
-    //                     fabs(edge_direction * tangent))
-    //             << std::endl;
-    //   tangent = computeTangentVectorAtPoint<ScalarType>(
-    //       a_aligned_paraboloid, a_plane_normal, a_intersection_1.getPt());
-    //   tangent.normalize();
-    //   std::cout << " 1 - edge x tangent1 = "
-    //             << fabs(static_cast<ScalarType>(1) -
-    //                     fabs(edge_direction * tangent))
-    //             << std::endl;
-    // }
-
-    // return parallel;
-  };
 
   // Compute gradients of polyhedron corners (if gradients are requested)
   if constexpr (has_embedded_gradient<ReturnType>::value) {
@@ -2373,17 +2274,6 @@ formParaboloidIntersectionBases(
           opposite_face->markAsVisited();
           opposite_face->setStartingHalfEdge(opposite_half_edge);
           opposite_face->addIntersection();
-
-          auto edge_parallel_intersections = edge_parallel_to_paraboloid(
-              edge_start, edge_end, edge_intercepts[0],
-              current_face->getPlane().normal());
-          if (edge_parallel_intersections > 0) {
-            current_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            opposite_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-          }
-
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
           if (squaredMagnitude(edge_intercepts[0] - edge_start) <
@@ -2421,19 +2311,6 @@ formParaboloidIntersectionBases(
           opposite_face->setStartingHalfEdge(
               current_edge->getOppositeHalfEdge());
           opposite_face->addDoubleIntersection();
-
-          auto edge_parallel_intersections = edge_parallel_to_paraboloid2(
-              edge_start, edge_end, edge_intercepts[0], edge_intercepts[1],
-              current_face->getPlane().normal());
-          if (edge_parallel_intersections > 0) {
-            current_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            opposite_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            if (edge_parallel_intersections == 2) {
-              requires_nudge = true;
-            }
-          }
         }
         current_edge =
             current_edge->getOppositeHalfEdge()->getPreviousHalfEdge();
@@ -2492,17 +2369,6 @@ formParaboloidIntersectionBases(
           auto opposite_face = opposite_half_edge->getFace();
           opposite_face->markAsVisited();
           opposite_face->addIntersection();
-
-          auto edge_parallel_intersections = edge_parallel_to_paraboloid(
-              edge_start, edge_end, edge_intercepts[0],
-              current_face->getPlane().normal());
-          if (edge_parallel_intersections > 0) {
-            current_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            opposite_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-          }
-
         } else if (edge_intercepts.size() == 2) {
           // Check for intersection near end point
           if (squaredMagnitude(edge_intercepts[0] - edge_start) <
@@ -2540,19 +2406,6 @@ formParaboloidIntersectionBases(
           opposite_face->setStartingHalfEdge(
               opposite_half_edge->getNextHalfEdge());
           opposite_face->addDoubleIntersection();
-
-          auto edge_parallel_intersections = edge_parallel_to_paraboloid2(
-              edge_start, edge_end, edge_intercepts[0], edge_intercepts[1],
-              current_face->getPlane().normal());
-          if (edge_parallel_intersections > 0) {
-            current_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            opposite_face->addEdgeParallelIntersections(
-                edge_parallel_intersections);
-            if (edge_parallel_intersections == 2) {
-              requires_nudge = true;
-            }
-          }
         }
         current_edge =
             current_edge->getOppositeHalfEdge()->getPreviousHalfEdge();
@@ -2799,8 +2652,7 @@ formParaboloidIntersectionBases(
     }
     auto starting_half_edge = face.getStartingHalfEdge();
     const auto intersection_size = face.getNumberOfIntersections();
-    if (intersection_size % 2 == 1 ||
-        face.getNumberOfEdgeParallelIntersections() > 1) {
+    if (intersection_size % 2 == 1) {
       resetPolyhedron(a_polytope, a_complete_polytope);
 
       AlignedParaboloidBase<Quad_t> nudged_aligned_paraboloid =
@@ -2876,7 +2728,7 @@ formParaboloidIntersectionBases(
 
       // -----> NO SORTING
       if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
-        // const bool reverse = a_aligned_paraboloid.a() < ZERO;
+        const bool reverse = a_aligned_paraboloid.a() < ZERO;
         // if (elliptic_face) {
         //   const auto& ref_pt =
         //   starting_half_edge->getVertex()->getLocation(); half_edge_type*
@@ -2893,7 +2745,7 @@ formParaboloidIntersectionBases(
         //           computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
         //               a_aligned_paraboloid, ref_pt, current_edge,
         //               exit_half_edge, false, false, &requires_nudge,
-        //               nudge_direction, a_surface);
+        //               a_surface);
         //       current_edge = exit_half_edge->getNextHalfEdge();
         //       while (current_edge->getVertex()->needsToSeek()) {
         //         current_edge = current_edge->getNextHalfEdge();
@@ -2907,7 +2759,7 @@ formParaboloidIntersectionBases(
         //           computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
         //               a_aligned_paraboloid, ref_pt, current_edge,
         //               exit_half_edge, false, false, &requires_nudge,
-        //               nudge_direction, a_surface);
+        //               a_surface);
         //     }
         //     skip_first = false;
         //     found_intersections += 2;
@@ -3030,8 +2882,8 @@ formParaboloidIntersectionBases(
         }
         // Clear list of intersections
         intersections.clear();
-        // }
       }
+      // }
       // -- --->If surface ouput : NEEDS SORTING
       else {
         bool ignore_type3_contributions = false;

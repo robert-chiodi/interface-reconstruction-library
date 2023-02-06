@@ -52,6 +52,50 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
 template <class ScalarType>
 inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
     const PtBase<ScalarType>& a_start_pt,
+    const NormalBase<ScalarType>& a_control_pt,
+    const PtBase<ScalarType>& a_end_pt,
+    const NormalBase<ScalarType>& a_plane_normal,
+    const AlignedParaboloidBase<ScalarType>& a_paraboloid) {
+  /* Defining constants and types */
+  const ScalarType EPSILON = machine_epsilon<ScalarType>();
+  const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType TWO = static_cast<ScalarType>(2);
+  const ScalarType HALF = ONE / TWO;
+  const ScalarType ONEANDHALF = ONE + HALF;
+  const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
+
+  /* Function */
+  // Set what can already be set
+  start_point_m = a_start_pt;
+  control_point_m = a_control_pt;
+  end_point_m = a_end_pt;
+  start_point_id_m = reinterpret_cast<std::uintptr_t>(&a_start_pt);
+  end_point_id_m = reinterpret_cast<std::uintptr_t>(&a_end_pt);
+
+  /* By caculating the end-point curvature
+This calculate the curvature of the conic with (Hartmann1996)
+and uses it to compute the weight (Farin1992)*/
+  const NormalBase<ScalarType> start_normal =
+      getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+  const NormalBase<ScalarType> start_cross_prod =
+      crossProduct(a_plane_normal, start_normal);
+  const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
+  const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
+  const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
+  const ScalarType D = safelyTiny(
+      fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1));
+  const ScalarType R =
+      (cross_sq_0 + cross_sq_1 + cross_sq_2) /
+      safelyTiny(squaredMagnitude(control_point_m - a_start_pt));
+  const ScalarType A = squaredMagnitude(
+      crossProduct(a_end_pt - a_start_pt, control_point_m - a_end_pt));
+  weight_m = HALF * sqrt(sqrt(A * R * R * R) / D);
+}
+
+template <class ScalarType>
+inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
+    const PtBase<ScalarType>& a_start_pt,
     const NormalBase<ScalarType>& a_start_tangent,
     const PtBase<ScalarType>& a_end_pt,
     const NormalBase<ScalarType>& a_end_tangent,
