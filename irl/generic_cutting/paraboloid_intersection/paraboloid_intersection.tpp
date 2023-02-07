@@ -2687,10 +2687,8 @@ formParaboloidIntersectionBases(
   }
 
   /* Triangulate faces with intersections */
-  if (elliptic) {
-    triangulatePolytope(a_polytope, a_complete_polytope, a_aligned_paraboloid,
-                        nudge_epsilon, &requires_nudge);
-  }
+  triangulatePolytope(a_polytope, a_complete_polytope, a_aligned_paraboloid,
+                      nudge_epsilon, &requires_nudge);
 
   // If intersection is too close to corners, shift polyhedron and
   // try again
@@ -3006,9 +3004,7 @@ formParaboloidIntersectionBases(
           fabs(face_normal[2]) > MACHINE_EPSILON;
 
       // -----> NO SORTING
-      // if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value)
-      // {
-      if (elliptic || std::is_same_v<SurfaceOutputType, NoSurfaceOutput>) {
+      if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
         if (elliptic_face) {
           const bool reverse = a_aligned_paraboloid.a() < ZERO;
           const auto& ref_pt = starting_half_edge->getVertex()->getLocation();
