@@ -534,8 +534,8 @@ ReturnType computeUnclippedSegmentType1Contribution(
   ReturnType full_moments = ReturnType::fromScalarConstant(ZERO);
 
   assert(a_entry_half_edge->getPreviousVertex()->isClipped() ||
-         (a_entry_half_edge->getPreviousVertex()->doesNotNeedToSeek() &&
-          a_entry_half_edge->getNextHalfEdge()->getVertex()->isNotClipped()));
+         a_entry_half_edge->getPreviousVertex()->doesNotNeedToSeek());
+  assert(a_entry_half_edge->getNextHalfEdge()->getVertex()->isNotClipped());
 
   auto current_half_edge = a_entry_half_edge->getNextHalfEdge();
   auto vertex = current_half_edge->getVertex();
@@ -749,8 +749,10 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   // bool error = false;
   // if constexpr (!has_paraboloid_surface<ReturnType>::value &&
   //               !has_embedded_gradient<ReturnType>::value) {
-  //   if constexpr ((std::is_same_v<ReturnType, VolumeMomentsBase<double>> ||
-  //                  std::is_same_v<ReturnType, VolumeMomentsBase<Quad_t>>)) {
+  //   if constexpr ((std::is_same_v<ReturnType, VolumeMomentsBase<double>>
+  //   ||
+  //                  std::is_same_v<ReturnType,
+  //                  VolumeMomentsBase<Quad_t>>)) {
   //     if (moments.volume() < -999.9) {
   //       error = true;
   //     }
@@ -766,9 +768,9 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   // if (error) {
   //   sleep(1);
   //   std::cout << "SCALE = " << inv_scale << std::endl;
-  //   std::cout << "PARABOLOID = " << scaled_aligned_paraboloid << std::endl;
-  //   std::cout << (*a_polytope) << std::endl;
-  //   const UnsignedIndex_t number_of_vertices =
+  //   std::cout << "PARABOLOID = " << scaled_aligned_paraboloid <<
+  //   std::endl; std::cout << (*a_polytope) << std::endl; const
+  //   UnsignedIndex_t number_of_vertices =
   //       a_polytope->getNumberOfVertices();
   //   for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
   //     auto& pt = a_polytope->getVertex(v)->getLocation().getPt();
@@ -863,11 +865,11 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   // Rotate base polyhedron back
   // for (UnsignedIndex_t v = 0; v < number_of_vertices; ++v) {
-  //   const Pt& original_pt = a_polytope->getVertex(v)->getLocation().getPt();
-  //   typename SegmentedHalfEdgePolyhedronType::pt_type projected_location;
-  //   auto& pt = projected_location.getPt();
-  //   pt = Pt(ZERO, ZERO, ZERO);
-  //   for (UnsignedIndex_t d = 0; d < 3; ++d) {
+  //   const Pt& original_pt =
+  //   a_polytope->getVertex(v)->getLocation().getPt(); typename
+  //   SegmentedHalfEdgePolyhedronType::pt_type projected_location; auto& pt
+  //   = projected_location.getPt(); pt = Pt(ZERO, ZERO, ZERO); for
+  //   (UnsignedIndex_t d = 0; d < 3; ++d) {
   //     for (UnsignedIndex_t n = 0; n < 3; ++n) {
   //       pt[n] += ref_frame[d][n] * original_pt[d];
   //     }
@@ -1078,8 +1080,8 @@ checkAndFindIntercepts(const AlignedParaboloidBase<ScalarType>& a_paraboloid,
                        const ScalarType a_nudge_epsilon,
                        const bool a_elliptic) {
   static_assert(std::is_same_v<PtType, PtBase<ScalarType>>);
-  const ScalarType ZERO = static_cast<ScalarType>(0);
-  const ScalarType ONE = static_cast<ScalarType>(1);
+  const ScalarType EPSILON_LO = -static_cast<ScalarType>(0.5) * a_nudge_epsilon;
+  const ScalarType EPSILON_HI = static_cast<ScalarType>(1) - EPSILON_LO;
   a_intercepts->resize(0);
   // bool solve = true;
 
@@ -1114,7 +1116,8 @@ checkAndFindIntercepts(const AlignedParaboloidBase<ScalarType>& a_paraboloid,
       solveQuadratic<ScalarType>(a, b, c);
 
   for (auto& solution : solutions) {
-    if (solution > -a_nudge_epsilon && solution < ONE + a_nudge_epsilon) {
+    if (solution > EPSILON_LO && solution < EPSILON_HI) {
+      // if (solution > ZERO && solution < ONE) {
       a_intercepts->push_back(PtBase<ScalarType>(pt_0 + solution * pt_diff));
     }
   }
@@ -1983,12 +1986,26 @@ void convertPolytopeFromDoubleToQuadPrecision(
                                                           a_converted_polytope);
 }
 
-template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType>
+template <class HalfEdgeType>
+HalfEdgeType* getNextNonIntersection(HalfEdgeType* a_half_edge) {
+  if (a_half_edge->getVertex()->needsToSeek()) {
+    return a_half_edge;
+  } else if (a_half_edge->getNextHalfEdge()->getVertex()->needsToSeek()) {
+    return a_half_edge->getNextHalfEdge();
+  } else {
+    return a_half_edge->getNextHalfEdge()->getNextHalfEdge();
+  }
+}
+
+template <class SegmentedHalfEdgePolyhedronType, class HalfEdgePolytopeType,
+          class AlignedParaboloidType, class ScalarType>
 void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
-                         HalfEdgePolytopeType* a_complete_polytope) {
+                         HalfEdgePolytopeType* a_complete_polytope,
+                         const AlignedParaboloidType& a_aligned_paraboloid,
+                         const ScalarType a_nudge_epsilon,
+                         bool* a_requires_nudge) {
   using VertexType = typename HalfEdgePolytopeType::vertex_type;
   using PtType = typename VertexType::pt_type;
-  using ScalarType = typename PtType::value_type;
   using HalfEdgeType = typename HalfEdgePolytopeType::half_edge_type;
   using FaceType = typename HalfEdgePolytopeType::face_type;
 
@@ -2040,53 +2057,217 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
   // }
   // assert(a_polytope->checkValidHalfEdgeStructure());
 
+  //   // Loop over all faces. Completely face independent procedure
+  // const auto nfaces = a_polytope->getNumberOfFaces();
+  // UnsignedIndex_t new_faces = 0;
+  // for (UnsignedIndex_t f = 0; f < nfaces; ++f) {
+  //   auto face = (*a_polytope)[f];
+  //   auto starting_half_edge = face->getStartingHalfEdge();
+  //   auto half_edge = starting_half_edge->getNextHalfEdge();
+  //   auto next = half_edge->getNextHalfEdge();
+  //   if (half_edge == starting_half_edge || next == starting_half_edge) {
+  //     continue;
+  //   }
+  //   auto next_next = next->getNextHalfEdge();
+  //   while (next_next != starting_half_edge) {
+  //     // Create new triangular face
+  //     a_polytope->addFace(a_complete_polytope->getNewFace(FaceType(half_edge)));
+  //     auto new_face = (*a_polytope)[nfaces + new_faces++];
+  //     // Creating new half-edge to close new triangular face
+  //     auto new_half_edge =
+  //     a_complete_polytope->getNewHalfEdge(HalfEdgeType(
+  //         starting_half_edge->getVertex(), next, half_edge, new_face));
+  //     half_edge->setPreviousHalfEdge(new_half_edge);
+  //     half_edge->setFace(new_face);
+  //     next->setNextHalfEdge(new_half_edge);
+  //     next->setFace(new_face);
+
+  //     // Creating new opposite half-edge
+  //     auto new_opposite_half_edge = a_complete_polytope->getNewHalfEdge(
+  //         HalfEdgeType(next->getVertex(), starting_half_edge, next_next,
+  //         face));
+  //     setMutualOpposites(new_half_edge, new_opposite_half_edge);
+  //     starting_half_edge->setNextHalfEdge(new_opposite_half_edge);
+  //     next_next->setPreviousHalfEdge(new_opposite_half_edge);
+
+  //     // Closing old face
+  //     half_edge = new_opposite_half_edge;
+  //     next = next_next;
+  //     next_next = next->getNextHalfEdge();
+
+  //     assert(starting_half_edge->getVertex()->checkValidHalfEdgeCycle());
+  //     assert(new_half_edge->getVertex()->checkValidHalfEdgeCycle());
+  //   }
+  // }
+
   // Loop over all faces. Completely face independent procedure
   const auto nfaces = a_polytope->getNumberOfFaces();
   UnsignedIndex_t new_faces = 0;
   for (UnsignedIndex_t f = 0; f < nfaces; ++f) {
     auto face = (*a_polytope)[f];
-    auto starting_half_edge = face->getStartingHalfEdge();
-    auto half_edge = starting_half_edge->getNextHalfEdge();
-    auto next = half_edge->getNextHalfEdge();
-    if (half_edge == starting_half_edge || next == starting_half_edge) {
-      continue;
-    }
-    auto next_next = next->getNextHalfEdge();
-    while (next_next != starting_half_edge) {
-      // Create new triangular face
-      a_polytope->addFace(a_complete_polytope->getNewFace(FaceType(half_edge)));
-      auto new_face = (*a_polytope)[nfaces + new_faces++];
-      // Creating new half-edge to close new triangular face
-      auto new_half_edge = a_complete_polytope->getNewHalfEdge(HalfEdgeType(
-          starting_half_edge->getVertex(), next, half_edge, new_face));
-      half_edge->setPreviousHalfEdge(new_half_edge);
-      half_edge->setFace(new_face);
-      next->setNextHalfEdge(new_half_edge);
-      next->setFace(new_face);
+    /* Only triangulate faces with intersections */
+    if (face->getNumberOfIntersections() > 0) {
+      auto starting_half_edge =
+          getNextNonIntersection(face->getStartingHalfEdge());
+      auto half_edge0 = starting_half_edge->getNextHalfEdge();
+      auto half_edge1 = getNextNonIntersection(half_edge0);
+      auto next0 = half_edge1->getNextHalfEdge();
+      auto next1 = getNextNonIntersection(next0);
+      if (half_edge1 == starting_half_edge || next1 == starting_half_edge) {
+        continue;
+      }
+      auto next_next0 = next1->getNextHalfEdge();
+      auto next_next1 = getNextNonIntersection(next_next0);
 
-      // Creating new opposite half-edge
-      auto new_opposite_half_edge = a_complete_polytope->getNewHalfEdge(
-          HalfEdgeType(next->getVertex(), starting_half_edge, next_next, face));
-      setMutualOpposites(new_half_edge, new_opposite_half_edge);
-      starting_half_edge->setNextHalfEdge(new_opposite_half_edge);
-      next_next->setPreviousHalfEdge(new_opposite_half_edge);
+      while (next_next1 != starting_half_edge) {
+        // Create new triangular face
+        a_polytope->addFace(
+            a_complete_polytope->getNewFace(FaceType(half_edge1)));
+        auto new_face = (*a_polytope)[nfaces + new_faces++];
+        // Creating new half-edge to close new triangular face
+        auto new_half_edge = a_complete_polytope->getNewHalfEdge(HalfEdgeType(
+            starting_half_edge->getVertex(), next1, half_edge0, new_face));
+        new_face->setStartingHalfEdge(new_half_edge);
+        half_edge0->setPreviousHalfEdge(new_half_edge);
+        half_edge0->setFace(new_face);
+        if (half_edge0 != half_edge1) {
+          half_edge1->setFace(new_face);
+          if (half_edge0->getNextHalfEdge() != half_edge1) {
+            half_edge0->getNextHalfEdge()->setFace(new_face);
+          }
+        }
+        next1->setNextHalfEdge(new_half_edge);
+        next0->setFace(new_face);
+        if (next0 != next1) {
+          next1->setFace(new_face);
+          if (next0->getNextHalfEdge() != next1) {
+            next0->getNextHalfEdge()->setFace(new_face);
+          }
+        }
 
-      // Closing old face
-      half_edge = new_opposite_half_edge;
-      next = next_next;
-      next_next = next->getNextHalfEdge();
+        // Creating new opposite half-edge
+        auto new_opposite_half_edge =
+            a_complete_polytope->getNewHalfEdge(HalfEdgeType(
+                next1->getVertex(), starting_half_edge, next_next0, face));
+        setMutualOpposites(new_half_edge, new_opposite_half_edge);
+        starting_half_edge->setNextHalfEdge(new_opposite_half_edge);
+        next_next0->setPreviousHalfEdge(new_opposite_half_edge);
 
-      assert(starting_half_edge->getVertex()->checkValidHalfEdgeCycle());
-      assert(new_half_edge->getVertex()->checkValidHalfEdgeCycle());
+        // Closing old face
+        half_edge0 = new_opposite_half_edge;
+        half_edge1 = half_edge0;
+        next0 = next_next0;
+        next1 = next_next1;
+        next_next0 = next1->getNextHalfEdge();
+        next_next1 = getNextNonIntersection(next_next0);
+
+        assert(starting_half_edge->getVertex()->checkValidHalfEdgeCycle());
+        assert(new_half_edge->getVertex()->checkValidHalfEdgeCycle());
+      }
     }
   }
 
-  // if (!a_polytope->checkValidHalfEdgeStructure()) {
-  //   std::cout << (*a_polytope) << std::endl;
-  //   // std::cout << (*a_complete_polytope) << std::endl;
-  // }
+  if (new_faces > 0) {
+    /* Compute intersections on new edges */
+    const bool elliptic = a_aligned_paraboloid.a() * a_aligned_paraboloid.b() >
+                          static_cast<ScalarType>(0);
+    const ScalarType nudge_epsilon_sq = a_nudge_epsilon * a_nudge_epsilon;
+    StackVector<PtType, 2> edge_intercepts;
+    for (UnsignedIndex_t f = nfaces; f < nfaces + new_faces; ++f) {
+      auto face = (*a_polytope)[f];
+      face->markAsVisited();
+      auto current_edge = face->getStartingHalfEdge();
+      const auto& vertex_start = current_edge->getPreviousVertex();
+      const auto& vertex_end = current_edge->getVertex();
+      if (elliptic) {
+        if (a_aligned_paraboloid.a() > static_cast<ScalarType>(0)) {
+          if (vertex_start->isNotClipped() && vertex_end->isNotClipped()) {
+            continue;
+          }
+        } else if (vertex_start->isClipped() && vertex_end->isClipped()) {
+          continue;
+        }
+      }
+      const auto& edge_start = vertex_start->getLocation();
+      const auto& edge_end = vertex_end->getLocation();
+      checkAndFindIntercepts<PtType, ScalarType>(
+          a_aligned_paraboloid, edge_start, edge_end, &edge_intercepts,
+          a_nudge_epsilon, elliptic);
+      if (edge_intercepts.size() == 1) {
+        if (squaredMagnitude(edge_intercepts[0] - edge_start) <
+                nudge_epsilon_sq ||
+            squaredMagnitude(edge_intercepts[0] - edge_end) <
+                nudge_epsilon_sq) {
+          *a_requires_nudge = true;
+          break;
+        }
+        placeSingleIntercept(edge_intercepts[0], current_edge, a_polytope,
+                             a_complete_polytope);
+        current_edge->getPreviousVertex()->setAsUnnecessaryToSeek();
+      } else if (edge_intercepts.size() == 2) {
+        if (squaredMagnitude(edge_intercepts[0] - edge_start) <
+                nudge_epsilon_sq ||
+            squaredMagnitude(edge_intercepts[1] - edge_end) <
+                nudge_epsilon_sq ||
+            squaredMagnitude(edge_intercepts[0] - edge_intercepts[1]) <
+                nudge_epsilon_sq) {
+          *a_requires_nudge = true;
+          break;
+        }
+        placeDoubleIntercept(edge_intercepts, current_edge, a_polytope,
+                             a_complete_polytope);
+        current_edge->getPreviousVertex()->setAsUnnecessaryToSeek();
+        current_edge->getPreviousHalfEdge()
+            ->getPreviousVertex()
+            ->setAsUnnecessaryToSeek();
+      }
+    }
 
-  assert(a_polytope->checkValidHalfEdgeStructure());
+    // if (!a_polytope->checkValidHalfEdgeStructure()) {
+    //   std::cout << (*a_polytope) << std::endl;
+    //   // std::cout << (*a_complete_polytope) << std::endl;
+    // }
+
+    assert(a_polytope->checkValidHalfEdgeStructure());
+
+    if (!(*a_requires_nudge)) {
+      /* Make starting H-edge of face an entry and update number of
+       * intersections
+       */
+      for (UnsignedIndex_t f = 0; f < nfaces + new_faces; ++f) {
+        auto face = (*a_polytope)[f];
+        if (face->getNumberOfIntersections() > 0 || f >= nfaces) {
+          face->clearIntersections();
+          const auto starting_half_edge = face->getStartingHalfEdge();
+          auto current_edge = starting_half_edge;
+          do {
+            if (current_edge->getVertex()->doesNotNeedToSeek()) {
+              face->addIntersection();
+            }
+            current_edge = current_edge->getNextHalfEdge();
+          } while (current_edge != starting_half_edge);
+        }
+      }
+      for (UnsignedIndex_t f = nfaces; f < nfaces + new_faces; ++f) {
+        auto face = (*a_polytope)[f];
+        const auto starting_half_edge = face->getStartingHalfEdge();
+        auto current_edge = starting_half_edge;
+        do {
+          if (current_edge->getVertex()->doesNotNeedToSeek()) {
+            if (current_edge->getPreviousVertex()->isClipped()) {
+              face->setStartingHalfEdge(current_edge);
+              break;
+            }
+          } else if (current_edge->getVertex()->isNotClipped() &&
+                     current_edge->getPreviousVertex()->doesNotNeedToSeek()) {
+            face->setStartingHalfEdge(current_edge->getPreviousHalfEdge());
+            break;
+          }
+          current_edge = current_edge->getNextHalfEdge();
+        } while (current_edge != starting_half_edge);
+      }
+    }
+  }
 }
 
 // Assumes paraboloid of function 0 = a*x^2 + b*y^2 + z.
@@ -2160,33 +2341,36 @@ formParaboloidIntersectionBases(
     return ReturnType::fromScalarConstant(-static_cast<ScalarType>(9999999.9));
   }
 
-  /* First, triangulate faces */
-  if (a_nudge_iter == 0) {
-    triangulatePolytope(a_polytope, a_complete_polytope);
-  }
+  // /* First, triangulate faces */
+  // if (a_nudge_iter == 0) {
+  //   triangulatePolytope(a_polytope, a_complete_polytope);
+  // }
 
-  // Recalculate in face plane information
-  for (auto& face : (*a_polytope)) {
-    const auto starting_half_edge = face->getStartingHalfEdge();
-    const auto& p0 =
-        starting_half_edge->getPreviousVertex()->getLocation().getPt();
-    const auto& p1 = starting_half_edge->getVertex()->getLocation().getPt();
-    const auto& p2 = starting_half_edge->getNextHalfEdge()
-                         ->getVertex()
-                         ->getLocation()
-                         .getPt();
-    auto normal = Normal(
-        (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] - p1[1]),
-        (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) * (p2[2] - p1[2]),
-        (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]));
-    ScalarType squaredMag = squaredMagnitude(normal);
-    if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      normal = Normal(ZERO, ZERO, ZERO);
-    } else {
-      normal /= sqrt(squaredMag);
-    }
-    face->setPlane(Plane(normal, normal * p0));
-  }
+  // // Recalculate in face plane information
+  // for (auto& face : (*a_polytope)) {
+  //   const auto starting_half_edge = face->getStartingHalfEdge();
+  //   const auto& p0 =
+  //       starting_half_edge->getPreviousVertex()->getLocation().getPt();
+  //   const auto& p1 =
+  //   starting_half_edge->getVertex()->getLocation().getPt(); const auto&
+  //   p2 = starting_half_edge->getNextHalfEdge()
+  //                        ->getVertex()
+  //                        ->getLocation()
+  //                        .getPt();
+  //   auto normal = Normal(
+  //       (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] -
+  //       p1[1]), (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) *
+  //       (p2[2]
+  //       - p1[2]), (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) *
+  //       (p2[0] - p1[0]));
+  //   ScalarType squaredMag = squaredMagnitude(normal);
+  //   if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+  //     normal = Normal(ZERO, ZERO, ZERO);
+  //   } else {
+  //     normal /= sqrt(squaredMag);
+  //   }
+  //   face->setPlane(Plane(normal, normal * p0));
+  // }
 
   // Identify elliptic case
   const bool elliptic =
@@ -2346,20 +2530,10 @@ formParaboloidIntersectionBases(
           // Check for intersection near end point
           if (squaredMagnitude(edge_intercepts[0] - edge_start) <
                   nudge_epsilon_sq ||
-              squaredMagnitude(edge_intercepts[0] - edge_end) <
-                  nudge_epsilon_sq) {
-            requires_nudge = true;
-            break;
-          }
-          if (squaredMagnitude(edge_intercepts[1] - edge_start) <
-                  nudge_epsilon_sq ||
               squaredMagnitude(edge_intercepts[1] - edge_end) <
+                  nudge_epsilon_sq ||
+              squaredMagnitude(edge_intercepts[0] - edge_intercepts[1]) <
                   nudge_epsilon_sq) {
-            requires_nudge = true;
-            break;
-          }
-          if (squaredMagnitude(edge_intercepts[0] - edge_intercepts[1]) <
-              nudge_epsilon_sq) {
             requires_nudge = true;
             break;
           }
@@ -2458,20 +2632,10 @@ formParaboloidIntersectionBases(
           // Check for intersection near end point
           if (squaredMagnitude(edge_intercepts[0] - edge_start) <
                   nudge_epsilon_sq ||
-              squaredMagnitude(edge_intercepts[0] - edge_end) <
-                  nudge_epsilon_sq) {
-            requires_nudge = true;
-            break;
-          }
-          if (squaredMagnitude(edge_intercepts[1] - edge_start) <
-                  nudge_epsilon_sq ||
               squaredMagnitude(edge_intercepts[1] - edge_end) <
+                  nudge_epsilon_sq ||
+              squaredMagnitude(edge_intercepts[0] - edge_intercepts[1]) <
                   nudge_epsilon_sq) {
-            requires_nudge = true;
-            break;
-          }
-          if (squaredMagnitude(edge_intercepts[0] - edge_intercepts[1]) <
-              nudge_epsilon_sq) {
             requires_nudge = true;
             break;
           }
@@ -2522,6 +2686,12 @@ formParaboloidIntersectionBases(
     a_polytope->getVertex(v)->setAsUnnecessaryToSeek();
   }
 
+  /* Triangulate faces with intersections */
+  if (elliptic) {
+    triangulatePolytope(a_polytope, a_complete_polytope, a_aligned_paraboloid,
+                        nudge_epsilon, &requires_nudge);
+  }
+
   // If intersection is too close to corners, shift polyhedron and
   // try again
   if (requires_nudge) {
@@ -2561,6 +2731,27 @@ formParaboloidIntersectionBases(
     } else {
       ///////////////////////////////////////TODO }
     }
+  }
+
+  // Recalculate in face plane information
+  for (auto& face : (*a_polytope)) {
+    auto current_edge = getNextNonIntersection(face->getStartingHalfEdge());
+    const auto& p0 = current_edge->getVertex()->getLocation().getPt();
+    current_edge = getNextNonIntersection(current_edge->getNextHalfEdge());
+    const auto& p1 = current_edge->getVertex()->getLocation().getPt();
+    current_edge = getNextNonIntersection(current_edge->getNextHalfEdge());
+    const auto& p2 = current_edge->getVertex()->getLocation().getPt();
+    auto normal = Normal(
+        (p1[1] - p0[1]) * (p2[2] - p1[2]) - (p1[2] - p0[2]) * (p2[1] - p1[1]),
+        (p1[2] - p0[2]) * (p2[0] - p1[0]) - (p1[0] - p0[0]) * (p2[2] - p1[2]),
+        (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]));
+    ScalarType squaredMag = squaredMagnitude(normal);
+    if (squaredMag < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      normal = Normal(ZERO, ZERO, ZERO);
+    } else {
+      normal /= sqrt(squaredMag);
+    }
+    face->setPlane(Plane(normal, normal * p0));
   }
 
   // Check for face-only intersections. Can only happen with
@@ -2732,7 +2923,7 @@ formParaboloidIntersectionBases(
     }
   }
 
-  for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
+  for (UnsignedIndex_t f = 0; f < a_polytope->getNumberOfFaces(); ++f) {
     auto& face = *(*a_polytope)[f];
     const auto& face_normal = face.getPlane().normal();
     if (squaredMagnitude(face_normal) < MACHINE_EPSILON) {
@@ -2815,7 +3006,9 @@ formParaboloidIntersectionBases(
           fabs(face_normal[2]) > MACHINE_EPSILON;
 
       // -----> NO SORTING
-      if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value) {
+      // if constexpr (std::is_same<SurfaceOutputType, NoSurfaceOutput>::value)
+      // {
+      if (elliptic || std::is_same_v<SurfaceOutputType, NoSurfaceOutput>) {
         if (elliptic_face) {
           const bool reverse = a_aligned_paraboloid.a() < ZERO;
           const auto& ref_pt = starting_half_edge->getVertex()->getLocation();
@@ -2853,7 +3046,7 @@ formParaboloidIntersectionBases(
             found_intersections += 2;
           } while (found_intersections != intersection_size);
         } else {
-          SmallVector<half_edge_type*, 6> intersections;
+          SmallVector<half_edge_type*, 4> intersections;
           // Find intersections and determine status
           auto current_edge = starting_half_edge;
           bool reverse_order = false;
