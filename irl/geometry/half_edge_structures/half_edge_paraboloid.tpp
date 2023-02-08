@@ -278,7 +278,8 @@ inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(void)
     : Face<HalfEdgeType>(),
       face_plane_m(),
       intersections_m(0),
-      edge_parallel_intersections_m(0) {}
+      edge_parallel_intersections_m(0),
+      is_triangle_m(false) {}
 
 template <class HalfEdgeType>
 inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(
@@ -286,7 +287,8 @@ inline FaceParaboloid<HalfEdgeType>::FaceParaboloid(
     : Face<HalfEdgeType>(a_starting_half_edge),
       face_plane_m(),
       intersections_m(0),
-      edge_parallel_intersections_m(0) {}
+      edge_parallel_intersections_m(0),
+      is_triangle_m(false) {}
 
 template <class HalfEdgeType>
 inline void FaceParaboloid<HalfEdgeType>::setPlane(
@@ -336,6 +338,16 @@ template <class HalfEdgeType>
 UnsignedIndex_t
 FaceParaboloid<HalfEdgeType>::getNumberOfEdgeParallelIntersections(void) const {
   return edge_parallel_intersections_m;
+}
+
+template <class HalfEdgeType>
+void FaceParaboloid<HalfEdgeType>::setAsTriangle(void) {
+  is_triangle_m = true;
+}
+
+template <class HalfEdgeType>
+bool FaceParaboloid<HalfEdgeType>::isTriangle(void) const {
+  return is_triangle_m;
 }
 
 }  // namespace IRL

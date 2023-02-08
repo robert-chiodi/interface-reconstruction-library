@@ -30,9 +30,9 @@
 #include "examples/paraboloid_advector/solver.h"
 #include "examples/paraboloid_advector/vof_advection.h"
 
-constexpr int NX = 256;
-constexpr int NY = 256;
-constexpr int NZ = 256;
+constexpr int NX = 64;
+constexpr int NY = 64;
+constexpr int NZ = 64;
 constexpr int GC = 2;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
 constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);

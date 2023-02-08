@@ -59,11 +59,9 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   /* Defining constants and types */
   const ScalarType EPSILON = machine_epsilon<ScalarType>();
   const ScalarType ZERO = static_cast<ScalarType>(0);
-  const ScalarType ONE = static_cast<ScalarType>(1);
-  const ScalarType TWO = static_cast<ScalarType>(2);
-  const ScalarType HALF = ONE / TWO;
-  const ScalarType ONEANDHALF = ONE + HALF;
+  const ScalarType HALF = static_cast<ScalarType>(0.5);
   const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
+  const ScalarType DISTANCE_EPSILON = ONEHUNDRED * EPSILON;
 
   /* Function */
   // Set what can already be set
@@ -76,21 +74,34 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   /* By caculating the end-point curvature
 This calculate the curvature of the conic with (Hartmann1996)
 and uses it to compute the weight (Farin1992)*/
-  const NormalBase<ScalarType> start_normal =
-      getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
-  const NormalBase<ScalarType> start_cross_prod =
-      crossProduct(a_plane_normal, start_normal);
-  const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
-  const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
-  const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
-  const ScalarType D = safelyTiny(
-      fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1));
-  const ScalarType R =
-      (cross_sq_0 + cross_sq_1 + cross_sq_2) /
-      safelyTiny(squaredMagnitude(control_point_m - a_start_pt));
-  const ScalarType A = squaredMagnitude(
-      crossProduct(a_end_pt - a_start_pt, control_point_m - a_end_pt));
-  weight_m = HALF * sqrt(sqrt(A * R * R * R) / D);
+  const ScalarType L = squaredMagnitude(a_control_pt - a_start_pt);
+  if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+    weight_m = ZERO;
+  } else {
+    const NormalBase<ScalarType> start_normal =
+        getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+    const NormalBase<ScalarType> start_cross_prod =
+        crossProduct(a_plane_normal, start_normal);
+    const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
+    const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
+    const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
+    const ScalarType D =
+        fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
+    if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      weight_m = ZERO;
+    } else {
+      const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
+      const ScalarType A =
+          sqrt(R * R * R *
+               squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
+                                             a_control_pt - a_end_pt)));
+      if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        weight_m = ZERO;
+      } else {
+        weight_m = HALF * sqrt(A / D);
+      }
+    }
+  }
 }
 
 template <class ScalarType>
@@ -109,6 +120,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   const ScalarType HALF = ONE / TWO;
   const ScalarType ONEANDHALF = ONE + HALF;
   const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
+  const ScalarType DISTANCE_EPSILON = ONEHUNDRED * EPSILON;
 
   /* Function */
   // Set what can already be set
@@ -214,21 +226,34 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
     /* By caculating the end-point curvature
  This calculate the curvature of the conic with (Hartmann1996)
  and uses it to compute the weight (Farin1992)*/
-    const NormalBase<ScalarType> start_normal =
-        getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
-    const NormalBase<ScalarType> start_cross_prod =
-        crossProduct(a_plane_normal, start_normal);
-    const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
-    const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
-    const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
-    const ScalarType D = safelyTiny(
-        fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1));
-    const ScalarType R =
-        (cross_sq_0 + cross_sq_1 + cross_sq_2) /
-        safelyTiny(squaredMagnitude(control_point_m - a_start_pt));
-    const ScalarType A = squaredMagnitude(
-        crossProduct(a_end_pt - a_start_pt, control_point_m - a_end_pt));
-    weight_m = HALF * sqrt(sqrt(A * R * R * R) / D);
+    const ScalarType L = squaredMagnitude(control_point_m - a_start_pt);
+    if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      weight_m = static_cast<ScalarType>(0);
+    } else {
+      const NormalBase<ScalarType> start_normal =
+          getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
+      const NormalBase<ScalarType> start_cross_prod =
+          crossProduct(a_plane_normal, start_normal);
+      const ScalarType cross_sq_0 = start_cross_prod[0] * start_cross_prod[0];
+      const ScalarType cross_sq_1 = start_cross_prod[1] * start_cross_prod[1];
+      const ScalarType cross_sq_2 = start_cross_prod[2] * start_cross_prod[2];
+      const ScalarType D =
+          fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
+      if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        weight_m = static_cast<ScalarType>(0);
+      } else {
+        const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
+        const ScalarType A =
+            sqrt(R * R * R *
+                 squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
+                                               control_point_m - a_end_pt)));
+        if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+          weight_m = static_cast<ScalarType>(0);
+        } else {
+          weight_m = HALF * sqrt(A / D);
+        }
+      }
+    }
 
     // /* By caculating position on arc at t=1/2 */
     // auto mid_to_control = NormalBase<ScalarType>(control_point_m -

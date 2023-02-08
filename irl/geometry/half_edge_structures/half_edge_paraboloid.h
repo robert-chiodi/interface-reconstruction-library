@@ -166,11 +166,14 @@ class FaceParaboloid : public Face<HalfEdgeType> {
   void addEdgeParallelIntersection(void);
   void addEdgeParallelIntersections(const UnsignedIndex_t a_intersections);
   UnsignedIndex_t getNumberOfEdgeParallelIntersections(void) const;
+  void setAsTriangle(void);
+  bool isTriangle(void) const;
 
  private:
   PlaneBase<value_type> face_plane_m;
   UnsignedIndex_t intersections_m;
   UnsignedIndex_t edge_parallel_intersections_m;
+  bool is_triangle_m;
 };
 
 }  // namespace IRL

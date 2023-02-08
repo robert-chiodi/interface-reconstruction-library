@@ -397,17 +397,16 @@ inline PtBase<ScalarType> projectPtAlongHalfLineOntoParaboloid(
   } else {
     // assert(maximum(solutions[0], solutions[1]) >=
     // static_cast<ScalarType>(0));
-    if ((solutions[0] > static_cast<ScalarType>(0) &&
-         solutions[1] > static_cast<ScalarType>(0)) ||
-        (solutions[0] <= static_cast<ScalarType>(0) &&
-         solutions[1] <= static_cast<ScalarType>(0))) {
+    if ((solutions[1] < static_cast<ScalarType>(0))) {
       return PtBase<ScalarType>(static_cast<ScalarType>(DBL_MAX),
                                 static_cast<ScalarType>(DBL_MAX),
                                 static_cast<ScalarType>(DBL_MAX));
 
     } else {
       const ScalarType distance_along_line =
-          maximum(solutions[0], solutions[1]);
+          solutions[0] > static_cast<ScalarType>(0)
+              ? minimum(solutions[0], solutions[1])
+              : maximum(solutions[0], solutions[1]);
       return a_starting_pt + a_line * distance_along_line;
     }
   }
