@@ -1752,8 +1752,8 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                         aligned_paraboloid.b());
 
   //////////////////////////////// YOU CAN CHANGE THESE PARAMETERS
-  int Ntests = 7;  // Number of tests
-  double h = 1.0;  // Edge length of the cube
+  int Ntests = 3001;  // Number of tests
+  double h = 1.0;     // Edge length of the cube
   ////////////////////////////////
 
   double max_volume_error = 0.0, rms_volume_error = 0.0;
@@ -1810,9 +1810,9 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     auto our_avg_gaussian_curvature = surface.getAverageGaussianCurvature();
     const double length_scale =
         pow(static_cast<double>(poly_vol), 1.0 / 3.0) * 0.01;
-    TriangulatedSurfaceOutput triangulated_surface =
-        surface.triangulate(length_scale);
-    triangulated_surface.write(surf_filename);
+    // TriangulatedSurfaceOutput triangulated_surface =
+    //     surface.triangulate(length_scale);
+    // triangulated_surface.write(surf_filename);
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;

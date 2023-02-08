@@ -283,7 +283,7 @@ ReturnType computeType3ContributionWithSplit(
     }
     const ScalarType normal_correction = average_tangent * a_plane_normal;
     average_tangent = average_tangent - normal_correction * a_plane_normal;
-    average_tangent.normalize();
+    average_tangent.approximatelyNormalize();
     Pt projected_pt = projectPtAlongHalfLineOntoParaboloid<ScalarType>(
         a_paraboloid, average_tangent, average_pt);
     if (projected_pt[0] == static_cast<ScalarType>(DBL_MAX)) {
@@ -1875,7 +1875,7 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   std::mt19937 gen(a_nudge_iter);
   std::uniform_real_distribution distr(-1.0, 1.0);
 
-  const Quad_t nudge_epsilon = 1.0e8q * distance_epsilon<Quad_t>();
+  const Quad_t nudge_epsilon = 1.0e6q * distance_epsilon<Quad_t>();
 
   // std::cout << " NUDGE " << a_nudge_iter << std::endl;
 
@@ -2427,7 +2427,7 @@ formParaboloidIntersectionBases(
   const bool elliptic =
       a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > ZERO;
 
-  /* First, triangulate faces and compute normals  */
+  /* First, triangulate faces (if necessary) and compute normals  */
   // if (a_nudge_iter == 0) {
   //   triangulatePolytope(a_polytope, a_complete_polytope);
   triangulatePolytope(a_polytope, a_complete_polytope, a_aligned_paraboloid,
