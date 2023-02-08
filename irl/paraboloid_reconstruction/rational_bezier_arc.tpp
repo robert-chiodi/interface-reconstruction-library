@@ -76,7 +76,7 @@ This calculate the curvature of the conic with (Hartmann1996)
 and uses it to compute the weight (Farin1992)*/
   const ScalarType L = squaredMagnitude(a_control_pt - a_start_pt);
   if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-    weight_m = ZERO;
+    weight_m = static_cast<ScalarType>(DBL_MAX);
   } else {
     const NormalBase<ScalarType> start_normal =
         getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
@@ -88,7 +88,7 @@ and uses it to compute the weight (Farin1992)*/
     const ScalarType D =
         fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
     if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      weight_m = ZERO;
+      weight_m = static_cast<ScalarType>(DBL_MAX);
     } else {
       const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
       const ScalarType A =
@@ -96,7 +96,7 @@ and uses it to compute the weight (Farin1992)*/
                squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
                                              a_control_pt - a_end_pt)));
       if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-        weight_m = ZERO;
+        weight_m = static_cast<ScalarType>(DBL_MAX);
       } else {
         weight_m = HALF * sqrt(A / D);
       }
@@ -228,7 +228,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
  and uses it to compute the weight (Farin1992)*/
     const ScalarType L = squaredMagnitude(control_point_m - a_start_pt);
     if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      weight_m = static_cast<ScalarType>(0);
+      weight_m = static_cast<ScalarType>(DBL_MAX);
     } else {
       const NormalBase<ScalarType> start_normal =
           getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
@@ -240,7 +240,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
       const ScalarType D =
           fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
       if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-        weight_m = static_cast<ScalarType>(0);
+        weight_m = static_cast<ScalarType>(DBL_MAX);
       } else {
         const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
         const ScalarType A =
@@ -248,7 +248,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
                  squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
                                                control_point_m - a_end_pt)));
         if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-          weight_m = static_cast<ScalarType>(0);
+          weight_m = static_cast<ScalarType>(DBL_MAX);
         } else {
           weight_m = HALF * sqrt(A / D);
         }

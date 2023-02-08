@@ -2100,26 +2100,28 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
       continue;
     }
 
-    /* Check for non-planarity of the face */
-    bool need_triangulation = false;
-    half_edge = next;
-    next = next->getNextHalfEdge();
-    do {
-      Normal new_normal = crossProduct(
-          half_edge->getVertex()->getLocation().getPt() - start_location,
-          next->getVertex()->getLocation().getPt() - start_location);
-      new_normal.normalize();
-      ScalarType normal_diff_sq = squaredMagnitude(normal - new_normal);
-      if (normal_diff_sq > a_nudge_epsilon * a_nudge_epsilon) {
-        need_triangulation = true;
-        break;
-      }
+    /* Check for non-planarity of the face (only in DP case)*/
+    if constexpr (std::is_same_v<ScalarType, double>) {
+      bool need_triangulation = false;
       half_edge = next;
       next = next->getNextHalfEdge();
-    } while (next != starting_half_edge);
-    if (!need_triangulation) {
-      face->setPlane(Plane(normal, normal * start_location));
-      continue;
+      do {
+        Normal new_normal = crossProduct(
+            half_edge->getVertex()->getLocation().getPt() - start_location,
+            next->getVertex()->getLocation().getPt() - start_location);
+        new_normal.normalize();
+        ScalarType normal_diff_sq = squaredMagnitude(normal - new_normal);
+        if (normal_diff_sq > a_nudge_epsilon * a_nudge_epsilon) {
+          need_triangulation = true;
+          break;
+        }
+        half_edge = next;
+        next = next->getNextHalfEdge();
+      } while (next != starting_half_edge);
+      if (!need_triangulation) {
+        face->setPlane(Plane(normal, normal * start_location));
+        continue;
+      }
     }
 
     /* Triangulate face */
