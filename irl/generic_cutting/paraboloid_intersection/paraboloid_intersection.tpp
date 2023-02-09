@@ -1517,6 +1517,12 @@ ReturnType orientAndApplyType3Correction(
         fabs(ONE - fabs(tgt_0 * edge_0)) < ANGLE_EPSILON;
     bool tgt_1_parallel_edge_1 =
         fabs(ONE - fabs(tgt_1 * edge_1)) < ANGLE_EPSILON;
+    // if constexpr (std::is_same_v<ScalarType, double>) {
+    //   if (tgt_0_parallel_edge_0 || tgt_1_parallel_edge_1) {
+    //     *a_requires_nudge = true;
+    //     return ReturnType::fromScalarConstant(ZERO);
+    //   }
+    // }
     if (!tgt_0_parallel_edge_0 &&
         !tgt_1_parallel_edge_1)  // We orient the tangent with the
                                  // edge normal
@@ -2492,37 +2498,52 @@ formParaboloidIntersectionBases(
   for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
     auto& vertex = *(a_polytope->getVertex(v));
     vertex.setAsUnnecessaryToSeek();  // Reset all
-    if (vertexBelow(vertex.getLocation().getPt(), a_aligned_paraboloid)) {
+    const auto& pt = vertex.getLocation().getPt();
+    const ScalarType dist_function = pt[2] +
+                                     a_aligned_paraboloid.a() * pt[0] * pt[0] +
+                                     a_aligned_paraboloid.b() * pt[1] * pt[1];
+    if (fabs(dist_function) < nudge_epsilon) {
+      requires_nudge = true;
+      break;
+    } else if (dist_function < ZERO) {
       vertex.markToBeNotClipped();
     } else {
       vertex.markToBeClipped();
       ++number_of_vertices_above;
     }
+    // if (vertexBelow(vertex.getLocation().getPt(), a_aligned_paraboloid)) {
+    //   vertex.markToBeNotClipped();
+    // } else {
+    //   vertex.markToBeClipped();
+    //   ++number_of_vertices_above;
+    // }
   }
 
-  // Early termination cases, only possible with elliptic
-  if (elliptic && a_aligned_paraboloid.a() > ZERO &&
-      number_of_vertices_above == 0) {
-    // This is needed to that we can reset the polytope after the
-    // return
-    for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
-      auto& vertex = *(a_polytope->getVertex(v));
-      vertex.setToSeek();
+  if (!requires_nudge) {
+    // Early termination cases, only possible with elliptic
+    if (elliptic && a_aligned_paraboloid.a() > ZERO &&
+        number_of_vertices_above == 0) {
+      // This is needed to that we can reset the polytope after the
+      // return
+      for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+        auto& vertex = *(a_polytope->getVertex(v));
+        vertex.setToSeek();
+      }
+      // Whole volume below
+      return ReturnType::calculateMoments(a_polytope);
     }
-    // Whole volume below
-    return ReturnType::calculateMoments(a_polytope);
-  }
 
-  if (elliptic && a_aligned_paraboloid.a() < ZERO &&
-      number_of_vertices_above == starting_number_of_vertices) {
-    // This is needed to that we can reset the polytope after the
-    // return
-    for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
-      auto& vertex = *(a_polytope->getVertex(v));
-      vertex.setToSeek();
+    if (elliptic && a_aligned_paraboloid.a() < ZERO &&
+        number_of_vertices_above == starting_number_of_vertices) {
+      // This is needed to that we can reset the polytope after the
+      // return
+      for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
+        auto& vertex = *(a_polytope->getVertex(v));
+        vertex.setToSeek();
+      }
+      // Zero volume - will be current value of full_moments
+      return full_moments;
     }
-    // Zero volume - will be current value of full_moments
-    return full_moments;
   }
 
   // Clear visitation knowledge from polytope.
