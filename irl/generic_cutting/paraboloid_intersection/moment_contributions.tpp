@@ -286,31 +286,26 @@ template <class ContainerType, class ScalarType>
 inline std::array<ContainerType, 3> coeffsV3SeriesOne(
     const ContainerType& a_weight) {
   std::array<ContainerType, 3> coeffs;
-  coeffs.fill(ContainerType(static_cast<ScalarType>(0.0)));
-  ContainerType x(static_cast<ScalarType>(1.0));
-  if constexpr (has_embedded_gradient<ContainerType>::value) {
-    for (UnsignedIndex_t i = 0; i <= 40; ++i) {
-      for (UnsignedIndex_t j = 0; j < 3; ++j) {
-        coeffs[j] += static_cast<ScalarType>(v3Series[i][j]) * x;
-      }
-      x *= a_weight - ContainerType(static_cast<ScalarType>(1.0));
-    }
-  } else {
-    UnsignedIndex_t i = 0;
-    ScalarType max_diff = static_cast<ScalarType>(1);
-    while (i <= 40) {
-      max_diff = static_cast<ScalarType>(0);
-      for (UnsignedIndex_t j = 0; j < 3; ++j) {
-        ScalarType add_to_coeff = static_cast<ScalarType>(v3Series[i][j]) * x;
-        coeffs[j] += add_to_coeff;
+  coeffs.fill(ContainerType(static_cast<ScalarType>(0)));
+  ContainerType x(static_cast<ScalarType>(1));
+  UnsignedIndex_t i = 0;
+  ScalarType max_diff;
+  while (i <= 40) {
+    max_diff = static_cast<ScalarType>(0);
+    for (UnsignedIndex_t j = 0; j < 3; ++j) {
+      ContainerType add_to_coeff = static_cast<ScalarType>(v3Series[i][j]) * x;
+      coeffs[j] += add_to_coeff;
+      if constexpr (has_embedded_gradient<ContainerType>::value) {
+        max_diff = maximum(max_diff, fabs(add_to_coeff.value()));
+      } else {
         max_diff = maximum(max_diff, fabs(add_to_coeff));
       }
-      if (max_diff < static_cast<ScalarType>(10.0 * DBL_EPSILON)) {
-        break;
-      }
-      x *= a_weight - static_cast<ScalarType>(1);
-      i++;
     }
+    if (max_diff < static_cast<ScalarType>(10.0 * DBL_EPSILON)) {
+      break;
+    }
+    x *= a_weight - ContainerType(static_cast<ScalarType>(1));
+    i++;
   }
   return coeffs;
 }
@@ -319,20 +314,46 @@ template <class ContainerType, class ScalarType>
 inline std::array<ContainerType, 12> coeffsV3andC3SeriesOne(
     const ContainerType& a_weight) {
   std::array<ContainerType, 12> coeffs;
-  coeffs.fill(ContainerType(static_cast<ScalarType>(0.0)));
-  ContainerType x(static_cast<ScalarType>(1.0));
-  for (UnsignedIndex_t i = 0; i <= 40; ++i) {
+  coeffs.fill(ContainerType(static_cast<ScalarType>(0)));
+  ContainerType x(static_cast<ScalarType>(1));
+  UnsignedIndex_t i = 0;
+  ScalarType max_diff;
+  while (i <= 40) {
+    max_diff = static_cast<ScalarType>(0);
     for (UnsignedIndex_t j = 0; j < 3; ++j) {
-      coeffs[j] += static_cast<ScalarType>(v3Series[i][j]) * x;
+      ContainerType add_to_coeff = static_cast<ScalarType>(v3Series[i][j]) * x;
+      coeffs[j] += add_to_coeff;
+      if constexpr (has_embedded_gradient<ContainerType>::value) {
+        max_diff = maximum(max_diff, fabs(add_to_coeff.value()));
+      } else {
+        max_diff = maximum(max_diff, fabs(add_to_coeff));
+      }
     }
     for (UnsignedIndex_t j = 0; j < 4; ++j) {
-      coeffs[3 + j] += static_cast<ScalarType>(cx3Series[i][j]) * x;
+      ContainerType add_to_coeff = static_cast<ScalarType>(cx3Series[i][j]) * x;
+      coeffs[3 + j] += add_to_coeff;
+      if constexpr (has_embedded_gradient<ContainerType>::value) {
+        max_diff = maximum(max_diff, fabs(add_to_coeff.value()));
+      } else {
+        max_diff = maximum(max_diff, fabs(add_to_coeff));
+      }
     }
     for (UnsignedIndex_t j = 0; j < 5; ++j) {
-      coeffs[7 + j] += static_cast<ScalarType>(cz3Series[i][j]) * x;
+      ContainerType add_to_coeff = static_cast<ScalarType>(cz3Series[i][j]) * x;
+      coeffs[7 + j] += add_to_coeff;
+      if constexpr (has_embedded_gradient<ContainerType>::value) {
+        max_diff = maximum(max_diff, fabs(add_to_coeff.value()));
+      } else {
+        max_diff = maximum(max_diff, fabs(add_to_coeff));
+      }
     }
-    x *= a_weight - ContainerType(static_cast<ScalarType>(1.0));
+    if (max_diff < static_cast<ScalarType>(10.0 * DBL_EPSILON)) {
+      break;
+    }
+    x *= a_weight - ContainerType(static_cast<ScalarType>(1));
+    i++;
   }
+
   return coeffs;
 }
 
