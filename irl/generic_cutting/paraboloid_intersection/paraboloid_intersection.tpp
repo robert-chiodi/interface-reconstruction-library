@@ -2072,6 +2072,9 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   // Loop over all faces. Completely face independent procedure
   // const ScalarType EPSILON_SQ = static_cast<ScalarType>(0.25);
+  const ScalarType EPSILON_NORMAL_SQ =
+      machine_epsilon<ScalarType>() * machine_epsilon<ScalarType>();
+  const ScalarType EPSILON_NORMAL_DIFF_SQ = a_nudge_epsilon * a_nudge_epsilon;
   const auto nfaces = a_polytope->getNumberOfFaces();
   UnsignedIndex_t new_faces = 0;
   for (UnsignedIndex_t f = 0; f < nfaces; ++f) {
@@ -2087,7 +2090,7 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
         half_edge->getVertex()->getLocation().getPt() - start_location,
         next->getVertex()->getLocation().getPt() - start_location);
     ScalarType squaredMag = squaredMagnitude(normal);
-    if (squaredMag < a_nudge_epsilon * a_nudge_epsilon) {
+    if (squaredMag < EPSILON_NORMAL_SQ) {
       normal = Normal(0, 0, 0);
     } else {
       normal /= sqrt(squaredMag);
@@ -2111,7 +2114,7 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
             next->getVertex()->getLocation().getPt() - start_location);
         new_normal.normalize();
         ScalarType normal_diff_sq = squaredMagnitude(normal - new_normal);
-        if (normal_diff_sq > a_nudge_epsilon * a_nudge_epsilon) {
+        if (normal_diff_sq > EPSILON_NORMAL_DIFF_SQ) {
           need_triangulation = true;
           break;
         }
@@ -2161,7 +2164,7 @@ void triangulatePolytope(SegmentedHalfEdgePolyhedronType* a_polytope,
           half_edge->getVertex()->getLocation().getPt() - start_location,
           next->getVertex()->getLocation().getPt() - start_location);
       squaredMag = squaredMagnitude(normal);
-      if (squaredMag < a_nudge_epsilon * a_nudge_epsilon) {
+      if (squaredMag < EPSILON_NORMAL_SQ) {
         normal = Normal(0, 0, 0);
       } else {
         normal /= sqrt(squaredMag);
