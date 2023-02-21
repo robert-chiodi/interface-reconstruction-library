@@ -599,7 +599,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
   for (int i = 0; i < Ntests; i++) {
     double k = (2.0 * h * h + h) * static_cast<double>(i) /
                static_cast<double>(Ntests - 1);
-
     auto cube = StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cell);
     auto cube_pt = StoredRectangularCuboid<Pt>::fromOtherPolytope(unit_cell);
     for (auto& vertex : cube) {
@@ -610,62 +609,9 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
       vertex = vertex * h;
       vertex += Pt(0.5 * h, 0.5 * h, 0.5 * h - k);
     }
-    HalfEdgePolyhedronParaboloid<MyPtType> half_edge;
-    cube.setHalfEdgeVersion(&half_edge);
-    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
-
-    for (auto& face : seg_half_edge) {
-      auto normal = Normal(0.0, 0.0, 0.0);
-      const auto starting_half_edge = face->getStartingHalfEdge();
-      auto current_half_edge = starting_half_edge;
-      auto next_half_edge = starting_half_edge->getNextHalfEdge();
-      const auto& start_location =
-          starting_half_edge->getPreviousVertex()->getLocation().getPt();
-      do {
-        normal +=
-            crossProduct(current_half_edge->getVertex()->getLocation().getPt() -
-                             start_location,
-                         next_half_edge->getVertex()->getLocation().getPt() -
-                             start_location);
-        current_half_edge = next_half_edge;
-        next_half_edge = next_half_edge->getNextHalfEdge();
-      } while (next_half_edge != starting_half_edge);
-      normal.normalize();
-      face->setPlane(Plane(normal, normal * start_location));
-    }
-
-    std::string poly_filename = "cell_" + std::to_string(i);
-    std::string surf_filename = "surface_" + std::to_string(i);
-    auto poly_vol = seg_half_edge.calculateVolume();
-    auto amr_volume_dummy = intersectPolyhedronWithParaboloidAMR<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
-        poly_filename);  // This prints the AMR triangles
-    ParametrizedSurfaceOutput surface(paraboloid);
-    // auto our_moments_test = Volume::fromScalarConstant(0.0);
-    // auto our_moments_test =
-    //     VolumeWithGradient<MyGradientType>::fromScalarConstant(0.0);
-    // auto start = std::chrono::system_clock::now();
-    // for (int j = 0; j < 1.0e6; j++) {
-    //   // our_moments_test += IRL::getVolumeMoments<Volume>(cube_pt,
-    //   paraboloid); our_moments_test +=
-    //       IRL::getVolumeMoments<VolumeWithGradient<MyGradientType>>(cube,
-    //                                                                 paraboloid);
-    // }
-    // auto end = std::chrono::system_clock::now();
-    // std::chrono::duration<double> runtime = end - start;
-    // printf("Total run time: %20f \n\n", runtime.count());
-    auto our_moments = intersectPolyhedronWithAlignedParaboloid<
-        VolumeWithGradient<MyGradientType>>(&seg_half_edge, &half_edge,
-                                            aligned_paraboloid, &surface);
-    auto our_surface_area = surface.getSurfaceArea();
-    auto our_avg_normal = surface.getAverageNormal();
-    auto our_avg_mean_curvature = surface.getAverageMeanCurvature();
-    auto our_avg_gaussian_curvature = surface.getAverageGaussianCurvature();
-    const double length_scale =
-        pow(static_cast<double>(poly_vol), 1.0 / 3.0) * 0.01;
-    TriangulatedSurfaceOutput triangulated_surface =
-        surface.triangulate(length_scale);
-    triangulated_surface.write(surf_filename);
+    auto poly_vol = cube_pt.calculateVolume();
+    auto our_moments =
+        getVolumeMoments<VolumeWithGradient<MyGradientType>>(cube, paraboloid);
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
@@ -688,19 +634,10 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
 
     double exact_volume = (std::pow(k, 2.) * M_PI) / 8.;
     double exact_volume_gradk = (k * M_PI) / 4.;
-    double exact_surface_area =
-        ((-1. + std::sqrt(1. + 4. * k) + 4. * k * std::sqrt(1. + 4. * k)) *
-         M_PI) /
-        24.;
     if (k > h) {
       // std::cout << "Substract high quadrant" << std::endl;
       exact_volume -= (std::pow(h - k, 2.) * M_PI) / 8.;
       exact_volume_gradk -= -0.25 * ((h - k) * M_PI);
-      exact_surface_area -= ((-1. + std::sqrt(1. - 4. * h + 4. * k) -
-                              4. * h * std::sqrt(1. - 4. * h + 4. * k) +
-                              4. * k * std::sqrt(1. - 4. * h + 4. * k)) *
-                             M_PI) /
-                            24.;
     }
     if (k > h * h) {
       // std::cout << "Substract 2 low wedges" << std::endl;
@@ -725,34 +662,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
            6. * k * M_PI -
            12. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
            12. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
-          24.;
-      exact_surface_area -=
-          (-8. * h * std::sqrt(-((std::pow(h, 2.) - k) * (1. + 4. * k))) -
-           M_PI + std::sqrt(1. + 4. * k) * M_PI +
-           4. * k * std::sqrt(1. + 4. * k) * M_PI -
-           2. * std::pow(1. + 4. * k, 1.5) *
-               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-           2. * std::sqrt(1. + 4. * k) *
-               std::atan(std::sqrt(-std::pow(h, 2.) + k) / h) +
-           8. * k * std::sqrt(1. + 4. * k) *
-               std::atan(std::sqrt(-std::pow(h, 2.) + k) / h) +
-           2. * std::atan(4. * h *
-                          std::sqrt((-std::pow(h, 2.) + k) / (1. + 4. * k))) +
-           2. * std::atan((h * std::sqrt(1. + 4. * k)) /
-                          std::sqrt(-std::pow(h, 2.) + k)) -
-           2. * std::atan(std::sqrt((-std::pow(h, 2.) + k) * (1. + 4. * k)) /
-                          h) -
-           2. * h * (3. + 4. * std::pow(h, 2.)) *
-               std::atanh(2. *
-                          std::sqrt((-std::pow(h, 2.) + k) / (1. + 4. * k))) +
-           3. * h * std::log(1. + 4. * std::pow(h, 2.)) +
-           4. * std::pow(h, 3.) * std::log(1. + 4. * std::pow(h, 2.)) -
-           6. * h *
-               std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
-                        std::sqrt(1. + 4. * k)) -
-           8. * std::pow(h, 3.) *
-               std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
-                        std::sqrt(1. + 4. * k))) /
           24.;
     }
     if (k > 2.0 * h * h) {
@@ -780,39 +689,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
                 (1. + (-std::pow(h, 2.) + k) / std::pow(h, 2.))) -
            6. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
            6. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
-          12.;
-      exact_surface_area +=
-          (4. * std::pow(h, 2.) * std::sqrt(1. + 8. * std::pow(h, 2.)) -
-           4. * h * std::sqrt(-((std::pow(h, 2.) - k) * (1. + 4. * k))) -
-           std::atan((4. * std::pow(h, 2.)) /
-                     std::sqrt(1. + 8. * std::pow(h, 2.))) -
-           std::sqrt(1. + 4. * k) *
-               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) -
-           4. * k * std::sqrt(1. + 4. * k) *
-               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-           std::sqrt(1. + 4. * k) *
-               std::atan(std::sqrt(-std::pow(h, 2.) + k) / h) +
-           4. * k * std::sqrt(1. + 4. * k) *
-               std::atan(std::sqrt(-std::pow(h, 2.) + k) / h) +
-           std::atan(4. * h *
-                     std::sqrt((-std::pow(h, 2.) + k) / (1. + 4. * k))) +
-           std::atan((h * std::sqrt(1. + 4. * k)) /
-                     std::sqrt(-std::pow(h, 2.) + k)) -
-           std::atan(std::sqrt((-std::pow(h, 2.) + k) * (1. + 4. * k)) / h) +
-           h * (3. + 4. * std::pow(h, 2.)) *
-               std::atanh((2. * h) / std::sqrt(1. + 8. * std::pow(h, 2.))) -
-           h * (3. + 4. * std::pow(h, 2.)) *
-               std::atanh(2. *
-                          std::sqrt((-std::pow(h, 2.) + k) / (1. + 4. * k))) +
-           3. * h * std::log(2. * h + std::sqrt(1. + 8. * std::pow(h, 2.))) +
-           4. * std::pow(h, 3.) *
-               std::log(2. * h + std::sqrt(1. + 8. * std::pow(h, 2.))) -
-           3. * h *
-               std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
-                        std::sqrt(1. + 4. * k)) -
-           4. * std::pow(h, 3.) *
-               std::log(2. * std::sqrt(-std::pow(h, 2.) + k) +
-                        std::sqrt(1. + 4. * k))) /
           12.;
     }
     if ((k - h) > h * h) {
@@ -844,47 +720,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
            12. * (h - k) * std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) -
            12. * (h - k) * std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h)) /
           24.;
-      exact_surface_area +=
-          (-8. * h *
-               std::sqrt(4. * std::pow(h, 3.) +
-                         std::pow(h, 2.) * (3. - 4. * k) + k * (1. + 4. * k) -
-                         h * (1. + 8. * k)) -
-           M_PI + std::sqrt(1. - 4. * h + 4. * k) * M_PI -
-           4. * h * std::sqrt(1. - 4. * h + 4. * k) * M_PI +
-           4. * k * std::sqrt(1. - 4. * h + 4. * k) * M_PI +
-           2. * std::atan(h / std::sqrt((h + std::pow(h, 2.) - k) /
-                                        (-1. + 4. * h - 4. * k))) +
-           2. * std::atan(4. * h *
-                          std::sqrt((h + std::pow(h, 2.) - k) /
-                                    (-1. + 4. * h - 4. * k))) -
-           2. * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) +
-           8. * h * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) -
-           8. * k * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) +
-           2. * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h) -
-           8. * h * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h) +
-           8. * k * std::sqrt(1. - 4. * h + 4. * k) *
-               std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h) -
-           2. * std::atan(std::sqrt(4. * std::pow(h, 3.) +
-                                    std::pow(h, 2.) * (3. - 4. * k) +
-                                    k * (1. + 4. * k) - h * (1. + 8. * k)) /
-                          h) -
-           2. * h * (3. + 4. * std::pow(h, 2.)) *
-               std::atanh(2. * std::sqrt((h + std::pow(h, 2.) - k) /
-                                         (-1. + 4. * h - 4. * k))) +
-           3. * h * std::log(1. + 4. * std::pow(h, 2.)) +
-           4. * std::pow(h, 3.) * std::log(1. + 4. * std::pow(h, 2.)) -
-           6. * h *
-               std::log(2. * std::sqrt(-h - std::pow(h, 2.) + k) +
-                        std::sqrt(1. - 4. * h + 4. * k)) -
-           8. * std::pow(h, 3.) *
-               std::log(2. * std::sqrt(-h - std::pow(h, 2.) + k) +
-                        std::sqrt(1. - 4. * h + 4. * k))) /
-          24.;
     }
     std::cout << std::setprecision(20) << "Gradient = [" << std::endl;
     std::cout << std::setprecision(20) << "  A -> "
@@ -905,17 +740,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
               << our_moments.volume_gradient().getGradRz() << std::endl
               << "]" << std::endl;
     std::cout << std::setprecision(20)
-              << "Surface EXACT  = " << exact_surface_area << std::endl;
-    std::cout << std::setprecision(20)
-              << "Surface IRL    = " << our_surface_area << std::endl;
-    std::cout << std::setprecision(20) << "Normal IRL     = " << our_avg_normal
-              << std::endl;
-    std::cout << std::setprecision(20)
-              << "Mean curv IRL     = " << our_avg_mean_curvature << std::endl;
-    std::cout << std::setprecision(20)
-              << "Gaussian curv IRL = " << our_avg_gaussian_curvature
-              << std::endl;
-    std::cout << std::setprecision(20)
               << "Vfrac unclipped EX  = " << exact_volume / poly_vol
               << std::endl;
     std::cout << std::setprecision(20)
@@ -930,10 +754,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
               << std::endl;
     std::cout << std::setprecision(20) << "GradZ unclipped FD = "
               << gradZ_FD / std::pow(poly_vol, 2.0 / 3.0) << std::endl;
-    std::cout << "Diff Surface EX/IRL = "
-              << fabs(our_surface_area - exact_surface_area) /
-                     std::pow(poly_vol, 2.0 / 3.0)
-              << std::endl;
     std::cout << "Diff Vfrac EX/IRL   = "
               << fabs(our_moments.volume() - exact_volume) / poly_vol
               << std::endl;
@@ -963,12 +783,6 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
             : fabs(our_moments.volume_gradient().getGradTz() -
                    exact_volume_gradk) /
                   std::pow(poly_vol, 2.0 / 3.0);
-    max_surface_error =
-        max_surface_error > fabs(our_surface_area - exact_surface_area) /
-                                std::pow(poly_vol, 2.0 / 3.0)
-            ? max_surface_error
-            : fabs(our_surface_area - exact_surface_area) /
-                  std::pow(poly_vol, 2.0 / 3.0);
     rms_volume_error += fabs(our_moments.volume() - exact_volume) *
                         fabs(our_moments.volume() - exact_volume) / poly_vol /
                         poly_vol;
@@ -976,22 +790,10 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
         fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) *
         fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) /
         std::pow(poly_vol, 4.0 / 3.0);
-    rms_surface_error += fabs(our_surface_area - exact_surface_area) *
-                         fabs(our_surface_area - exact_surface_area) /
-                         std::pow(poly_vol, 4.0 / 3.0);
-
-    // if (fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk)
-    // /
-    //         std::pow(poly_vol, 2.0 / 3.0) >
-    //     1.0e-6)
-    //   exit(1);
   }
   rms_volume_error = sqrt(rms_volume_error / static_cast<double>(Ntests));
   rms_gradient_error = sqrt(rms_gradient_error / static_cast<double>(Ntests));
-  rms_surface_error = sqrt(rms_surface_error / static_cast<double>(Ntests));
 
-  std::cout << "Max surface error   = " << max_surface_error << std::endl;
-  std::cout << "RMS surface error   = " << rms_surface_error << std::endl;
   std::cout << "Max volume error    = " << max_volume_error << std::endl;
   std::cout << "RMS volume error    = " << rms_volume_error << std::endl;
   std::cout << "Max gradient error  = " << max_gradient_error << std::endl;
@@ -1000,7 +802,7 @@ TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
                "---------------------------------------------------------"
             << std::endl;
 
-  EXPECT_NEAR(max_volume_error, 0.0, 1.0e-13);
+  EXPECT_NEAR(maximum(max_volume_error, max_gradient_error), 0.0, 1.0e-14);
 }
 
 TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {

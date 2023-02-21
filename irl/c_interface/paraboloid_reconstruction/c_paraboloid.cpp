@@ -295,7 +295,7 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
     Eigen::VectorXd sol = A_mat.colPivHouseholderQr().solve(b_vec);
     const double a = sol(0), b = sol(1), c = sol(2), d = sol(3), e = sol(4),
                  f = sol(5);
-    const double theta = 0.5 * std::atan2(e, (IRL::safelyTiny(d - f)));
+    const double theta = 0.5 * std::atan2(e, (IRL::safelyEpsilon(d - f)));
     const double cos_t = std::cos(theta);
     const double sin_t = std::sin(theta);
     double A = -(d * cos_t * cos_t + f * sin_t * sin_t + e * cos_t * sin_t);
@@ -303,7 +303,7 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
 
     // Translation to coordinate system R' where aligned paraboloid
     // valid Translation is R' = {x' = x + u, y' = y + v, z' = z + w}
-    const double denominator = IRL::safelyTiny(4.0 * d * f - e * e);
+    const double denominator = IRL::safelyEpsilon(4.0 * d * f - e * e);
     double u = (2.0 * b * f - c * e) / denominator;
     double v = -(b * e - 2.0 * d * c) / denominator;
     double w = -(a + (-b * b * f + b * c * e - c * c * d) / denominator);

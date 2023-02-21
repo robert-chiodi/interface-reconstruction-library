@@ -283,9 +283,19 @@ int main(int argc, char* argv[]) {
       /****************** TRIANGULATE */
       std::vector<IRL::TriangulatedSurfaceOutput> triangulated_surface;
       triangulated_surface.resize(number_of_patches);
+      double avg_length = 0.0;
       for (IRL::UnsignedIndex_t j = 0; j < number_of_patches; j++) {
+        avg_length += std::fabs(surface_patches[j].getSurfaceArea());
+      }
+      avg_length /= IRL::safelyEpsilon(static_cast<double>(number_of_patches));
+      avg_length = std::sqrt(avg_length) / 3.0;
+      for (IRL::UnsignedIndex_t j = 0; j < number_of_patches; j++) {
+        if (length_scale <= 0.0) {
+          auto curv = std::fabs(surface_patches[j].getAverageMeanCurvature());
+          surface_patches[j].setLengthScale(std::min(0.1 / curv, avg_length));
+        }
         triangulated_surface[j] =
-            surface_patches[j].triangulate(length_scale, 3);
+            surface_patches[j].triangulate(length_scale, 1);
       }
 
       //   std::cout << "Writing file " << output_file << std::endl;

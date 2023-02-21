@@ -54,6 +54,8 @@ if(NOT "${CMAKE_BUILD_TYPE_UC}" MATCHES "DEBUG")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -DNDEBUG_PERF")
 endif()
 
+message(STATUS "CXX compilation flags are: ${CMAKE_CXX_FLAGS}")
+
 # Find external packages needed by IRL
 find_package(Eigen) # Provide -D EIGEN_PATH=/path/to/Eigen
 find_package(CGAL)
