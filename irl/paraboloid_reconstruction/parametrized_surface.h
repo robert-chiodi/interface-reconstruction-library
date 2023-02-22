@@ -12,21 +12,23 @@
 
 #include <vector>
 
-#define IRL_NO_USE_TRIANGLE
+#define IRL_USE_EARCUT
+// #define IRL_USE_TRIANGLE
+// #define IRL_USE_CGAL
 
-#if 1
-
-#elif not defined IRL_NO_USE_TRIANGLE
+#ifdef IRL_USE_EARCUT
+#include "external/earcut.hpp/include/mapbox/earcut.hpp"
+#elif defined IRL_USE_TRIANGLE
 #include "external/triangle/triangle.h"
-#else
+#elif defined IRL_USE_CGAL
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Constrained_Delaunay_triangulation_2.h>
 #include <CGAL/Delaunay_mesh_face_base_2.h>
 #include <CGAL/Delaunay_mesh_size_criteria_2.h>
 #include <CGAL/Delaunay_mesh_vertex_base_2.h>
 #include <CGAL/Delaunay_mesher_2.h>
-// #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_sweep_2_algorithms.h>
 #include <CGAL/lloyd_optimize_mesh_2.h>
 #endif
@@ -143,49 +145,6 @@ class ParametrizedSurfaceOutput {
   std::vector<Pt*> pt_from_bezier_split_m;
   std::vector<RationalBezierArc> arc_list_m;
 };
-
-class PSVertex {
- public:
-  PSVertex(void) : x_(0.0), y_(0.0), status_(-1), arc_(-1){};
-  PSVertex(const double x, const double y)
-      : x_(x), y_(y), status_(-1), arc_(-1){};
-  const double x(void) const { return x_; };
-  double& x(void) { return x_; };
-  const double y(void) const { return y_; };
-  double& y(void) { return y_; };
-  short& status(void) { return status_; };
-  short& arc(void) { return arc_; };
-
- private:
-  double x_;
-  double y_;
-  short status_;
-  short arc_;
-};
-
-struct {
-  bool operator()(PSVertex a, PSVertex b) const { return a.x() < b.x(); }
-} PSVertexXcomp;
-
-class PSTriangle {
- public:
-  PSTriangle(void) : vertices_({0, 0, 0}), status_(-1){};
-  PSTriangle(const UnsignedIndex_t v0, const UnsignedIndex_t v1,
-             const UnsignedIndex_t v2)
-      : vertices_({v0, v1, v2}), status_(-1){};
-  UnsignedIndex_t& operator[](UnsignedIndex_t a_index) {
-    return vertices_[a_index];
-  };
-  short& status(void) { return status_; };
-
- private:
-  std::array<UnsignedIndex_t, 3> vertices_;
-  short status_;
-};
-
-SmallVector<PSVertex, 2> IntersectEdgeWithArc(const PSVertex p0,
-                                              const PSVertex p1,
-                                              const RationalBezierArc arc);
 
 inline std::ostream& operator<<(
     std::ostream& out, const ParametrizedSurfaceOutput& a_parametrized_surface);

@@ -13,9 +13,11 @@
 #include <fstream>
 #include <iomanip>
 
+#define IRL_USE_EARCUT
+// #define IRL_USE_TRIANGLE
+// #define IRL_USE_CGAL
+
 #include "external/NumericalIntegration/NumericalIntegration.h"
-#include "external/earcut.hpp/include/mapbox/earcut.hpp"
-#define IRL_NO_USE_TRIANGLE
 
 namespace IRL {
 
@@ -976,8 +978,6 @@ void splitLongEdges(VertexList& vertices, TriList& triangles, EdgeList& edges,
           squaredMagnitude(vertices[v0] - vertices[v1]);
       if (edge_length_sq > high_sq) {
         remains_long_edges = true;
-        // std::cout << "Splitting edge " << i << " " << v0 << " -- " << v1
-        //           << std::endl;
         splitEdge(i, vertices, triangles, edges, tri_neigh, tri_edges, vert_tri,
                   vert_neigh);
       }
@@ -1100,7 +1100,6 @@ template <class VertexList, class EdgeList, class TriList>
 void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
                    const double length_scale,
                    const AlignedParaboloid paraboloid) {
-  // std::cout << "Length scale = " << length_scale << std::endl;
   const double low = 4.0 / 5.0 * length_scale;
   const double high = 4.0 / 3.0 * length_scale;
   const int fixed_vertices = vertices.size();
@@ -1193,7 +1192,6 @@ void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
     for (int d = 0; d < 3; ++d) {
       if (tri_edges[i][d] < 0) {
         edges_are_valid = false;
-        std::cout << "Edges invalid" << std::endl;
       }
       // assert(tri_edges[i][d] >= 0);
     }
@@ -1211,22 +1209,21 @@ void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
     for (int i = 0; i < fixed_vertices; i++) {
       if (!noDuplicates(vert_neigh[i])) {
         no_duplicates = false;
-        std::cout << "Duplicate neighbours" << std::endl;
+        // std::cout << "Duplicate neighbours" << std::endl;
         break;
       }
       if (!noDuplicates(vert_tri[i])) {
         no_duplicates = false;
-        std::cout << "Duplicate triangles" << std::endl;
+        // std::cout << "Duplicate triangles" << std::endl;
         break;
       }
     }
 
     if (no_duplicates) {
-      // std::cout << "Starting remeshing" << std::endl;
       for (int i = 0; i < 5; ++i) {
-        // std::cout << " ITER " << i << std::endl;
         splitLongEdges(vertices, triangles, edges, tri_neigh, tri_edges,
                        vert_tri, vert_neigh, high);
+        // TODO: fix bug in edge collapse
         // collapseShortEdges(vertices, triangles, edges, tri_neigh, tri_edges,
         //                    vert_tri, vert_neigh, low, high, fixed_vertices);
         equalizeValence(vertices, triangles, edges, tri_neigh, tri_edges,
@@ -1236,7 +1233,6 @@ void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
       }
     }
   }
-  // std::cout << "Ended remeshing" << std::endl;
 }
 
 template <class MomentType, class SurfaceType>
@@ -1289,7 +1285,8 @@ inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
       int_mean_curv_m(a_rhs.int_mean_curv_m),
       knows_int_gaussian_curv_m(a_rhs.knows_int_gaussian_curv_m),
       int_gaussian_curv_m(a_rhs.int_gaussian_curv_m),
-      length_scale_m{a_rhs.length_scale_m} {}
+      length_scale_m{a_rhs.length_scale_m},
+      pt_from_bezier_split_m(std::move(a_rhs.pt_from_bezier_split_m)) {}
 
 inline ParametrizedSurfaceOutput::ParametrizedSurfaceOutput(
     const ParametrizedSurfaceOutput& a_rhs)
@@ -1319,6 +1316,7 @@ inline ParametrizedSurfaceOutput& ParametrizedSurfaceOutput::operator=(
     knows_int_gaussian_curv_m = a_rhs.knows_int_gaussian_curv_m;
     int_gaussian_curv_m = a_rhs.int_gaussian_curv_m;
     length_scale_m = a_rhs.length_scale_m;
+    pt_from_bezier_split_m = std::move(a_rhs.pt_from_bezier_split_m);
   }
   return *this;
 }
@@ -2045,9 +2043,6 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
   // curves
   double min_arc_length = DBL_MAX;
   bool valid_curves = true;
-  // std::cout << "Starting building curves from " << nArcs <<
-  // " arcs"
-  //           << std::endl;
   for (std::size_t t = 0; t < nArcs; ++t) {
     if (visited[t]) {
       continue;
@@ -2094,341 +2089,10 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
     }
   }
 
-  // std::cout << "Done with "
-  //           <<
-  //           static_cast<UnsignedIndex_t>(list_of_closed_curves.size())
-  //           << " curves and validity is " << valid_curves
-  //           << std::endl;
-
-  // TriangulatedSurfaceOutput returned_surface;
   returned_surface->clearAll();
 
   if (valid_curves) {
-#if 1
-
-    // // Compute bounding box of arcs
-    // double xmin = DBL_MAX, xmax = -DBL_MAX;
-    // double ymin = DBL_MAX, ymax = -DBL_MAX;
-    // length_scale = DBL_MAX;
-    // const UnsignedIndex_t nCurves =
-    //     static_cast<UnsignedIndex_t>(list_of_closed_curves.size());
-    // for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
-    //   const UnsignedIndex_t nLocalArcs =
-    //   list_of_closed_curves[i].size();
-    //   // Loop over arcs of curve
-    //   for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
-    //     const RationalBezierArc& arc =
-    //     list_of_closed_curves[i][j]; xmin = minimum(xmin,
-    //     arc.start_point()[0]); xmin = minimum(xmin,
-    //     arc.control_point()[0]); xmax = maximum(xmax,
-    //     arc.start_point()[0]); xmax = maximum(xmax,
-    //     arc.control_point()[0]); ymin = minimum(ymin,
-    //     arc.start_point()[1]); ymin = minimum(ymin,
-    //     arc.control_point()[1]); ymax = maximum(ymax,
-    //     arc.start_point()[1]); ymax = maximum(ymax,
-    //     arc.control_point()[1]); const double arc_length =
-    //     arc.arc_length(); UnsignedIndex_t nSplit = a_nsplit
-    //     <= 0 ? 1 : a_nsplit; if (length_scale_ref > 0.0) {
-    //       nSplit = static_cast<UnsignedIndex_t>(arc_length
-    //       / length_scale_ref); nSplit = nSplit < a_nsplit ?
-    //       a_nsplit : nSplit;
-    //     }
-    //     const double step = 1.0 /
-    //     static_cast<double>(nSplit); length_scale =
-    //     minimum(length_scale, step * arc_length); if
-    //     (length_scale_ref > 0.0) length_scale =
-    //     length_scale_ref;
-    //   }
-    // }
-    // xmin -= length_scale;
-    // ymin -= length_scale;
-    // xmax += length_scale;
-    // ymax += length_scale;
-    // double lx = xmax - xmin, ly = ymax - ymin;
-
-    // // Create rows of vertices
-    // UnsignedIndex_t x_rows =
-    //                     static_cast<UnsignedIndex_t>(ceil(lx
-    //                     / length_scale)),
-    //                 y_rows =
-    //                     static_cast<UnsignedIndex_t>(ceil(ly
-    //                     / length_scale));
-    // xmax = xmin + static_cast<double>(x_rows) *
-    // length_scale; ymax = ymin + static_cast<double>(y_rows)
-    // * length_scale;
-
-    // std::vector<PSVertex> vertices;
-    // std::vector<std::vector<PSVertex>> intersections;
-    // std::vector<PSTriangle> triangles;
-    // vertices.reserve(x_rows * y_rows);
-    // intersections.resize(y_rows);
-    // for (UnsignedIndex_t j = 0; j < y_rows; ++j) {
-    //   const double y = ymin + static_cast<double>(j) *
-    //   length_scale; const UnsignedIndex_t start_vert_id =
-    //   vertices.size(); const double start_vert_x =
-    //       xmin + 0.5 * static_cast<double>(j % 2) *
-    //       length_scale;
-    //   for (UnsignedIndex_t i = 0; i < x_rows; ++i) {
-    //     const double x = start_vert_x +
-    //     static_cast<double>(i) * length_scale;
-    //     vertices.push_back(PSVertex(x, y));
-    //   }
-    //   UnsignedIndex_t count_arc = 0;
-    //   for (UnsignedIndex_t k = 0; k < nCurves; ++k) {
-    //     for (UnsignedIndex_t l = 0; l <
-    //     list_of_closed_curves[k].size(); ++l)
-    //     {
-    //       const double w =
-    //       list_of_closed_curves[k][l].weight(); const
-    //       double x0 =
-    //       list_of_closed_curves[k][l].start_point()[0];
-    //       const double x1 =
-    //       list_of_closed_curves[k][l].control_point()[0];
-    //       const double x2 =
-    //       list_of_closed_curves[k][l].end_point()[0]; const
-    //       double y0 =
-    //       list_of_closed_curves[k][l].start_point()[1];
-    //       const double y1 =
-    //       list_of_closed_curves[k][l].control_point()[1];
-    //       const double y2 =
-    //       list_of_closed_curves[k][l].end_point()[1]; const
-    //       double A = y0 - 2.0 * w * y1 + y2 - 2.0 * y *
-    //       (1.0 - w); const double B = -2.0 * y0 + 2.0 * w *
-    //       y1 - 2.0 * y * (w - 1.0); const double C = y0 -
-    //       y; auto solutions = solveQuadratic<double>(A, B,
-    //       C); for (auto& t : solutions) {
-    //         if (t > 0.0 && t <= 1.0) {
-    //           const double denominator =
-    //               (1.0 - t) * (1.0 - t) + 2.0 * w * t *
-    //               (1.0 - t) + t * t;
-    //           const double numerator = (1.0 - t) * (1.0 -
-    //           t) * x0 +
-    //                                    2.0 * w * t * (1.0 -
-    //                                    t) * x1 + t * t *
-    //                                    x2;
-    //           const double x = numerator / denominator;
-    //           intersections[j].push_back(PSVertex(x, y));
-    //           intersections[j].back().status() = 0;
-    //           intersections[j].back().arc() = 0;
-    //         }
-    //       }
-    //       count_arc++;
-    //     }
-    //   }
-    //   if (intersections[j].size() > 0) {
-    //     std::sort(intersections[j].begin(),
-    //     intersections[j].end(),
-    //               PSVertexXcomp);
-
-    //     if (intersections[j][0].x() < xmin) {
-    //       std::cout << "Intersection " <<
-    //       intersections[j][0].x() << ", "
-    //                 << intersections[j][0].y()
-    //                 << " is smaller than xmin = " << xmin
-    //                 << std::endl;
-    //     }
-    //     if (intersections[j].back().x() > xmax) {
-    //       std::cout << "Intersection " <<
-    //       intersections[j].back().x() << ", "
-    //                 << intersections[j].back().y()
-    //                 << " is greater than xmax = " << xmax
-    //                 << std::endl;
-    //     }
-
-    //     UnsignedIndex_t k = 0;
-    //     short status = -1;
-    //     for (UnsignedIndex_t i = 0; i < x_rows; ++i) {
-    //       if (k >= intersections[j].size() ||
-    //           vertices[start_vert_id + i].x() >
-    //           intersections[j][k].x()) {
-    //         status *= -1;
-    //         k++;
-    //       }
-    //       vertices[start_vert_id + i].status() = status;
-    //     }
-    //   }
-    // }
-
-    // for (UnsignedIndex_t j = 0; j < y_rows - 1; ++j) {
-    //   for (UnsignedIndex_t i = 0; i < x_rows - 1; ++i) {
-    //     if (j % 2) {
-    //       UnsignedIndex_t v0 = j * x_rows + i;
-    //       UnsignedIndex_t v1 = (j + 1) * x_rows + i + 1;
-    //       UnsignedIndex_t v2 = (j + 1) * x_rows + i;
-    //       if (vertices[v0].status() == 1 ||
-    //       vertices[v1].status() == 1 ||
-    //           vertices[v2].status() == 1) {
-    //         triangles.push_back(PSTriangle(v0, v1, v2));
-    //         triangles.back().status() = 1;
-    //       }
-    //       v0 = j * x_rows + i;
-    //       v1 = j * x_rows + i + 1;
-    //       v2 = (j + 1) * x_rows + i + 1;
-    //       if (vertices[v0].status() == 1 ||
-    //       vertices[v1].status() == 1 ||
-    //           vertices[v2].status() == 1) {
-    //         triangles.push_back(PSTriangle(v0, v1, v2));
-    //         triangles.back().status() = 1;
-    //       }
-    //     } else {
-    //       UnsignedIndex_t v0 = j * x_rows + i;
-    //       UnsignedIndex_t v1 = j * x_rows + i + 1;
-    //       UnsignedIndex_t v2 = (j + 1) * x_rows + i;
-    //       if (vertices[v0].status() == 1 ||
-    //       vertices[v1].status() == 1 ||
-    //           vertices[v2].status() == 1) {
-    //         triangles.push_back(PSTriangle(v0, v1, v2));
-    //         triangles.back().status() = 1;
-    //       }
-    //       v0 = j * x_rows + i + 1;
-    //       v1 = (j + 1) * x_rows + i;
-    //       v2 = (j + 1) * x_rows + i + 1;
-    //       triangles.push_back(PSTriangle(v0, v1, v2));
-    //       if (vertices[v0].status() == 1 ||
-    //       vertices[v1].status() == 1 ||
-    //           vertices[v2].status() == 1) {
-    //         triangles.push_back(PSTriangle(v0, v1, v2));
-    //         triangles.back().status() = 1;
-    //       }
-    //     }
-    //   }
-    // }
-
-    // std::array<SmallVector<PSVertex, 2>, 3>
-    // triangle_intersect; const UnsignedIndex_t NumTriangles
-    // = triangles.size(); for (UnsignedIndex_t t = 0; t <
-    // NumTriangles; ++t) {
-    //   auto triangle = triangles[t];
-    //   if (vertices[triangle[0]].status() == -1 ||
-    //       vertices[triangle[1]].status() == -1 ||
-    //       vertices[triangle[2]].status() == -1) {
-    //     UnsignedIndex_t count = 0;
-    //     for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //       triangle_intersect[d].resize(0);
-    //       for (UnsignedIndex_t k = 0; k < nCurves; ++k) {
-    //         for (UnsignedIndex_t l = 0; l <
-    //         list_of_closed_curves[k].size();
-    //              ++l) {
-    //           auto intersects = IntersectEdgeWithArc(
-    //               vertices[triangle[d]],
-    //               vertices[triangle[(d + 1) % 3]],
-    //               list_of_closed_curves[k][l]);
-    //           for (auto& i : intersects) {
-    //             triangle_intersect[d].push_back(i);
-    //             triangle_intersect[d].back().status() = 0;
-    //             count++;
-    //           }
-    //         }
-    //       }
-    //     }
-    //     triangle.status() = 0;
-    //     if (count % 2 != 0) {
-    //       std::cout << "Triangle has " << count << "
-    //       interscetions "
-    //                 << std::endl;
-    //       std::cout << vertices[triangle[0]].x() << " "
-    //                 << vertices[triangle[0]].y() <<
-    //                 std::endl;
-    //       std::cout << vertices[triangle[1]].x() << " "
-    //                 << vertices[triangle[1]].y() <<
-    //                 std::endl;
-    //       std::cout << vertices[triangle[2]].x() << " "
-    //                 << vertices[triangle[2]].y() <<
-    //                 std::endl;
-    //       for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //         std::cout << "Intersections: " << d <<
-    //         std::endl; for (auto& i :
-    //         triangle_intersect[d]) {
-    //           std::cout << i.x() << " " << i.y() <<
-    //           std::endl;
-    //         }
-    //       }
-
-    //       for (UnsignedIndex_t k = 0; k < nCurves; ++k) {
-    //         for (UnsignedIndex_t l = 0; l <
-    //         list_of_closed_curves[k].size();
-    //              ++l) {
-    //           std::cout << list_of_closed_curves[k][l] <<
-    //           std::endl;
-    //         }
-    //       }
-    //       continue;
-    //     }
-    //     if (count > 0) {
-    //       UnsignedIndex_t start_vert_id = vertices.size();
-    //       bool error = false;
-    //       for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //         if (triangle_intersect[d].size() > 2) {
-    //           error = true;
-    //           break;
-    //         }
-    //         if (triangle_intersect[d].size() == 0) {
-    //           triangle_intersect[d].push_back(PSVertex(
-    //               vertices[triangle[d]].x(),
-    //               vertices[triangle[d]].y()));
-    //           triangle_intersect[d].back().status() =
-    //               vertices[triangle[d]].status();
-    //           triangle_intersect[d].push_back(PSVertex(
-    //               vertices[triangle[d]].x(),
-    //               vertices[triangle[d]].y()));
-    //           triangle_intersect[d].back().status() =
-    //               vertices[triangle[d]].status();
-
-    //         } else if (triangle_intersect[d].size() == 1) {
-    //           triangle_intersect[d].push_back(
-    //               PSVertex(triangle_intersect[d].back().x(),
-    //                        triangle_intersect[d].back().y()));
-    //           triangle_intersect[d].back().status() = 0;
-    //         }
-    //         for (auto& i : triangle_intersect[d]) {
-    //           vertices.push_back(PSVertex(i.x(), i.y()));
-    //           vertices.back().status() = i.status();
-    //         }
-    //       }
-    //       if (!error) {
-    //         triangles.push_back(
-    //             PSTriangle(triangle[0], start_vert_id,
-    //             start_vert_id + 5));
-    //         triangles.push_back(
-    //             PSTriangle(triangle[1], start_vert_id + 2,
-    //             start_vert_id + 1));
-    //         triangles.push_back(
-    //             PSTriangle(triangle[2], start_vert_id + 4,
-    //             start_vert_id + 3));
-    //         triangles.push_back(PSTriangle(start_vert_id,
-    //         start_vert_id + 1,
-    //                                        start_vert_id +
-    //                                        2));
-    //         triangles.push_back(PSTriangle(start_vert_id,
-    //         start_vert_id + 2,
-    //                                        start_vert_id +
-    //                                        5));
-    //         triangles.push_back(PSTriangle(start_vert_id +
-    //         2, start_vert_id + 3,
-    //                                        start_vert_id +
-    //                                        5));
-    //         triangles.push_back(PSTriangle(start_vert_id +
-    //         5, start_vert_id + 3,
-    //                                        start_vert_id +
-    //                                        4));
-    //       }
-    //     }
-    //   }
-    // }
-
-    // for (auto& triangle : triangles) {
-    //   if (vertices[triangle[0]].status() == -1 ||
-    //       vertices[triangle[1]].status() == -1 ||
-    //       vertices[triangle[2]].status() == -1 ||
-    //       (vertices[triangle[0]].status() == 0 &&
-    //        vertices[triangle[1]].status() == 0 &&
-    //        vertices[triangle[2]].status() == 0)) {
-    //     triangle.status() = -1;
-    //   } else {
-    //     triangle.status() = 1;
-    //   }
-    // }
-
+#ifdef IRL_USE_EARCUT
     // The number type to use for tessellation
     using Coord = double;
     // The index type. Defaults to uint32_t, but you can also
@@ -2539,48 +2203,6 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
       }
     }
 
-    // const UnsignedIndex_t it_max = 2;
-    // for (UnsignedIndex_t i = 0; i < indices.size() / 3;
-    // ++i) {
-    //   double max_edge_sq = DBL_MAX;
-    //   UnsignedIndex_t it = 0;
-    //   splitTriangle(vlist, tlist, aligned_paraboloid, i,
-    //   indices[3 * i],
-    //                 indices[3 * i + 1], indices[3 * i + 2],
-    //                 it, it_max);
-    // }
-
-    // vlist.resize(vertices.size());
-    // UnsignedIndex_t count = 0;
-    // for (auto& triangle : triangles) {
-    //   if (triangle.status() == 1) {
-    //     count++;
-    //   }
-    // }
-    // tlist.resize(count,
-    // TriangulatedSurfaceOutput::TriangleStorage::value_type::
-    //                         fromNoExistencePlane(vlist, {0,
-    //                         0, 0}));
-    // count = 0;
-    // for (auto& vertex : vertices) {
-    //   double x = vertex.x();
-    //   double y = vertex.y();
-    //   double z =
-    //       -aligned_paraboloid.a() * x * x -
-    //       aligned_paraboloid.b() * y * y;
-    //   vlist[count++] = Pt(x, y, z);
-    // }
-    // count = 0;
-    // for (auto& triangle : triangles) {
-    //   if (triangle.status() == 1) {
-    //     tlist[count++] =
-    //     TriangulatedSurfaceOutput::TriangleStorage::
-    //         value_type::fromNoExistencePlane(
-    //             vlist, {triangle[0], triangle[1],
-    //             triangle[2]});
-    //   }
-    // }
-
     // Translate and rotate triangulated surface vertices
     const auto& datum = paraboloid_m.getDatum();
     const auto& ref_frame = paraboloid_m.getReferenceFrame();
@@ -2595,8 +2217,7 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
       vertex += datum;
     }
 
-#elif defined IRL_NO_USE_TRIANGLE
-
+#elif defined IRL_USE_CGAL
     typedef CGAL::Exact_predicates_exact_constructions_kernel K;
     typedef CGAL::Exact_predicates_exact_constructions_kernel Kexact;
     typedef CGAL::Delaunay_mesh_vertex_base_2<K> Vb;
@@ -2803,142 +2424,7 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
 
     myfile << "Finished triangulating surface.\n";
     myfile.close();
-
-    // for (UnsignedIndex_t i = 0; i < edges.size(); ++i) {
-    //   if (out.edgemarkerlist[i] == 1) {
-    //     returned_surface.addBoundaryEdge(out.edgelist[2 *
-    //     i],
-    //                                      out.edgelist[2 * i
-    //                                      + 1]);
-    //   }
-    // }
-
-    // CDT::Triangulation<double> mesher;
-
-    // // Create boundaries
-    // std::vector<CDT::V2d<double>> points;
-    // std::vector<CDT::Edge> segments;
-    // points.resize(0);
-    // const UnsignedIndex_t nCurves =
-    //     static_cast<UnsignedIndex_t>(list_of_closed_curves.size());
-    // UnsignedIndex_t start_points = 0;
-    // double total_signed_area = 0.0;
-    // double xmin = DBL_MAX, xmax = -DBL_MAX;
-    // double ymin = DBL_MAX, ymax = -DBL_MAX;
-    // for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
-    //   const UnsignedIndex_t nLocalArcs =
-    //   list_of_closed_curves[i].size();
-    //   // Loop over arcs of curve
-    //   UnsignedIndex_t added_points = 0;
-    //   double signed_area = 0.0;
-    //   for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
-    //     // Compute approximate arc length
-    //     const RationalBezierArc& arc =
-    //     list_of_closed_curves[i][j]; const double
-    //     arc_length = arc.arc_length();
-
-    //     // Split arc
-    //     UnsignedIndex_t nSplit = a_nsplit <= 0 ? 1 :
-    //     a_nsplit; if (length_scale_ref > 0.0) {
-    //       nSplit = static_cast<UnsignedIndex_t>(arc_length
-    //       / length_scale_ref); nSplit = nSplit < a_nsplit ?
-    //       a_nsplit : nSplit;
-    //     }
-    //     const double step = 1.0 /
-    //     static_cast<double>(nSplit); length_scale =
-    //     std::min(length_scale, step * arc_length); if
-    //     (length_scale_ref > 0.0) length_scale =
-    //     length_scale_ref; added_points += nSplit;
-    //     // const auto start_ind = points.size();
-    //     // points.resize(start_ind + nSplit);
-    //     for (UnsignedIndex_t k = 1; k <= nSplit; ++k) {
-    //       const double t = static_cast<double>(k) * step;
-    //       const auto pt = arc.point(t);
-    //       // points[start_ind + k - 1] =
-    //       CDT::V2d<double>::make(pt[0],pt[1]); xmin =
-    //       minimum(xmin, pt[0]); xmax = maximum(xmax,
-    //       pt[0]); ymin = minimum(ymin, pt[1]); ymax =
-    //       maximum(ymax, pt[1]);
-    //       points.push_back(CDT::V2d<double>::make(pt[0],
-    //       pt[1]));
-    //     }
-    //   }
-
-    //   // Create segments
-    //   segments.emplace_back(
-    //       static_cast<CDT::VertInd>(start_points +
-    //       added_points - 1),
-    //       static_cast<CDT::VertInd>(start_points));
-    //   for (UnsignedIndex_t j = start_points;
-    //        j < start_points + added_points - 1; ++j) {
-    //     segments.emplace_back(static_cast<CDT::VertInd>(j),
-    //                           static_cast<CDT::VertInd>(j +
-    //                           1));
-    //   }
-
-    //   start_points += added_points;
-    //   total_signed_area += 0.5 * signed_area;
-    // }
-
-    // // Mesh!
-    // CDT::RemoveDuplicatesAndRemapEdges(points, segments);
-    // mesher.insertVertices(points);
-    // mesher.insertEdges(segments);
-    // mesher.eraseOuterTrianglesAndHoles();
-    // auto triangles = mesher.triangles;
-    // auto vertices = mesher.vertices;
-
-    // auto& vlist = returned_surface.getVertexList();
-    // vlist.resize(vertices.size());
-    // for (UnsignedIndex_t i = 0; i < vertices.size(); ++i) {
-    //   const double x = vertices[i].x;
-    //   const double y = vertices[i].y;
-    //   const double z =
-    //       -aligned_paraboloid.a() * x * x -
-    //       aligned_paraboloid.b() * y * y;
-    //   vlist[i] = Pt(x, y, z);
-    // }
-
-    // // Translate and rotate triangulated surface vertices
-    // const auto& datum = paraboloid_m.getDatum();
-    // const auto& ref_frame =
-    // paraboloid_m.getReferenceFrame(); for (auto& vertex :
-    // vlist) {
-    //   const Pt base_pt = vertex;
-    //   vertex = Pt(0.0, 0.0, 0.0);
-    //   for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //     for (UnsignedIndex_t n = 0; n < 3; ++n) {
-    //       vertex[n] += ref_frame[d][n] * base_pt[d];
-    //     }
-    //   }
-    //   vertex += datum;
-    // }
-
-    // // for (UnsignedIndex_t i = 0; i < edges.size(); ++i) {
-    // //   if (out.edgemarkerlist[i] == 1) {
-    // //     returned_surface.addBoundaryEdge(out.edgelist[2
-    // * i],
-    // //                                      out.edgelist[2
-    // * i + 1]);
-    // //   }
-    // // }
-
-    // auto& tlist = returned_surface.getTriangleList();
-    // tlist.resize(triangles.size(),
-    //              TriangulatedSurfaceOutput::TriangleStorage::value_type::
-    //                  fromNoExistencePlane(vlist, {0, 0,
-    //                  0}));
-    // for (UnsignedIndex_t i = 0; i < triangles.size(); ++i)
-    // {
-    //   tlist[i] =
-    //   TriangulatedSurfaceOutput::TriangleStorage::value_type::
-    //       fromNoExistencePlane(
-    //           vlist,
-    //           {static_cast<UnsignedIndex_t>(triangles[i].vertices[0]),
-    //                   static_cast<UnsignedIndex_t>(triangles[i].vertices[1]),
-    //                   static_cast<UnsignedIndex_t>(triangles[i].vertices[2])});
-    // }
-#else
+#elif defined IRL_USE_TRIANGLE
     // Second, we approximate the arc length of the arc, so as
     // to know how many times it needs to be split
     std::vector<REAL> input_points;
@@ -3242,7 +2728,6 @@ inline void ParametrizedSurfaceOutput::triangulate_fromPtr(
     }
 #endif
   }
-  // return returned_surface;
 }
 
 inline std::ostream& operator<<(

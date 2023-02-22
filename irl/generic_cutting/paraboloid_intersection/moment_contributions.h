@@ -93,7 +93,7 @@ ReturnType computeFaceOnlyContribution(
     const PtBase<ScalarType>& a_pt_ref);
 
 template <class ReturnType, class ScalarType>
-ReturnType computeFaceOnlyContributionWithGradient(
+inline ReturnType computeFaceOnlyContributionWithGradient(
     const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PlaneBase<ScalarType>& a_face_plane,
     const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
@@ -106,7 +106,7 @@ ReturnType computeTriangleCorrection(
     const PtBase<ScalarType>& a_pt_2);
 
 template <class ReturnType, class ScalarType>
-ReturnType computeTriangleCorrectionWithGradient(
+inline ReturnType computeTriangleCorrectionWithGradient(
     const AlignedParaboloidBase<ScalarType>& a_paraboloid,
     const PtWithGradientBase<typename ReturnType::gradient_type, ScalarType>&
         a_pt_0,
