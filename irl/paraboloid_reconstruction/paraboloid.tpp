@@ -110,8 +110,9 @@ inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
     frame_m[d].serialize(a_buffer);
   }
   // paraboloid_m.serialize(a_buffer);
-  a_buffer->pack(&paraboloid_m.a(), 1);
-  a_buffer->pack(&paraboloid_m.b(), 1);
+  const ScalarType a = paraboloid_m.a(), b = paraboloid_m.b();
+  a_buffer->pack(&a, 1);
+  a_buffer->pack(&b, 1);
   const UnsignedIndex_t bool_to_int =
       (place_infinite_shortcut_m[0] ? 1 : 0) +
       2 * (place_infinite_shortcut_m[1] ? 1 : 0);
@@ -126,8 +127,10 @@ inline void ParaboloidBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
     frame_m[d].unpackSerialized(a_buffer);
   }
   // paraboloid_m.unpackSerialized(a_buffer);
-  a_buffer->unpack(&paraboloid_m.a(), 1);
-  a_buffer->unpack(&paraboloid_m.b(), 1);
+  ScalarType a, b;
+  a_buffer->unpack(&a, 1);
+  a_buffer->unpack(&b, 1);
+  paraboloid_m = {{a, b}};
   UnsignedIndex_t int_to_bool = 0;
   a_buffer->unpack(&int_to_bool, 1);
   place_infinite_shortcut_m[0] = (int_to_bool % 2 == 1) ? true : false;
