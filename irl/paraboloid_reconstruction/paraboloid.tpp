@@ -110,7 +110,10 @@ inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
   frame_m[1].serialize(a_buffer);
   frame_m[2].serialize(a_buffer);
   paraboloid_m.serialize(a_buffer);
-  a_buffer->pack(&place_infinite_shortcut_m, 2);
+  const UnsignedIndex_t bool_to_int =
+      (place_infinite_shortcut_m[0] ? 1 : 0) +
+      2 * (place_infinite_shortcut_m[1] ? 1 : 0);
+  a_buffer->pack(&bool_to_int, 1);
 }
 
 template <class ScalarType>
@@ -120,7 +123,10 @@ inline void ParaboloidBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
   frame_m[1].unpackSerialized(a_buffer);
   frame_m[2].unpackSerialized(a_buffer);
   paraboloid_m.unpackSerialized(a_buffer);
-  a_buffer->unpack(&place_infinite_shortcut_m, 2);
+  UnsignedIndex_t int_to_bool = 0;
+  a_buffer->unpack(&int_to_bool, 1);
+  place_infinite_shortcut_m[0] = int_to_bool % 2 == 1 ? true : false;
+  place_infinite_shortcut_m[1] = int_to_bool / 2 == 1 ? true : false;
 }
 template <class ScalarType>
 inline PtBase<ScalarType> conicCenter(
