@@ -106,10 +106,12 @@ inline bool ParaboloidBase<ScalarType>::isAlwaysBelow(void) const {
 template <class ScalarType>
 inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
   datum_m.serialize(a_buffer);
-  frame_m[0].serialize(a_buffer);
-  frame_m[1].serialize(a_buffer);
-  frame_m[2].serialize(a_buffer);
-  paraboloid_m.serialize(a_buffer);
+  for (std::size_t d = 0; d < 3; ++d) {
+    frame_m[d].serialize(a_buffer);
+  }
+  // paraboloid_m.serialize(a_buffer);
+  a_buffer->pack(&paraboloid_m.a(), 1);
+  a_buffer->pack(&paraboloid_m.b(), 1);
   const UnsignedIndex_t bool_to_int =
       (place_infinite_shortcut_m[0] ? 1 : 0) +
       2 * (place_infinite_shortcut_m[1] ? 1 : 0);
@@ -119,14 +121,17 @@ inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
 template <class ScalarType>
 inline void ParaboloidBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
   datum_m.unpackSerialized(a_buffer);
-  frame_m[0].unpackSerialized(a_buffer);
-  frame_m[1].unpackSerialized(a_buffer);
-  frame_m[2].unpackSerialized(a_buffer);
-  paraboloid_m.unpackSerialized(a_buffer);
+  NormalBase<ScalarType> normal;
+  for (std::size_t d = 0; d < 3; ++d) {
+    frame_m[d].unpackSerialized(a_buffer);
+  }
+  // paraboloid_m.unpackSerialized(a_buffer);
+  a_buffer->unpack(&paraboloid_m.a(), 1);
+  a_buffer->unpack(&paraboloid_m.b(), 1);
   UnsignedIndex_t int_to_bool = 0;
   a_buffer->unpack(&int_to_bool, 1);
-  place_infinite_shortcut_m[0] = int_to_bool % 2 == 1 ? true : false;
-  place_infinite_shortcut_m[1] = int_to_bool / 2 == 1 ? true : false;
+  place_infinite_shortcut_m[0] = (int_to_bool % 2 == 1) ? true : false;
+  place_infinite_shortcut_m[1] = (int_to_bool / 2 == 1) ? true : false;
 }
 template <class ScalarType>
 inline PtBase<ScalarType> conicCenter(
