@@ -8,10 +8,10 @@ Additional documentation and examples are currently being added. If you would li
 - [Robert Chiodi] (principal developer, maintainer)
 - [Fabien Evrard](mailto:fabien.evrard@cornell.edu)
 
-# License and scope
+## License and scope
 IRL is open-sourced under the Mozilla Public License 2 (MPL2). It has already been used in incompressible and compressible CFD codes on structured, unstructured, and AMReX based flow solvers, with some images of simulations performed using IRL shown below.
 
-# Start guide
+## Start guide
 IRL is written in C++17 with a Fortran 2008 interface. Below are links to additional information on how to install and use IRL:
 
 - [Compilation & Installation](docs/markdown/install_main_page.md)
