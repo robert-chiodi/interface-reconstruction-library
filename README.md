@@ -23,7 +23,7 @@ IRL is written in C++17 with a Fortran 2008 interface. Below are links to additi
 - [Examples](docs/markdown/examples_main_page.md)
 
 ## How to cite us
-If you use IRL for your scientific work, please consider citing the [paper](10.1016/j.jcp.2021.110787) introducing the half-edge structure and its implementation
+If you use IRL for your scientific work, please consider citing the [paper](https://doi.org/10.1016/j.jcp.2021.110787) introducing the half-edge structure and its implementation
 
     R. Chiodi and O. Desjardins, General, robust, and efficient polyhedron intersection in the interface reconstruction library, Journal of Computational Physics 449 (2022), 110787. 
 
