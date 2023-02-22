@@ -109,10 +109,7 @@ inline void ParaboloidBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
   for (std::size_t d = 0; d < 3; ++d) {
     frame_m[d].serialize(a_buffer);
   }
-  // paraboloid_m.serialize(a_buffer);
-  const ScalarType a = paraboloid_m.a(), b = paraboloid_m.b();
-  a_buffer->pack(&a, 1);
-  a_buffer->pack(&b, 1);
+  paraboloid_m.serialize(a_buffer);
   const UnsignedIndex_t bool_to_int =
       (place_infinite_shortcut_m[0] ? 1 : 0) +
       2 * (place_infinite_shortcut_m[1] ? 1 : 0);
@@ -126,16 +123,13 @@ inline void ParaboloidBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
   for (std::size_t d = 0; d < 3; ++d) {
     frame_m[d].unpackSerialized(a_buffer);
   }
-  // paraboloid_m.unpackSerialized(a_buffer);
-  ScalarType a, b;
-  a_buffer->unpack(&a, 1);
-  a_buffer->unpack(&b, 1);
-  paraboloid_m = {{a, b}};
+  paraboloid_m.unpackSerialized(a_buffer);
   UnsignedIndex_t int_to_bool = 0;
   a_buffer->unpack(&int_to_bool, 1);
   place_infinite_shortcut_m[0] = (int_to_bool % 2 == 1) ? true : false;
   place_infinite_shortcut_m[1] = (int_to_bool / 2 == 1) ? true : false;
 }
+
 template <class ScalarType>
 inline PtBase<ScalarType> conicCenter(
     const PlaneBase<ScalarType>& a_plane,

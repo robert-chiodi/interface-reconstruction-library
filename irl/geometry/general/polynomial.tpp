@@ -15,13 +15,13 @@ namespace IRL {
 template <UnsignedIndex_t kNCoefficients, class ScalarType>
 inline void PolynomialBase<kNCoefficients, ScalarType>::serialize(
     ByteBuffer* a_buffer) const {
-  a_buffer->pack(&coefficients_m, kNCoefficients);
+  a_buffer->pack(coefficients_m.data(), kNCoefficients);
 }
 
 template <UnsignedIndex_t kNCoefficients, class ScalarType>
 inline void PolynomialBase<kNCoefficients, ScalarType>::unpackSerialized(
     ByteBuffer* a_buffer) {
-  a_buffer->unpack(&coefficients_m, kNCoefficients);
+  a_buffer->unpack(coefficients_m.data(), kNCoefficients);
 }
 }  // namespace IRL
 
