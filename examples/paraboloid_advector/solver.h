@@ -101,8 +101,13 @@ int runSimulation(const std::string& a_advection_method,
   // Set constants in IRL
   IRL::setMinimumVolumeToTrack(10.0 * DBL_EPSILON * cc_mesh.dx() *
                                cc_mesh.dy() * cc_mesh.dz());
-  IRL::setVolumeFractionBounds(1.0e-8);
+  IRL::setVolumeFractionBounds(1.0e-14);
   IRL::setVolumeFractionTolerance(1.0e-13);
+
+  if (rank == 0) {
+    std::cout << "VolumeFractionBounds = " << IRL::global_constants::VF_LOW
+              << std::endl;
+  }
 
   // Initialize data
   SimulationType::initialize(&velU, &velV, &velW, &interface);
@@ -180,18 +185,22 @@ int runSimulation(const std::string& a_advection_method,
   }
 
   // L1 Difference between Starting VOF and ending VOF
-  double l1_error = 0.0;
-  const BasicMesh& mesh = cc_mesh;
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        l1_error += std::fabs(liquid_volume_fraction(i, j, k) -
-                              starting_liquid_volume_fraction(i, j, k));
+  if (rank == 0) {
+    double l1_error = 0.0;
+    const BasicMesh& mesh = cc_mesh;
+    for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+      for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+        for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+          l1_error += std::fabs(liquid_volume_fraction(i, j, k) -
+                                starting_liquid_volume_fraction(i, j, k));
+        }
       }
     }
+    l1_error /=
+        (static_cast<double>(mesh.getNx() * mesh.getNy() * mesh.getNz()));
+    std::cout << "L1 Difference between start and end: " << l1_error
+              << std::endl;
   }
-  l1_error /= (static_cast<double>(mesh.getNx() * mesh.getNy() * mesh.getNz()));
-  std::cout << "L1 Difference between start and end: " << l1_error << std::endl;
 
   return 0;
 }

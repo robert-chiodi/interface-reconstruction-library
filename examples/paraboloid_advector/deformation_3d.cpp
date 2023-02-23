@@ -30,12 +30,12 @@
 #include "examples/paraboloid_advector/solver.h"
 #include "examples/paraboloid_advector/vof_advection.h"
 
-constexpr int NX = 64;
-constexpr int NY = 64;
-constexpr int NZ = 64;
-constexpr int GC = 2;
+constexpr int NX = 32;
+constexpr int NY = 32;
+constexpr int NZ = 32;
+constexpr int GC = 3;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
-constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
+constexpr IRL::Pt upper_domain(32.0, 32.0, 32.0);
 
 BasicMesh Deformation3D::setMesh(void) {
   BasicMesh mesh(NX, NY, NZ, GC);
@@ -50,10 +50,8 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
                                Data<IRL::Paraboloid>* a_interface) {
   Deformation3D::setVelocity(0.0, a_U, a_V, a_W);
   const BasicMesh& mesh = a_U->getMesh();
-  const IRL::Pt circle_center(1.0 * 0.35, 1.0 * 0.35, 1.0 * 0.35);
-  const double circle_radius = 1.0 * 0.15;
-  // const IRL::Pt circle_center(1.0 * 0.5, 1.0 * 0.5, 1.0 * 0.5);
-  // const double circle_radius = 1.0 * 0.3;
+  const IRL::Pt sphere_center(32.0 * 0.35, 32.0 * 0.35, 32.0 * 0.35);
+  const double sphere_radius = 32.0 * 0.15;
 
   // Loop over cells in domain. Skip if cell is not mixed phase.
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
@@ -63,17 +61,17 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
         const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
                                     mesh.z(k + 1));
         const IRL::Pt mid_pt = 0.5 * (lower_cell_pt + upper_cell_pt);
-        IRL::Pt disp = mid_pt - circle_center;
+        IRL::Pt disp = mid_pt - sphere_center;
         const auto mag = magnitude(disp);
-        if (mag < circle_radius - 2.0 * mesh.dx()) {
+        if (mag < sphere_radius - 2.0 * mesh.dx()) {
           (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
-        } else if (mag > circle_radius + 2.0 * mesh.dx()) {
+        } else if (mag > sphere_radius + 2.0 * mesh.dx()) {
           (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
         } else {
-          auto circle_normal = IRL::Normal::fromPt(disp);
-          circle_normal.normalize();
+          auto sphere_normal = IRL::Normal::fromPt(disp);
+          sphere_normal.normalize();
           (*a_interface)(i, j, k) =
-              details::fromSphere(circle_center, circle_radius, circle_normal);
+              details::fromSphere(sphere_center, sphere_radius, sphere_normal);
         }
       }
     }
@@ -91,20 +89,17 @@ void Deformation3D::setVelocity(const double a_time, Data<double>* a_U,
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
         (*a_U)(i, j, k) =
-            2.0 * 1.0 * std::pow(sin(M_PI * mesh.xm(i) / 1.0), 2) *
-            sin(2.0 * M_PI * mesh.ym(j) / 1.0) *
-            sin(2.0 * M_PI * mesh.zm(k) / 1.0) * cos(M_PI * (a_time) / 3.0);
-        (*a_V)(i, j, k) = -1.0 * std::pow(sin(M_PI * mesh.ym(j) / 1.0), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i) / 1.0) *
-                          sin(2.0 * M_PI * mesh.zm(k) / 1.0) *
+            2.0 * 32.0 * std::pow(sin(M_PI * mesh.xm(i) / 32.0), 2) *
+            sin(2.0 * M_PI * mesh.ym(j) / 32.0) *
+            sin(2.0 * M_PI * mesh.zm(k) / 32.0) * cos(M_PI * (a_time) / 3.0);
+        (*a_V)(i, j, k) = -32.0 * std::pow(sin(M_PI * mesh.ym(j) / 32.0), 2) *
+                          sin(2.0 * M_PI * mesh.xm(i) / 32.0) *
+                          sin(2.0 * M_PI * mesh.zm(k) / 32.0) *
                           cos(M_PI * (a_time) / 3.0);
-        (*a_W)(i, j, k) = -1.0 * std::pow(sin(M_PI * mesh.zm(k) / 1.0), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i) / 1.0) *
-                          sin(2.0 * M_PI * mesh.ym(j) / 1.0) *
+        (*a_W)(i, j, k) = -32.0 * std::pow(sin(M_PI * mesh.zm(k) / 32.0), 2) *
+                          sin(2.0 * M_PI * mesh.xm(i) / 32.0) *
+                          sin(2.0 * M_PI * mesh.ym(j) / 32.0) *
                           cos(M_PI * (a_time) / 3.0);
-        // (*a_U)(i, j, k) = 1.0;
-        // (*a_V)(i, j, k) = 1.0;
-        // (*a_W)(i, j, k) = 1.0;
       }
     }
   }

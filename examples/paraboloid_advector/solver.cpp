@@ -214,14 +214,8 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
           auto volume_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<
               IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
               cell, a_liquid_gas_interface(i, j, k));
-          if (volume_and_surface.getMoments() < -999.0) {
-            // std::cout << "Surface failed" << std::endl;
-            // std::cout << "Paraboloid = \n"
-            //           << a_liquid_gas_interface(i, j, k) << std::endl;
-          } else {
+          if (volume_and_surface.getMoments() > -DBL_MAX) {
             auto surface = volume_and_surface.getSurface();
-            // double length_scale =
-            //     std::pow(cell.calculateVolume(), 1.0 / 3.0) / 4.0;
             double length_scale = std::min(
                 std::pow(cell.calculateVolume(), 1.0 / 3.0) / 3.0, 1.0e-2);
             surface.setLengthScale(length_scale);
@@ -229,12 +223,8 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
                 1.0e-6 * length_scale * length_scale) {
               surfaces.push_back(surface);
             }
-
             total_surface += surface.getSurfaceArea();
             avg_mean_curv += surface.getMeanCurvatureIntegral();
-
-            // if (surface.getSurfaceArea() >
-            //     1.0e-6 * length_scale * length_scale) {
             max_mean_curv_error = std::max(
                 max_mean_curv_error,
                 std::abs(surface.getAverageMeanCurvature() - exact_curv));
@@ -253,21 +243,5 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
   l2_mean_curv_error = std::sqrt(l2_mean_curv_error);
   avg_mean_curv /= total_surface;
   total_surface = std::sqrt(total_surface);
-  // std::cout << "Surface area = " << total_surface << " instead of "
-  //           << std::sqrt(4.0 * M_PI * radius * radius) << " (rel error = "
-  //           << std::fabs(total_surface -
-  //                        std::sqrt(4.0 * M_PI * radius * radius)) /
-  //                  std::sqrt(4.0 * M_PI * radius * radius)
-  //           << ")" << std::endl;
-  // std::cout << "Avg mean curvature = " << avg_mean_curv << " instead of "
-  //           << 2.0 / radius << " (rel error = "
-  //           << std::fabs(avg_mean_curv - 2.0 / radius) / (2.0 / radius) <<
-  //           ")"
-  //           << std::endl;
-  // std::cout << "L2 mean curvature error = "
-  //           << l2_mean_curv_error / (2.0 / radius) << std::endl;
-  // std::cout << "Linf mean curvature error = "
-  //           << max_mean_curv_error / (2.0 / radius) << std::endl;
-  // a_output->writeVTKInterface(a_time, surfaces, false);
   a_output->writeParametrizedInterface(a_time, surfaces);
 }

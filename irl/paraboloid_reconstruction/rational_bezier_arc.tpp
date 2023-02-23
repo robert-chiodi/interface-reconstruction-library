@@ -95,13 +95,15 @@ and uses it to compute the weight (Farin1992)*/
           sqrt(R * R * R *
                squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
                                              a_control_pt - a_end_pt)));
-      if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-        weight_m = static_cast<ScalarType>(DBL_MAX);
-      } else {
-        weight_m = HALF * sqrt(A / D);
-      }
+      // if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+      //   weight_m = static_cast<ScalarType>(DBL_MAX);
+      // } else {
+      weight_m = HALF * sqrt(A / D);
+      // }
     }
   }
+
+  // std::cout << "Weight hyperoblic = " << weight_m << std::endl;
 }
 
 template <class ScalarType>
@@ -247,13 +249,15 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
             sqrt(R * R * R *
                  squaredMagnitude(crossProduct(a_end_pt - a_start_pt,
                                                control_point_m - a_end_pt)));
-        if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-          weight_m = static_cast<ScalarType>(DBL_MAX);
-        } else {
-          weight_m = HALF * sqrt(A / D);
-        }
+        // if (A < DISTANCE_EPSILON * DISTANCE_EPSILON) {
+        //   weight_m = static_cast<ScalarType>(DBL_MAX);
+        // } else {
+        weight_m = HALF * sqrt(A / D);
+        // }
       }
     }
+
+    // std::cout << "Weight elliptic = " << weight_m << std::endl;
 
     // /* By caculating position on arc at t=1/2 */
     // auto mid_to_control = NormalBase<ScalarType>(control_point_m -

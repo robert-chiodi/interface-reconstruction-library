@@ -421,7 +421,7 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   double vfrac_max =
       getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
   UnsignedIndex_t iter = 0;
-  while (iter < 40 && vfrac_max < (1.0 - volume_fraction_tolerance_m)) {
+  while (iter < 40 && vfrac_max < 1.0) {
     interval_max *= 2.0;
     reconstruction_m.setDatum(Pt(datum + frame[2] * interval_max));
     vfrac_max =
@@ -433,7 +433,7 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   double vfrac_min =
       getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
   iter = 0;
-  while (iter < 40 && vfrac_min > volume_fraction_tolerance_m) {
+  while (iter < 40 && vfrac_min > 0.0) {
     interval_min *= 2.0;
     reconstruction_m.setDatum(Pt(datum + frame[2] * interval_min));
     vfrac_min =
@@ -460,8 +460,8 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
     }
   }
 
-  std::cout << "DISTANCE FAILED = " << bounding_values[1];
-  distances_m = -999999.0 + bounding_values[1];
+  std::cout << "DISTANCE FAILED = " << bounding_values[1] << std::endl;
+  distances_m = -DBL_MAX;
   return;
 }  // namespace IRL
 

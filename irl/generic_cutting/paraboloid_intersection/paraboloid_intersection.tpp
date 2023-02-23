@@ -36,7 +36,7 @@ inline const ScalarType distance_epsilon(void);
 
 template <>
 inline const double distance_epsilon(void) {
-  return 1.0e1 * DBL_EPSILON;
+  return 1.0e2 * DBL_EPSILON;
 }
 
 template <>
@@ -49,7 +49,7 @@ inline const ScalarType angle_epsilon(void);
 
 template <>
 inline const double angle_epsilon(void) {
-  return 1.0e5 * DBL_EPSILON;
+  return 1.0e6 * DBL_EPSILON;
 }
 
 template <>
@@ -299,9 +299,9 @@ ReturnType computeType3ContributionWithSplit(
     // If we have had to split more than 10 times, something is wrong: switch to
     // QP and shake the polytope
     if (*a_split_counter > 10) {
-      if constexpr (std::is_same_v<ScalarType, double>) {
-        *a_requires_nudge = true;
-      }
+      // if constexpr (std::is_same_v<ScalarType, double>) {
+      *a_requires_nudge = true;
+      // }
       return ReturnType::fromScalarConstant(ZERO);
     }
     // Compute the tangent at the new projected point
@@ -624,6 +624,11 @@ ReturnType computeNewEdgeSegmentContribution(
               a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
               a_surface, a_requires_nudge);
     } else {
+      // auto moments = orientAndApplyType3Correction<ReturnType, ScalarType>(
+      //     a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
+      //     a_requires_nudge, a_surface);
+      // std::cout << "Type 3 = " << moments << std::endl;
+      // full_moments += moments;
       full_moments += orientAndApplyType3Correction<ReturnType, ScalarType>(
           a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
           a_requires_nudge, a_surface);
@@ -756,6 +761,12 @@ intersectPolyhedronWithParaboloid(SegmentedHalfEdgePolyhedronType* a_polytope,
   } else {
     moments.volume() *= inv_volume_scale;
   }
+
+  // // Un-normalized polyhedron
+  // for (UnsignedIndex_t v = 0; v < original_number_of_vertices; ++v) {
+  //   auto& pt = a_polytope->getVertex(v)->getLocation().getPt();
+  //   pt *= inv_scale;
+  // }
 
   // Un-normalized gradient
   if constexpr (has_embedded_gradient<ReturnType>::value) {
@@ -1711,7 +1722,7 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   std::uniform_real_distribution distr(-1.0, 1.0);
 
   // This is a-hoc but works well
-  const Quad_t nudge_epsilon = 1.0e6q * distance_epsilon<Quad_t>();
+  const Quad_t nudge_epsilon = 1.0e10q * distance_epsilon<Quad_t>();
 
   // Compute polytope center to rotate about it
   auto center = a_polytope->calculateCentroid();
@@ -1824,8 +1835,6 @@ void convertPolytopeFromDoubleToQuadPrecision(
                  converted_kMaxHalfEdges, converted_kMaxVertices,
                  converted_kMaxFaces>::setHalfEdgeVersion(pt_list, face_mapping,
                                                           a_converted_polytope);
-
-  assert(converted_segmented_paraboloid.checkValidHalfEdgeStructure());
 }
 
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
@@ -2206,23 +2215,17 @@ formParaboloidIntersectionBases(
     // Early termination cases, only possible with elliptic thanks to convexity
     if (elliptic && a_aligned_paraboloid.a() > ZERO &&
         number_of_vertices_above == 0) {
-      // This is needed to reset the polytope after the return
-      for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
-        auto& vertex = *(a_polytope->getVertex(v));
-        vertex.setToSeek();
-      }
       // Whole volume below
+      // std::cout << "All vertices below, returning "
+      //           << ReturnType::calculateMoments(a_polytope) << std::endl;
       return ReturnType::calculateMoments(a_polytope);
     }
 
     if (elliptic && a_aligned_paraboloid.a() < ZERO &&
         number_of_vertices_above == starting_number_of_vertices) {
-      // This is needed to reset the polytope after the return
-      for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
-        auto& vertex = *(a_polytope->getVertex(v));
-        vertex.setToSeek();
-      }
       // Zero volume - will be current value of full_moments
+      // std::cout << "All vertices below, returning " << full_moments
+      //           << std::endl;
       return full_moments;
     }
   }
@@ -2511,7 +2514,7 @@ formParaboloidIntersectionBases(
 
     // Nudge and try again!
     return reformParaboloidIntersectionBases<ReturnType>(
-        a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter + 1,
+        a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
         a_surface);
   }
 
@@ -2708,8 +2711,8 @@ formParaboloidIntersectionBases(
 
       // Nudge and try again!
       return reformParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid,
-          a_nudge_iter + 1, a_surface);
+          a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
+          a_surface);
     }
 
     // This face has not intersections so the moment contribution is only of
@@ -3130,7 +3133,7 @@ formParaboloidIntersectionBases(
                 // Nudge and try again!
                 return reformParaboloidIntersectionBases<ReturnType>(
                     a_polytope, a_complete_polytope, a_aligned_paraboloid,
-                    a_nudge_iter + 1, a_surface);
+                    a_nudge_iter, a_surface);
               }
             }
           }
@@ -3392,8 +3395,8 @@ formParaboloidIntersectionBases(
 
       // Nudge and try again!
       return reformParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid,
-          a_nudge_iter + 1, a_surface);
+          a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
+          a_surface);
     }
   }  // End loop over faces
 
