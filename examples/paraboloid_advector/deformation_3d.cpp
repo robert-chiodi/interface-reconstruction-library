@@ -30,12 +30,12 @@
 #include "examples/paraboloid_advector/solver.h"
 #include "examples/paraboloid_advector/vof_advection.h"
 
-constexpr int NX = 32;
-constexpr int NY = 32;
-constexpr int NZ = 32;
-constexpr int GC = 3;
+constexpr int NX = 64;
+constexpr int NY = 64;
+constexpr int NZ = 64;
+constexpr int GC = 4;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
-constexpr IRL::Pt upper_domain(32.0, 32.0, 32.0);
+constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
 
 BasicMesh Deformation3D::setMesh(void) {
   BasicMesh mesh(NX, NY, NZ, GC);
@@ -50,8 +50,8 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
                                Data<IRL::Paraboloid>* a_interface) {
   Deformation3D::setVelocity(0.0, a_U, a_V, a_W);
   const BasicMesh& mesh = a_U->getMesh();
-  const IRL::Pt sphere_center(32.0 * 0.35, 32.0 * 0.35, 32.0 * 0.35);
-  const double sphere_radius = 32.0 * 0.15;
+  const IRL::Pt sphere_center(0.35, 0.35, 0.35);
+  const double sphere_radius = 0.15;
 
   // Loop over cells in domain. Skip if cell is not mixed phase.
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
@@ -88,17 +88,17 @@ void Deformation3D::setVelocity(const double a_time, Data<double>* a_U,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_U)(i, j, k) =
-            2.0 * 32.0 * std::pow(sin(M_PI * mesh.xm(i) / 32.0), 2) *
-            sin(2.0 * M_PI * mesh.ym(j) / 32.0) *
-            sin(2.0 * M_PI * mesh.zm(k) / 32.0) * cos(M_PI * (a_time) / 3.0);
-        (*a_V)(i, j, k) = -32.0 * std::pow(sin(M_PI * mesh.ym(j) / 32.0), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i) / 32.0) *
-                          sin(2.0 * M_PI * mesh.zm(k) / 32.0) *
+        (*a_U)(i, j, k) = 2.0 * std::pow(sin(M_PI * mesh.xm(i)), 2) *
+                          sin(2.0 * M_PI * mesh.ym(j)) *
+                          sin(2.0 * M_PI * mesh.zm(k)) *
                           cos(M_PI * (a_time) / 3.0);
-        (*a_W)(i, j, k) = -32.0 * std::pow(sin(M_PI * mesh.zm(k) / 32.0), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i) / 32.0) *
-                          sin(2.0 * M_PI * mesh.ym(j) / 32.0) *
+        (*a_V)(i, j, k) = -std::pow(sin(M_PI * mesh.ym(j)), 2) *
+                          sin(2.0 * M_PI * mesh.xm(i)) *
+                          sin(2.0 * M_PI * mesh.zm(k)) *
+                          cos(M_PI * (a_time) / 3.0);
+        (*a_W)(i, j, k) = -std::pow(sin(M_PI * mesh.zm(k)), 2) *
+                          sin(2.0 * M_PI * mesh.xm(i)) *
+                          sin(2.0 * M_PI * mesh.ym(j)) *
                           cos(M_PI * (a_time) / 3.0);
       }
     }

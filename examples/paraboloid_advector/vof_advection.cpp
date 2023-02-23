@@ -214,9 +214,12 @@ void Split::advectVOF(
                       *a_link_localized_paraboloid, a_dt, a_U, a_V, a_W,
                       a_interface);
 
-    for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-      for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-        for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+    // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+    //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+    for (int i = imin; i < imin + nx; ++i) {
+      for (int j = jmin; j < jmin + ny; ++j) {
+        for (int k = kmin; k < kmin + nz; ++k) {
           int shift[3] = {0, 0, 0};
           double sign = -1.0;
           auto x0 = IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k));
@@ -301,6 +304,20 @@ void Split::advectVOF(
     }
     a_liquid_volume_fraction->updateBorder();
   }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {
+          (*a_liquid_volume_fraction)(i, j, k) = 0.0;
+        } else if ((*a_liquid_volume_fraction)(i, j, k) > 1.0) {
+          (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+        }
+      }
+    }
+  }
+
+  a_liquid_volume_fraction->updateBorder();
 }
 
 void FullLagrangian::advectVOF(
@@ -310,10 +327,49 @@ void FullLagrangian::advectVOF(
     Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
     Data<IRL::Pt>* a_gas_centroid) {
   const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  int split_proc = static_cast<int>(std::cbrt(static_cast<double>(size)));
+  int imin, nx, jmin, ny, kmin, nz;
+  const int NX = mesh.getNx(), NY = mesh.getNy(), NZ = mesh.getNz();
+
+  if (size > 1) {
+    if (size == split_proc * split_proc * split_proc) {
+      for (int i = 0; i < split_proc; i++) {
+        for (int j = 0; j < split_proc; j++) {
+          for (int k = 0; k < split_proc; k++) {
+            if (i + split_proc * j + split_proc * split_proc * k == rank) {
+              imin = i * (NX / split_proc);
+              nx = std::min((i + 1) * (NX / split_proc), NX) - imin;
+              jmin = j * (NY / split_proc);
+              ny = std::min((j + 1) * (NY / split_proc), NY) - jmin;
+              kmin = k * (NZ / split_proc);
+              nz = std::min((k + 1) * (NZ / split_proc), NZ) - kmin;
+            }
+          }
+        }
+      }
+    } else {
+      imin = rank * (NX / size);
+      nx = std::min((rank + 1) * (NX / size), NX) - imin;
+      jmin = 0;
+      ny = NZ;
+      kmin = 0;
+      nz = NZ;
+    }
+  } else {
+    imin = 0, nx = NX, jmin = 0, ny = NY, kmin = 0, nz = NZ;
+  }
+
   // For now, naively advect everywhere in domain
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+  //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+  //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -341,25 +397,56 @@ void FullLagrangian::advectVOF(
           (*a_liquid_volume_fraction)(i, j, k) = 1.0;
         }
 
-        if ((*a_liquid_volume_fraction)(i, j, k) <
-            IRL::global_constants::VF_LOW) {
-          // (*a_liquid_volume_fraction)(i, j, k) = 0.0;
-          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
-          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
-        } else if ((*a_liquid_volume_fraction)(i, j, k) >
-                   IRL::global_constants::VF_HIGH) {
-          // (*a_liquid_volume_fraction)(i, j, k) = 1.0;
-          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
-          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
-        } else {
-          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
-              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-          (*a_gas_centroid)(i, j, k) = back_project_vertex(
-              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-        }
+        // if ((*a_liquid_volume_fraction)(i, j, k) <
+        //     IRL::global_constants::VF_LOW) {
+        //   // (*a_liquid_volume_fraction)(i, j, k) = 0.0;
+        //   (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+        //   (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        // } else if ((*a_liquid_volume_fraction)(i, j, k) >
+        //            IRL::global_constants::VF_HIGH) {
+        //   // (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+        //   (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+        //   (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        // } else {
+        //   (*a_liquid_centroid)(i, j, k) = back_project_vertex(
+        //       (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+        //   (*a_gas_centroid)(i, j, k) = back_project_vertex(
+        //       (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+        // }
       }
     }
   }
+
+  int vector_size = mesh.size();
+  std::vector<double> vfrac_local, vfrac;
+  vfrac_local.resize(vector_size);
+  vfrac.resize(vector_size);
+  std::fill(vfrac_local.begin(), vfrac_local.end(), 0.0);
+  std::fill(vfrac.begin(), vfrac.end(), 0.0);
+
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        vfrac_local[address] = (*a_liquid_volume_fraction)(i, j, k);
+      }
+    }
+  }
+
+  MPI_Allreduce(vfrac_local.data(), vfrac.data(), vector_size, MPI_DOUBLE,
+                MPI_SUM, MPI_COMM_WORLD);
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        (*a_liquid_volume_fraction)(i, j, k) = vfrac[address];
+      }
+    }
+  }
+
   a_liquid_volume_fraction->updateBorder();
 
   // Technically wrong below, need to move to new reference frame for periodic
@@ -503,6 +590,44 @@ void SemiLagrangian::advectVOF(
     }
   }
 
+  std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
+  std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
+  std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
+  std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
+  std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
+  std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
+
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        face_flux_x_local[address] = (face_flux[0](i, j, k))[1].volume();
+        face_flux_y_local[address] = (face_flux[1](i, j, k))[1].volume();
+        face_flux_z_local[address] = (face_flux[2](i, j, k))[1].volume();
+      }
+    }
+  }
+
+  MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        (face_flux[0](i, j, k))[1].volume() = face_flux_x[address];
+        (face_flux[1](i, j, k))[1].volume() = face_flux_y[address];
+        (face_flux[2](i, j, k))[1].volume() = face_flux_z[address];
+      }
+    }
+  }
+
   face_flux[0].updateBorder();
   face_flux[1].updateBorder();
   face_flux[2].updateBorder();
@@ -527,7 +652,18 @@ void SemiLagrangian::advectVOF(
              (face_flux[1])(i, j + 1, k)[0].volume() +
              (face_flux[2])(i, j, k)[0].volume() -
              (face_flux[2])(i, j, k + 1)[0].volume()) /
-            cell_volume;
+            (cell_volume + (face_flux[0])(i, j, k)[0].volume() -
+             (face_flux[0])(i + 1, j, k)[0].volume() +
+             (face_flux[1])(i, j, k)[0].volume() -
+             (face_flux[1])(i, j + 1, k)[0].volume() +
+             (face_flux[2])(i, j, k)[0].volume() -
+             (face_flux[2])(i, j, k + 1)[0].volume() +
+             (face_flux[0])(i, j, k)[1].volume() -
+             (face_flux[0])(i + 1, j, k)[1].volume() +
+             (face_flux[1])(i, j, k)[1].volume() -
+             (face_flux[1])(i, j + 1, k)[1].volume() +
+             (face_flux[2])(i, j, k)[1].volume() -
+             (face_flux[2])(i, j, k + 1)[1].volume());
 
         if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {
           (*a_liquid_volume_fraction)(i, j, k) = 0.0;
@@ -661,17 +797,18 @@ void SemiLagrangianCorrected::advectVOF(
   }
 
   // Allocate storage for face fluxes
-  Data<IRL::Volume> face_flux[3] = {Data<IRL::Volume>(&mesh),
-                                    Data<IRL::Volume>(&mesh),
-                                    Data<IRL::Volume>(&mesh)};
+  Data<IRL::SeparatedMoments<IRL::VolumeMoments>> face_flux[3] = {
+      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh),
+      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh),
+      Data<IRL::SeparatedMoments<IRL::VolumeMoments>>(&mesh)};
 
   // For now, naively advect everywhere in domain
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        // for (int i = imin; i < imin + nx; ++i) {
-        //   for (int j = jmin; j < jmin + ny; ++j) {
-        //     for (int k = kmin; k < kmin + nz; ++k) {
+  // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+  //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+  //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -712,140 +849,100 @@ void SemiLagrangianCorrected::advectVOF(
         face_cell[2].adjustCapToMatchVolume(a_dt * W_face(i, j, k) * mesh.dx() *
                                             mesh.dy());
 
-        const double divergence = (U_face(i + 1, j, k) - U_face(i, j, k)) +
-                                  (V_face(i, j + 1, k) - V_face(i, j, k)) +
-                                  (W_face(i, j, k + 1) - W_face(i, j, k));
-        // if (fabs(divergence) > IRL::global_constants::VF_LOW) {
-        //   std::cout << "Divergence = " << divergence << std::endl;
-        // }
-
         for (int dim = 0; dim < 3; ++dim) {
           // Store face flux
-          (face_flux[dim])(i, j, k) = IRL::getVolumeMoments<IRL::Volume>(
-              face_cell[dim], (*a_link_localized_paraboloid)(i, j, k));
-
-          if ((i == 15 && j == 18 && k == 16) ||
-              (i == 16 && j == 18 && k == 16) ||
-              (i == 15 && j == 19 && k == 16) ||
-              (i == 15 && j == 18 && k == 17)) {
-            std::cout << "Divergence = " << divergence << std::endl;
-            std::cout << "Flux[" << dim << "](" << i << "," << j << "," << k
-                      << ") = " << (face_flux[dim](i, j, k)).volume()
-                      << std::endl;
-            std::cout << "Cell vol = " << face_cell[dim].calculateVolume()
-                      << std::endl;
-            if (dim == 1 && (i == 15 && j == 19 && k == 16)) {
-              std::cout << face_cell[dim] << std::endl;
-              for (int ii = i - 1; ii <= i + 1; ii++) {
-                for (int jj = j - 1; jj <= j + 1; jj++) {
-                  for (int kk = k - 1; kk <= k + 1; kk++) {
-                    std::cout
-                        << "VFRAC(" << ii << "," << jj << "," << kk
-                        << ") = " << (*a_liquid_volume_fraction)(ii, jj, kk)
-                        << std::endl;
-                    std::cout << "Paraboloid(" << ii << "," << jj << "," << kk
-                              << ") = "
-                              << (*a_link_localized_paraboloid)(ii, jj, kk)
-                                     .getNextReconstruction()
-                              << std::endl;
-                  }
-                }
-              }
-            }
-          }
+          (face_flux[dim])(i, j, k) =
+              IRL::getVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(
+                  face_cell[dim], (*a_link_localized_paraboloid)(i, j, k));
         }
       }
     }
   }
 
-  // int vector_size = mesh.size();
-  // std::vector<double> face_flux_x_local, face_flux_y_local,
-  // face_flux_z_local; std::vector<double> face_flux_x, face_flux_y,
-  // face_flux_z; face_flux_x_local.resize(vector_size);
-  // face_flux_y_local.resize(vector_size);
-  // face_flux_z_local.resize(vector_size);
-  // face_flux_x.resize(vector_size);
-  // face_flux_y.resize(vector_size);
-  // face_flux_z.resize(vector_size);
-  // std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
-  // std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
-  // std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
-  // std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
-  // std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
-  // std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
+  int vector_size = mesh.size();
+  std::vector<double> face_flux_x_local, face_flux_y_local, face_flux_z_local;
+  std::vector<double> face_flux_x, face_flux_y, face_flux_z;
+  face_flux_x_local.resize(vector_size);
+  face_flux_y_local.resize(vector_size);
+  face_flux_z_local.resize(vector_size);
+  face_flux_x.resize(vector_size);
+  face_flux_y.resize(vector_size);
+  face_flux_z.resize(vector_size);
+  std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
+  std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
+  std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
+  std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
+  std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
+  std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
 
-  // for (int i = imin; i < imin + nx; ++i) {
-  //   for (int j = jmin; j < jmin + ny; ++j) {
-  //     for (int k = kmin; k < kmin + nz; ++k) {
-  //       int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
-  //                     (j + mesh.getNgc()) * mesh.getNzo() + (k +
-  //                     mesh.getNgc());
-  //       face_flux_x_local[address] = (face_flux[0](i, j, k))[0].volume();
-  //       face_flux_y_local[address] = (face_flux[1](i, j, k))[0].volume();
-  //       face_flux_z_local[address] = (face_flux[2](i, j, k))[0].volume();
-  //     }
-  //   }
-  // }
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        face_flux_x_local[address] = (face_flux[0](i, j, k))[0].volume();
+        face_flux_y_local[address] = (face_flux[1](i, j, k))[0].volume();
+        face_flux_z_local[address] = (face_flux[2](i, j, k))[0].volume();
+      }
+    }
+  }
 
-  // MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  // MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  // MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-  //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-  //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-  //       int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
-  //                     (j + mesh.getNgc()) * mesh.getNzo() + (k +
-  //                     mesh.getNgc());
-  //       (face_flux[0](i, j, k))[0].volume() = face_flux_x[address];
-  //       (face_flux[1](i, j, k))[0].volume() = face_flux_y[address];
-  //       (face_flux[2](i, j, k))[0].volume() = face_flux_z[address];
-  //     }
-  //   }
-  // }
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        (face_flux[0](i, j, k))[0].volume() = face_flux_x[address];
+        (face_flux[1](i, j, k))[0].volume() = face_flux_y[address];
+        (face_flux[2](i, j, k))[0].volume() = face_flux_z[address];
+      }
+    }
+  }
 
-  // std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
-  // std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
-  // std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
-  // std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
-  // std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
-  // std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
+  std::fill(face_flux_x_local.begin(), face_flux_x_local.end(), 0.0);
+  std::fill(face_flux_y_local.begin(), face_flux_y_local.end(), 0.0);
+  std::fill(face_flux_z_local.begin(), face_flux_z_local.end(), 0.0);
+  std::fill(face_flux_x.begin(), face_flux_x.end(), 0.0);
+  std::fill(face_flux_y.begin(), face_flux_y.end(), 0.0);
+  std::fill(face_flux_z.begin(), face_flux_z.end(), 0.0);
 
-  // for (int i = imin; i < imin + nx; ++i) {
-  //   for (int j = jmin; j < jmin + ny; ++j) {
-  //     for (int k = kmin; k < kmin + nz; ++k) {
-  //       int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
-  //                     (j + mesh.getNgc()) * mesh.getNzo() + (k +
-  //                     mesh.getNgc());
-  //       face_flux_x_local[address] = (face_flux[0](i, j, k))[1].volume();
-  //       face_flux_y_local[address] = (face_flux[1](i, j, k))[1].volume();
-  //       face_flux_z_local[address] = (face_flux[2](i, j, k))[1].volume();
-  //     }
-  //   }
-  // }
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        face_flux_x_local[address] = (face_flux[0](i, j, k))[1].volume();
+        face_flux_y_local[address] = (face_flux[1](i, j, k))[1].volume();
+        face_flux_z_local[address] = (face_flux[2](i, j, k))[1].volume();
+      }
+    }
+  }
 
-  // MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  // MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  // MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
-  //               MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_x_local.data(), face_flux_x.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_y_local.data(), face_flux_y.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(face_flux_z_local.data(), face_flux_z.data(), vector_size,
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-  //   for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-  //     for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-  //       int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
-  //                     (j + mesh.getNgc()) * mesh.getNzo() + (k +
-  //                     mesh.getNgc());
-  //       (face_flux[0](i, j, k))[1].volume() = face_flux_x[address];
-  //       (face_flux[1](i, j, k))[1].volume() = face_flux_y[address];
-  //       (face_flux[2](i, j, k))[1].volume() = face_flux_z[address];
-  //     }
-  //   }
-  // }
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        int address = (i + mesh.getNgc()) * mesh.getNyo() * mesh.getNzo() +
+                      (j + mesh.getNgc()) * mesh.getNzo() + (k + mesh.getNgc());
+        (face_flux[0](i, j, k))[1].volume() = face_flux_x[address];
+        (face_flux[1](i, j, k))[1].volume() = face_flux_y[address];
+        (face_flux[2](i, j, k))[1].volume() = face_flux_z[address];
+      }
+    }
+  }
 
   face_flux[0].updateBorder();
   face_flux[1].updateBorder();
@@ -865,117 +962,83 @@ void SemiLagrangianCorrected::advectVOF(
         // Update VOF
         (*a_liquid_volume_fraction)(i, j, k) =
             previous_liquid_volume_fraction +
-            ((face_flux[0])(i, j, k).volume() -
-             (face_flux[0])(i + 1, j, k).volume() +
-             (face_flux[1])(i, j, k).volume() -
-             (face_flux[1])(i, j + 1, k).volume() +
-             (face_flux[2])(i, j, k).volume() -
-             (face_flux[2])(i, j, k + 1).volume()) /
-                (cell_volume);
+            ((face_flux[0])(i, j, k)[0].volume() -
+             (face_flux[0])(i + 1, j, k)[0].volume() +
+             (face_flux[1])(i, j, k)[0].volume() -
+             (face_flux[1])(i, j + 1, k)[0].volume() +
+             (face_flux[2])(i, j, k)[0].volume() -
+             (face_flux[2])(i, j, k + 1)[0].volume()) /
+                (cell_volume + (face_flux[0])(i, j, k)[0].volume() -
+                 (face_flux[0])(i + 1, j, k)[0].volume() +
+                 (face_flux[1])(i, j, k)[0].volume() -
+                 (face_flux[1])(i, j + 1, k)[0].volume() +
+                 (face_flux[2])(i, j, k)[0].volume() -
+                 (face_flux[2])(i, j, k + 1)[0].volume() +
+                 (face_flux[0])(i, j, k)[1].volume() -
+                 (face_flux[0])(i + 1, j, k)[1].volume() +
+                 (face_flux[1])(i, j, k)[1].volume() -
+                 (face_flux[1])(i, j + 1, k)[1].volume() +
+                 (face_flux[2])(i, j, k)[1].volume() -
+                 (face_flux[2])(i, j, k + 1)[1].volume());
 
         if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {
-          if ((*a_liquid_volume_fraction)(i, j, k) < -1.0e-14) {
-            std::cout << "Cell " << i << " " << j << " " << k << " has - error "
-                      << (*a_liquid_volume_fraction)(i, j, k) << std::endl;
-            std::cout << "Cell volume = " << cell_volume << std::endl;
-            std::cout << "Fluxes are:\n"
-                      << (face_flux[0])(i, j, k).volume() / cell_volume << "\n"
-                      << -(face_flux[0])(i + 1, j, k).volume() / cell_volume
-                      << "\n"
-                      << (face_flux[1])(i, j, k).volume() / cell_volume << "\n"
-                      << -(face_flux[1])(i, j + 1, k).volume() / cell_volume
-                      << "\n"
-                      << (face_flux[2])(i, j, k).volume() / cell_volume << "\n"
-                      << -(face_flux[2])(i, j, k + 1).volume() / cell_volume
-                      << "\n"
-                      << " SUM gas = "
-                      << ((face_flux[0])(i, j, k).volume() -
-                          (face_flux[0])(i + 1, j, k).volume() +
-                          (face_flux[1])(i, j, k).volume() -
-                          (face_flux[1])(i, j + 1, k).volume() +
-                          (face_flux[2])(i, j, k).volume() -
-                          (face_flux[2])(i, j, k + 1).volume()) /
-                             cell_volume
-                      << "\n"
-                      // << " SUM gas+liquid = "
-                      // << (face_flux[0])(i, j, k)[0].volume() -
-                      //        ((face_flux[0])(i + 1, j, k)[0].volume() +
-                      //         (face_flux[1])(i, j, k)[0].volume() -
-                      //         (face_flux[1])(i, j + 1, k)[0].volume() +
-                      //         (face_flux[2])(i, j, k)[0].volume() -
-                      //         (face_flux[2])(i, j, k + 1)[0].volume() +
-                      //         (face_flux[0])(i, j, k)[1].volume() -
-                      //         (face_flux[0])(i + 1, j, k)[1].volume() +
-                      //         (face_flux[1])(i, j, k)[1].volume() -
-                      //         (face_flux[1])(i, j + 1, k)[1].volume() +
-                      //         (face_flux[2])(i, j, k)[1].volume() -
-                      //         (face_flux[2])(i, j, k + 1)[1].volume()) /
-                      //            cell_volume
-                      // << "\n"
-                      << std::endl;
-          }
           (*a_liquid_volume_fraction)(i, j, k) = 0.0;
         } else if ((*a_liquid_volume_fraction)(i, j, k) > 1.0) {
-          if ((*a_liquid_volume_fraction)(i, j, k) > 1.0 + 1.0e-14) {
-            std::cout << "Cell " << i << " " << j << " " << k << " has + error "
-                      << (*a_liquid_volume_fraction)(i, j, k) - 1.0
-                      << std::endl;
-          }
           (*a_liquid_volume_fraction)(i, j, k) = 1.0;
         }
 
-        // if ((*a_liquid_volume_fraction)(i, j, k) <
-        //     IRL::global_constants::VF_LOW) {
-        //   (*a_liquid_volume_fraction)(i, j, k) = 0.0;
-        //   (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
-        //   (*a_gas_centroid)(i, j, k) = cell.calculateCentroid();
-        // } else if ((*a_liquid_volume_fraction)(i, j, k) >
-        //            IRL::global_constants::VF_HIGH) {
-        //   (*a_liquid_volume_fraction)(i, j, k) = 1.0;
-        //   (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
-        //   (*a_gas_centroid)(i, j, k) = cell.calculateCentroid();
-        // } else {
-        //   // Update liquid centroid, .centroid() is un-normalized
-        //   (*a_liquid_centroid)(i, j, k) =
-        //       IRL::Pt(previous_liquid_volume_fraction * cell_volume *
-        //                   (*a_liquid_centroid)(i, j, k) +
-        //               (face_flux[0])(i, j, k)[0].centroid() -
-        //               (face_flux[0])(i + 1, j, k)[0].centroid() +
-        //               (face_flux[1])(i, j, k)[0].centroid() -
-        //               (face_flux[1])(i, j + 1, k)[0].centroid() +
-        //               (face_flux[2])(i, j, k)[0].centroid() -
-        //               (face_flux[2])(i, j, k + 1)[0].centroid()) /
-        //       (previous_liquid_volume_fraction * cell_volume +
-        //        (face_flux[0])(i, j, k)[0].volume() -
-        //        (face_flux[0])(i + 1, j, k)[0].volume() +
-        //        (face_flux[1])(i, j, k)[0].volume() -
-        //        (face_flux[1])(i, j + 1, k)[0].volume() +
-        //        (face_flux[2])(i, j, k)[0].volume() -
-        //        (face_flux[2])(i, j, k + 1)[0].volume());
+        if ((*a_liquid_volume_fraction)(i, j, k) <
+            IRL::global_constants::VF_LOW) {
+          // (*a_liquid_volume_fraction)(i, j, k) = 0.0;
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = cell.calculateCentroid();
+        } else if ((*a_liquid_volume_fraction)(i, j, k) >
+                   IRL::global_constants::VF_HIGH) {
+          // (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = cell.calculateCentroid();
+        } else {
+          // Update liquid centroid, .centroid() is un-normalized
+          (*a_liquid_centroid)(i, j, k) =
+              IRL::Pt(previous_liquid_volume_fraction * cell_volume *
+                          (*a_liquid_centroid)(i, j, k) +
+                      (face_flux[0])(i, j, k)[0].centroid() -
+                      (face_flux[0])(i + 1, j, k)[0].centroid() +
+                      (face_flux[1])(i, j, k)[0].centroid() -
+                      (face_flux[1])(i, j + 1, k)[0].centroid() +
+                      (face_flux[2])(i, j, k)[0].centroid() -
+                      (face_flux[2])(i, j, k + 1)[0].centroid()) /
+              (previous_liquid_volume_fraction * cell_volume +
+               (face_flux[0])(i, j, k)[0].volume() -
+               (face_flux[0])(i + 1, j, k)[0].volume() +
+               (face_flux[1])(i, j, k)[0].volume() -
+               (face_flux[1])(i, j + 1, k)[0].volume() +
+               (face_flux[2])(i, j, k)[0].volume() -
+               (face_flux[2])(i, j, k + 1)[0].volume());
 
-        //   // Update gas centroid, .centroid() is un-normalized
-        //   (*a_gas_centroid)(i, j, k) =
-        //       IRL::Pt((1.0 - previous_liquid_volume_fraction) * cell_volume *
-        //                   (*a_gas_centroid)(i, j, k) +
-        //               (face_flux[0])(i, j, k)[1].centroid() -
-        //               (face_flux[0])(i + 1, j, k)[1].centroid() +
-        //               (face_flux[1])(i, j, k)[1].centroid() -
-        //               (face_flux[1])(i, j + 1, k)[1].centroid() +
-        //               (face_flux[2])(i, j, k)[1].centroid() -
-        //               (face_flux[2])(i, j, k + 1)[1].centroid()) /
-        //       ((1.0 - previous_liquid_volume_fraction) * cell_volume +
-        //        (face_flux[0])(i, j, k)[1].volume() -
-        //        (face_flux[0])(i + 1, j, k)[1].volume() +
-        //        (face_flux[1])(i, j, k)[1].volume() -
-        //        (face_flux[1])(i, j + 1, k)[1].volume() +
-        //        (face_flux[2])(i, j, k)[1].volume() -
-        //        (face_flux[2])(i, j, k + 1)[1].volume());
+          // Update gas centroid, .centroid() is un-normalized
+          (*a_gas_centroid)(i, j, k) =
+              IRL::Pt((1.0 - previous_liquid_volume_fraction) * cell_volume *
+                          (*a_gas_centroid)(i, j, k) +
+                      (face_flux[0])(i, j, k)[1].centroid() -
+                      (face_flux[0])(i + 1, j, k)[1].centroid() +
+                      (face_flux[1])(i, j, k)[1].centroid() -
+                      (face_flux[1])(i, j + 1, k)[1].centroid() +
+                      (face_flux[2])(i, j, k)[1].centroid() -
+                      (face_flux[2])(i, j, k + 1)[1].centroid()) /
+              ((1.0 - previous_liquid_volume_fraction) * cell_volume +
+               (face_flux[0])(i, j, k)[1].volume() -
+               (face_flux[0])(i + 1, j, k)[1].volume() +
+               (face_flux[1])(i, j, k)[1].volume() -
+               (face_flux[1])(i, j + 1, k)[1].volume() +
+               (face_flux[2])(i, j, k)[1].volume() -
+               (face_flux[2])(i, j, k + 1)[1].volume());
 
-        //   (*a_liquid_centroid)(i, j, k) = back_project_vertex(
-        //       (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-        //   (*a_gas_centroid)(i, j, k) = back_project_vertex(
-        //       (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-        // }
+          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
+              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+          (*a_gas_centroid)(i, j, k) = back_project_vertex(
+              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+        }
       }
     }
   }
