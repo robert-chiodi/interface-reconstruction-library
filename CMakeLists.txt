@@ -110,7 +110,8 @@ endif()
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(irl INTERFACE PUBLIC Eigen::Eigen)
-target_link_libraries(irl INTERFACE PUBLIC CGAL::CGAL)
+
+# target_link_libraries(irl INTERFACE PUBLIC CGAL::CGAL)
 target_link_libraries(irl PUBLIC quadmath)
 
 if(IRL_USE_ABSL)
