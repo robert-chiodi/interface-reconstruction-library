@@ -58,7 +58,8 @@ message(STATUS "CXX compilation flags are: ${CMAKE_CXX_FLAGS}")
 
 # Find external packages needed by IRL
 find_package(Eigen) # Provide -D EIGEN_PATH=/path/to/Eigen
-find_package(CGAL)
+
+# find_package(CGAL)
 
 # Add packages IRL stores in external
 set(IRL_USE_ABSL ON)
@@ -99,12 +100,12 @@ else()
   add_library(irl_fortran STATIC)
 endif()
 
-if(DEFINED USE_TRIANGLE AND NOT USE_TRIANGLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D IRL_NO_USE_TRIANGLE")
-else()
-  target_sources(irl PRIVATE "external/triangle/triangle.h")
-  target_sources(irl PRIVATE "external/triangle/triangle.cpp")
-endif()
+# if(DEFINED USE_TRIANGLE AND NOT USE_TRIANGLE)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D IRL_NO_USE_TRIANGLE")
+# else()
+# target_sources(irl PRIVATE "external/triangle/triangle.h")
+# target_sources(irl PRIVATE "external/triangle/triangle.cpp")
+# endif()
 
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")
