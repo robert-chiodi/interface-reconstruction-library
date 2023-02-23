@@ -624,11 +624,6 @@ ReturnType computeNewEdgeSegmentContribution(
               a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
               a_surface, a_requires_nudge);
     } else {
-      // auto moments = orientAndApplyType3Correction<ReturnType, ScalarType>(
-      //     a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
-      //     a_requires_nudge, a_surface);
-      // std::cout << "Type 3 = " << moments << std::endl;
-      // full_moments += moments;
       full_moments += orientAndApplyType3Correction<ReturnType, ScalarType>(
           a_aligned_paraboloid, a_exit_half_edge, a_entry_half_edge,
           a_requires_nudge, a_surface);
@@ -2216,16 +2211,12 @@ formParaboloidIntersectionBases(
     if (elliptic && a_aligned_paraboloid.a() > ZERO &&
         number_of_vertices_above == 0) {
       // Whole volume below
-      // std::cout << "All vertices below, returning "
-      //           << ReturnType::calculateMoments(a_polytope) << std::endl;
       return ReturnType::calculateMoments(a_polytope);
     }
 
     if (elliptic && a_aligned_paraboloid.a() < ZERO &&
         number_of_vertices_above == starting_number_of_vertices) {
       // Zero volume - will be current value of full_moments
-      // std::cout << "All vertices below, returning " << full_moments
-      //           << std::endl;
       return full_moments;
     }
   }
@@ -2680,10 +2671,16 @@ formParaboloidIntersectionBases(
     if (number_of_vertices_above == starting_number_of_vertices) {
       // All points above
       return full_moments;
-    } else {
+    } else if (number_of_vertices_above == 0) {
       // All points below
       return ReturnType::calculateMoments(a_polytope) + full_moments;
     }
+    // ELSE: The polytope has 0 intersections, but a number of clipped vertices
+    // > 0 and a number of unclipped vertices > 0. This is very rare, and
+    // happens when the polytope actually consists of several manifolds that are
+    // either entirely above or entirely below the paraboloid. In which case,
+    // the remainder of this function will compute the volume of the unclipped
+    // elements by looping over their faces. else {
   }
 
   // There are edge-intersections. We then need to calculate the contributions
