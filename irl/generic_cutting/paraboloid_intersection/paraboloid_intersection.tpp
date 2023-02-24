@@ -2039,6 +2039,8 @@ void triangulatePolytopeAndComputeNormals(
     // Add new vertex to the polytope
     auto center_vert =
         a_complete_polytope->getNewVertex(VertexType(face_center));
+    center_vert->setToSeek();
+    center_vert->markToBeNotClipped();
     a_polytope->addVertex(center_vert);
 
     // Loop over face and triangulate now
