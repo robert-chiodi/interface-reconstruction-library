@@ -341,12 +341,17 @@ FaceParaboloid<HalfEdgeType>::getNumberOfEdgeParallelIntersections(void) const {
 }
 
 template <class HalfEdgeType>
-void FaceParaboloid<HalfEdgeType>::setAsTriangle(void) {
+inline void FaceParaboloid<HalfEdgeType>::setAsTriangle(void) {
   is_triangle_m = true;
 }
 
 template <class HalfEdgeType>
-bool FaceParaboloid<HalfEdgeType>::isTriangle(void) const {
+inline void FaceParaboloid<HalfEdgeType>::setAsNotTriangle(void) {
+  is_triangle_m = false;
+}
+
+template <class HalfEdgeType>
+inline bool FaceParaboloid<HalfEdgeType>::isTriangle(void) const {
   return is_triangle_m;
 }
 

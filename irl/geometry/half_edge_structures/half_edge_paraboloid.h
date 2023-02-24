@@ -167,6 +167,7 @@ class FaceParaboloid : public Face<HalfEdgeType> {
   void addEdgeParallelIntersections(const UnsignedIndex_t a_intersections);
   UnsignedIndex_t getNumberOfEdgeParallelIntersections(void) const;
   void setAsTriangle(void);
+  void setAsNotTriangle(void);
   bool isTriangle(void) const;
 
  private:

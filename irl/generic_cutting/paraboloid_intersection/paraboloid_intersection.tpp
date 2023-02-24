@@ -2189,6 +2189,7 @@ formParaboloidIntersectionBases(
   for (UnsignedIndex_t v = 0; v < starting_number_of_vertices; ++v) {
     auto& vertex = *(a_polytope->getVertex(v));
     vertex.setAsUnnecessaryToSeek();  // Reset all
+    vertex.markToBeClipped();
     const auto& pt = vertex.getLocation().getPt();
     const ScalarType dist_function = pt[2] +
                                      a_aligned_paraboloid.a() * pt[0] * pt[0] +
@@ -2223,6 +2224,7 @@ formParaboloidIntersectionBases(
 
   // Clear visitation knowledge from polytope.
   for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
+    (*a_polytope)[f]->setAsNotTriangle();
     (*a_polytope)[f]->markAsNotVisited();
     (*a_polytope)[f]->clearIntersections();
   }
