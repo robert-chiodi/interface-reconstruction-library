@@ -1874,15 +1874,14 @@ ReturnType reformParaboloidIntersectionBases(
 
       // Nudge polytope and reset surface
       nudgePolyhedron(&QP_segmented_paraboloid, &QP_polytope_paraboloid,
-                      a_nudge_iter + 1, a_surface);
+                      a_nudge_iter, a_surface);
       // Try again!
       return formParaboloidIntersectionBases<ReturnType>(
           &QP_segmented_paraboloid, &QP_polytope_paraboloid,
           QP_aligned_paraboloid, a_nudge_iter + 1, a_surface);
     } else {
       // Nudge polytope (already QP) and reset surface
-      nudgePolyhedron(a_polytope, a_complete_polytope, a_nudge_iter + 1,
-                      a_surface);
+      nudgePolyhedron(a_polytope, a_complete_polytope, a_nudge_iter, a_surface);
       // Try again!
       return formParaboloidIntersectionBases<ReturnType>(
           a_polytope, a_complete_polytope, a_aligned_paraboloid,
@@ -1936,7 +1935,9 @@ void triangulatePolytopeAndComputeNormals(
     }
 
     // If face is already a triangle, move to next face
-    if (half_edge == starting_half_edge || next == starting_half_edge) {
+    if (face->isTriangle() || half_edge == starting_half_edge ||
+        next == starting_half_edge ||
+        next->getNextHalfEdge() == starting_half_edge) {
       face->setPlane(Plane(normal, normal * start_location));
       face->setAsTriangle();
       continue;
@@ -1968,10 +1969,10 @@ void triangulatePolytopeAndComputeNormals(
 
 // Triangulate face
 #if 0
-// Old implementation that does not introduce a Steiner vertex
-// In some peculiar cases (associated with localizer cuts) this
-// can lead to invalid half-edge structures and therefore wrong 
-// moments and/or segfaults
+    // Old implementation that does not introduce a Steiner vertex
+    // In some peculiar cases (associated with localizer cuts) this
+    // can lead to invalid half-edge structures and therefore wrong
+    // moments and/or segfaults
     face->setAsTriangle();
     half_edge = starting_half_edge->getNextHalfEdge();
     next = half_edge->getNextHalfEdge();
@@ -2161,7 +2162,7 @@ formParaboloidIntersectionBases(
   const ScalarType nudge_epsilon = DISTANCE_EPSILON;
   const ScalarType nudge_epsilon_sq = nudge_epsilon * nudge_epsilon;
 
-  if constexpr (std::is_same_v<ScalarType, double>) {
+  if constexpr (std::is_same_v<ScalarType, Quad_t>) {
     // We only check this in QP for performance purposes
     // (i.e. when a_nudge_iter > 0)
     if (a_nudge_iter >= 100) {
@@ -2171,7 +2172,6 @@ formParaboloidIntersectionBases(
       return ReturnType::fromScalarConstant(-static_cast<ScalarType>(DBL_MAX));
     }
   }
-
   // Identify elliptic case
   const bool elliptic =
       a_aligned_paraboloid.a() * a_aligned_paraboloid.b() > ZERO;
@@ -2224,7 +2224,6 @@ formParaboloidIntersectionBases(
 
   // Clear visitation knowledge from polytope.
   for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
-    (*a_polytope)[f]->setAsNotTriangle();
     (*a_polytope)[f]->markAsNotVisited();
     (*a_polytope)[f]->clearIntersections();
   }
@@ -2705,13 +2704,8 @@ formParaboloidIntersectionBases(
     const auto intersection_size = face.getNumberOfIntersections();
     if (intersection_size % 2 == 1) {
       // Discrete topology is ambiguous, let's shake things up
-      resetPolyhedron(a_polytope, a_complete_polytope);
-      assert(a_polytope->getNumberOfVertices() == starting_number_of_vertices);
-
-      // Nudge and try again!
-      return reformParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
-          a_surface);
+      requires_nudge = true;
+      break;
     }
 
     // This face has not intersections so the moment contribution is only of
@@ -2965,8 +2959,6 @@ formParaboloidIntersectionBases(
               computeUnclippedSegmentType1Contribution<ReturnType, ScalarType>(
                   a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
                   skip_first);
-          current_edge->getVertex()->markAsEntry();
-          exit_half_edge->getVertex()->markAsExit();
           intersections.push_back(std::pair<half_edge_type*, ScalarType>(
               {current_edge, static_cast<ScalarType>(DBL_MAX)}));
           intersections.push_back(std::pair<half_edge_type*, ScalarType>(
@@ -3126,13 +3118,8 @@ formParaboloidIntersectionBases(
               }
               // If all sorts have failed, switch to QP and try again
               if (re_re_restart_sort) {
-                resetPolyhedron(a_polytope, a_complete_polytope);
-                assert(a_polytope->getNumberOfVertices() ==
-                       starting_number_of_vertices);
-                // Nudge and try again!
-                return reformParaboloidIntersectionBases<ReturnType>(
-                    a_polytope, a_complete_polytope, a_aligned_paraboloid,
-                    a_nudge_iter, a_surface);
+                requires_nudge = true;
+                break;
               }
             }
           }
@@ -3205,6 +3192,7 @@ formParaboloidIntersectionBases(
               fabs(z_center_plane - z_center_paraboloid) <
                   ONE_HUNDRED * MACHINE_EPSILON) {
             requires_nudge = true;
+            break;
           }
           // If the sorted intersections are too close to each other, we switch
           // to QP
@@ -3241,6 +3229,7 @@ formParaboloidIntersectionBases(
           // If we can't determine that accurately enough, we switch to QP
           if (fabs(z_diff) < ONE_HUNDRED * MACHINE_EPSILON) {
             requires_nudge = true;
+            break;
           }
           // Find dominant face normal direction
           std::size_t dir = 0;
@@ -3248,8 +3237,8 @@ formParaboloidIntersectionBases(
           for (std::size_t d = 1; d < 3; ++d) {
             if (fabs(face_normal[d]) > max_normal) {
               dir = d;
+              max_normal = fabs(face_normal[d]);
             }
-            max_normal = fabs(face_normal[dir]);
           }
           const ScalarType normal_invert = copysign(ONE, face_normal[dir]);
           const ScalarType invert =
@@ -3328,13 +3317,18 @@ formParaboloidIntersectionBases(
                         [](const stype& a, const stype& b) {
                           return a.second < b.second;
                         });
+              // If there remains aligned intersections, switch to QP
+              for (std::size_t i = 0; i < intersection_size - 1; ++i) {
+                if (fabs(intersections[i].second -
+                         intersections[i + 1].second) <
+                    ONE_HUNDRED * MACHINE_EPSILON) {
+                  requires_nudge = true;
+                }
+              }
             } else {
               // Is convex hull incomplete? Then error out
               if (hull_size != intersection_size) {
-                std::cout << "Parabolic intersections don't form a "
-                             "convex polygon!"
-                          << std::endl;
-                exit(-1);
+                requires_nudge = true;
               }
               // Else: update intersection with ordered list
               if (invert > ZERO) {
@@ -3346,18 +3340,9 @@ formParaboloidIntersectionBases(
                 }
               }
             }
-          }
-          // If there remains aligned intersections, switch to QP
-          UnsignedIndex_t intersection_are_aligned = 0;
-          for (std::size_t i = 0; i < intersection_size - 1; ++i) {
-            if (fabs(intersections[i].second - intersections[i + 1].second) <
-                ONE_HUNDRED * MACHINE_EPSILON) {
-              requires_nudge = true;
-              intersection_are_aligned++;
-            }
-          }
-          if (intersection_are_aligned == intersection_size) {
-            ignore_type3_contributions = true;
+          } else {
+            requires_nudge = true;
+            break;
           }
         }
         // Traverse face from entry->exit until all intersections have been
@@ -3389,15 +3374,20 @@ formParaboloidIntersectionBases(
     // If some ambiguous configuration has been detected, switch to QP and shake
     // things up
     if (requires_nudge) {
-      resetPolyhedron(a_polytope, a_complete_polytope);
-      assert(a_polytope->getNumberOfVertices() == starting_number_of_vertices);
-
-      // Nudge and try again!
-      return reformParaboloidIntersectionBases<ReturnType>(
-          a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
-          a_surface);
+      break;
     }
   }  // End loop over faces
+
+  // Last call for the nudge
+  if (requires_nudge) {
+    resetPolyhedron(a_polytope, a_complete_polytope);
+    assert(a_polytope->getNumberOfVertices() == starting_number_of_vertices);
+
+    // Nudge and try again!
+    return reformParaboloidIntersectionBases<ReturnType>(
+        a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
+        a_surface);
+  }
 
   return full_moments;
 }
