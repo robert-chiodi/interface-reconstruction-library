@@ -2299,8 +2299,6 @@ formParaboloidIntersectionBases(
             a_aligned_paraboloid, edge_start, edge_end, &edge_intercepts,
             nudge_epsilon, elliptic);
 
-        assert(current_edge->getPreviousVertex()->isClipped() ||
-               edge_intercepts.size() == 1);
         // Size of returned intercepts indicates single or double
         // intercept (or none)
         if (edge_intercepts.size() == 1) {
@@ -3301,9 +3299,10 @@ formParaboloidIntersectionBases(
             // Check if all intersections are aligned
             if (flatness_counter == intersection_size - 2) {
               is_flat = true;
+              break;
             }
             p = q;
-          } while (p != left_id && !is_flat);
+          } while (p != left_id);
           // If the convex-hull of the intersections does not have a 0 area
           // (i.e. is flat)
           if (!is_flat) {
