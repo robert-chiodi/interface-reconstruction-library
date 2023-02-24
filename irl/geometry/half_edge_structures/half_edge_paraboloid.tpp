@@ -143,8 +143,7 @@ inline VertexParaboloid<PtType>::VertexParaboloid(void)
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
       is_clipped_m(false),
-      needs_to_seek_m(false),
-      is_entry_m(false) {}
+      needs_to_seek_m(false) {}
 
 template <class PtType>
 inline VertexParaboloid<PtType>::VertexParaboloid(const PtType& a_location)
@@ -152,8 +151,7 @@ inline VertexParaboloid<PtType>::VertexParaboloid(const PtType& a_location)
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
       is_clipped_m(false),
-      needs_to_seek_m(false),
-      is_entry_m(false) {}
+      needs_to_seek_m(false) {}
 
 template <class PtType>
 inline void VertexParaboloid<PtType>::setHalfEdge(
@@ -233,22 +231,6 @@ inline bool VertexParaboloid<PtType>::needsToSeek(void) const {
 template <class PtType>
 inline bool VertexParaboloid<PtType>::doesNotNeedToSeek(void) const {
   return !needs_to_seek_m;
-}
-template <class PtType>
-inline void VertexParaboloid<PtType>::markAsEntry(void) {
-  is_entry_m = true;
-}
-template <class PtType>
-inline void VertexParaboloid<PtType>::markAsExit(void) {
-  is_entry_m = false;
-}
-template <class PtType>
-inline bool VertexParaboloid<PtType>::isEntry(void) const {
-  return is_entry_m;
-}
-template <class PtType>
-inline bool VertexParaboloid<PtType>::isExit(void) const {
-  return !is_entry_m;
 }
 
 template <class PtType>

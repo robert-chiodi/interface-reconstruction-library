@@ -126,11 +126,6 @@ class VertexParaboloid {
   bool needsToSeek(void) const;
   bool doesNotNeedToSeek(void) const;
 
-  void markAsEntry(void);
-  void markAsExit(void);
-  bool isEntry(void) const;
-  bool isExit(void) const;
-
   inline bool checkValidHalfEdgeCycle(void) const;
 
  private:
@@ -140,7 +135,6 @@ class VertexParaboloid {
   value_type distance_m;
   bool is_clipped_m = false;
   bool needs_to_seek_m = false;
-  bool is_entry_m = false;
 };
 
 template <class HalfEdgeType>
