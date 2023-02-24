@@ -142,7 +142,7 @@ inline VertexParaboloid<PtType>::VertexParaboloid(void)
           static_cast<typename PtType::value_type>(0))),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false),
       is_entry_m(false) {}
 
@@ -151,7 +151,7 @@ inline VertexParaboloid<PtType>::VertexParaboloid(const PtType& a_location)
     : vertex_location_m(a_location),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false),
       is_entry_m(false) {}
 

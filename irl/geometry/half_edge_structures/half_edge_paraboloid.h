@@ -138,9 +138,9 @@ class VertexParaboloid {
   HalfEdgeParaboloid<VertexParaboloid>*
       half_edge_m;  // HalfEdgeParaboloid that ends at this vertex
   value_type distance_m;
-  bool is_clipped_m;
-  bool needs_to_seek_m;
-  bool is_entry_m;
+  bool is_clipped_m = false;
+  bool needs_to_seek_m = false;
+  bool is_entry_m = false;
 };
 
 template <class HalfEdgeType>
@@ -174,7 +174,7 @@ class FaceParaboloid : public Face<HalfEdgeType> {
   PlaneBase<value_type> face_plane_m;
   UnsignedIndex_t intersections_m;
   UnsignedIndex_t edge_parallel_intersections_m;
-  bool is_triangle_m;
+  bool is_triangle_m = false;
 };
 
 }  // namespace IRL
