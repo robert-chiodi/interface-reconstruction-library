@@ -1935,8 +1935,7 @@ void triangulatePolytopeAndComputeNormals(
     }
 
     // If face is already a triangle, move to next face
-    if (face->isTriangle() || half_edge == starting_half_edge ||
-        next == starting_half_edge ||
+    if (half_edge == starting_half_edge || next == starting_half_edge ||
         next->getNextHalfEdge() == starting_half_edge) {
       face->setPlane(Plane(normal, normal * start_location));
       face->setAsTriangle();
@@ -1963,6 +1962,7 @@ void triangulatePolytopeAndComputeNormals(
       } while (next != starting_half_edge);
       if (!need_triangulation) {
         face->setPlane(Plane(normal, normal * start_location));
+        face->setAsNotTriangle();
         continue;
       }
     }
@@ -2109,6 +2109,37 @@ void triangulatePolytopeAndComputeNormals(
   }
 
   assert(a_polytope->checkValidHalfEdgeStructure());
+  assert(checkTriangleFlags(a_polytope));
+}
+
+template <class HalfEdgePolytopeType>
+inline bool checkTriangleFlags(HalfEdgePolytopeType* a_polytope) {
+  for (UnsignedIndex_t f = 0; f < a_polytope->getNumberOfFaces(); ++f) {
+    auto face = (*a_polytope)[f];
+    const auto starting_half_edge = face->getStartingHalfEdge();
+    auto three_after = starting_half_edge->getNextHalfEdge();
+    if (face->isTriangle() && three_after == starting_half_edge) {
+      continue;
+    }
+    if (!face->isTriangle() && three_after == starting_half_edge) {
+      return false;
+    }
+    three_after = three_after->getNextHalfEdge();
+    if (face->isTriangle() && three_after == starting_half_edge) {
+      continue;
+    }
+    if (!face->isTriangle() && three_after == starting_half_edge) {
+      return false;
+    }
+    three_after = three_after->getNextHalfEdge();
+    if (face->isTriangle() && three_after != starting_half_edge) {
+      return false;
+    }
+    if (!face->isTriangle() && three_after == starting_half_edge) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // Assumes paraboloid of function 0 = a*x^2 + b*y^2 + z.
