@@ -3008,7 +3008,8 @@ formParaboloidIntersectionBases(
           restart_sort = true;
           // If this sorting failed, we now sort based on Y positions
           if (restart_sort) {
-            auto intersection_copy = intersections;
+            SmallVector<stype, 6> intersection_copy;
+            intersection_copy.resize(intersections.size());
             // We split in X direction
             UnsignedIndex_t split_ind = 0;
             UnsignedIndex_t store_ind = 1;
@@ -3129,7 +3130,8 @@ formParaboloidIntersectionBases(
           // We will sort each hyperbola branch separately
           std::size_t pos_end = 0;
           std::size_t neg_end = 0;
-          auto intersection_copy = intersections;
+          SmallVector<stype, 6> intersection_copy;
+          intersection_copy.resize(intersections.size());
           // Compute center of the hyperbola
           const std::array<ScalarType, 2> conic_center{
               {face_normal[0] /
@@ -3263,7 +3265,8 @@ formParaboloidIntersectionBases(
           std::size_t p = left_id;
           auto p_pt = left_pt;
           std::size_t hull_size = 0;
-          auto intersection_copy = intersections;
+          SmallVector<stype, 6> intersection_copy;
+          intersection_copy.resize(intersections.size());
           bool is_flat = false;
           bool has_flat = false;
           do {
