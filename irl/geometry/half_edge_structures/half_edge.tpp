@@ -128,7 +128,7 @@ inline Vertex<PtType>::Vertex(void)
     : vertex_location_m(Pt(0.0, 0.0, 0.0)),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false) {}
 
 template <class PtType>
@@ -136,7 +136,7 @@ inline Vertex<PtType>::Vertex(const PtType& a_location)
     : vertex_location_m(a_location),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false) {}
 
 template <class PtType>
@@ -232,11 +232,11 @@ bool Vertex<PtType>::checkValidHalfEdgeCycle(void) const {
 
 template <class HalfEdgeType>
 inline Face<HalfEdgeType>::Face(void)
-    : starting_half_edge_m(nullptr), has_been_visited_m{false} {}
+    : starting_half_edge_m(nullptr), has_been_visited_m(false) {}
 
 template <class HalfEdgeType>
 inline Face<HalfEdgeType>::Face(HalfEdgeType* a_starting_half_edge)
-    : starting_half_edge_m(a_starting_half_edge), has_been_visited_m{false} {}
+    : starting_half_edge_m(a_starting_half_edge), has_been_visited_m(false) {}
 
 template <class HalfEdgeType>
 inline void Face<HalfEdgeType>::setStartingHalfEdge(
