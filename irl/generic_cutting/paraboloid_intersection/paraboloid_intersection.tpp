@@ -2816,6 +2816,7 @@ formParaboloidIntersectionBases(
           // The half-edges ending at an intersection will be stores in this
           // vector
           SmallVector<half_edge_type*, 6> intersections;
+          intersections.resize(0);
           // Find intersections and add to list
           auto current_edge = starting_half_edge;
           bool reverse_order = false;
@@ -2947,6 +2948,7 @@ formParaboloidIntersectionBases(
         // in this vector
         using stype = std::pair<half_edge_type*, ScalarType>;
         SmallVector<stype, 6> intersections;
+        intersections.resize(0);
         // Find intersections and determine status
         auto current_edge = starting_half_edge;
         bool reverse_order = false;
@@ -2960,9 +2962,9 @@ formParaboloidIntersectionBases(
                   a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
                   skip_first);
           intersections.push_back(std::pair<half_edge_type*, ScalarType>(
-              {current_edge, static_cast<ScalarType>(DBL_MAX)}));
+              {current_edge, static_cast<ScalarType>(0)}));
           intersections.push_back(std::pair<half_edge_type*, ScalarType>(
-              {exit_half_edge, static_cast<ScalarType>(DBL_MAX)}));
+              {exit_half_edge, static_cast<ScalarType>(0)}));
           current_edge = exit_half_edge->getNextHalfEdge();
           while (current_edge->getVertex()->needsToSeek()) {
             current_edge = current_edge->getNextHalfEdge();
@@ -3272,6 +3274,9 @@ formParaboloidIntersectionBases(
           do {
             p_pt = intersections[p].first->getVertex()->getLocation().getPt();
             intersection_copy[hull_size++] = intersections[p];
+            if (hull_size == intersection_size) {
+              break;
+            }
             std::size_t q = (p + 1) % intersection_size;
             std::size_t flatness_counter = 0;
             for (std::size_t i = 0; i < intersection_size; ++i) {
@@ -3298,7 +3303,7 @@ formParaboloidIntersectionBases(
               is_flat = true;
             }
             p = q;
-          } while (p != left_id && !is_flat && hull_size <= intersection_size);
+          } while (p != left_id && !is_flat);
           // If the convex-hull of the intersections does not have a 0 area
           // (i.e. is flat)
           if (!is_flat) {
