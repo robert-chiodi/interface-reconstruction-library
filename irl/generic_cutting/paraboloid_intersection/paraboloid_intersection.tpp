@@ -2254,6 +2254,11 @@ formParaboloidIntersectionBases(
       // Zero volume - will be current value of full_moments
       return full_moments;
     }
+  } else {
+    // Nudge and try again!
+    return reformParaboloidIntersectionBases<ReturnType>(
+        a_polytope, a_complete_polytope, a_aligned_paraboloid, a_nudge_iter,
+        a_surface);
   }
 
   // Clear visitation knowledge from polytope.
