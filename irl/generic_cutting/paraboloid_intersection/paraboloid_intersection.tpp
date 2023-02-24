@@ -961,6 +961,7 @@ void placeSingleIntercept(const PtType& a_intersection_location,
       typename SegmentedHalfEdgePolytopeType::vertex_type(
           a_intersection_location));
   first_intersection_vertex->setToSeek();
+  first_intersection_vertex->markToBeNotClipped();
   a_polytope->addVertex(first_intersection_vertex);
   HalfEdgeType* new_half_edge = separateIntersectedHalfEdge(
       first_intersection_vertex, a_half_edge_with_intersection, a_polytope,
