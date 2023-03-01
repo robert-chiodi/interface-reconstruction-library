@@ -46,8 +46,8 @@ enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
 intersectPolyhedronWithAlignedParaboloid(
     SegmentedHalfEdgePolyhedronType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope,
-    const AlignedParaboloidType& a_paraboloid,
-    const double a_inv_volume_scale SurfaceOutputType* a_surface = nullptr);
+    const AlignedParaboloidType& a_paraboloid, const double a_inv_volume_scale,
+    SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
           class HalfEdgePolytopeType, class AligneParaboloidType,
