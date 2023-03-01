@@ -944,8 +944,8 @@ enable_if_t<is_polyhedron<SegmentedHalfEdgePolyhedronType>::value, ReturnType>
 intersectPolyhedronWithAlignedParaboloid(
     SegmentedHalfEdgePolyhedronType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope,
-    const AlignedParaboloidType& a_paraboloid,
-    const double a_inv_volume_scale SurfaceOutputType* a_surface) {
+    const AlignedParaboloidType& a_paraboloid, const double a_inv_volume_scale,
+    SurfaceOutputType* a_surface) {
   // Assumed a_polytope is already rotated to be in same
   // coordinate system as a_paraboloid.
 #ifdef DEBUG_DP
