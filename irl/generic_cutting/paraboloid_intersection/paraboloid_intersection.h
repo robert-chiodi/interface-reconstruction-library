@@ -47,7 +47,7 @@ intersectPolyhedronWithAlignedParaboloid(
     SegmentedHalfEdgePolyhedronType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope,
     const AlignedParaboloidType& a_paraboloid,
-    SurfaceOutputType* a_surface = nullptr);
+    const double a_inv_volume_scale SurfaceOutputType* a_surface = nullptr);
 
 template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
           class HalfEdgePolytopeType, class AligneParaboloidType,
@@ -194,6 +194,16 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
                      HalfEdgePolytopeType* a_complete_polytope,
                      const UnsignedIndex_t a_nudge_iter,
                      SurfaceOutputType* a_surface);
+
+template <class ReturnType, class SegmentedHalfEdgePolyhedronType,
+          class HalfEdgePolytopeType, class AligneParaboloidType,
+          class SurfaceOutputType>
+ReturnType reformParaboloidIntersectionBases(
+    SegmentedHalfEdgePolyhedronType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const AligneParaboloidType& a_aligned_paraboloid,
+    const UnsignedIndex_t a_nudge_iter, SurfaceOutputType* a_surface);
+
 template <class C>
 struct has_embedded_gradient : std::false_type {};
 
