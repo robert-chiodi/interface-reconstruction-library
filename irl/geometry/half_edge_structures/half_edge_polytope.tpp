@@ -52,6 +52,18 @@ void HalfEdgePolytope<
   initial_face_storage_size_m = a_number_of_faces * sizeof(FaceType);
   storage_m.resize(initial_half_edge_storage_size_m +
                    initial_vertex_storage_size_m + initial_face_storage_size_m);
+  for (std::size_t i = 0; i < initial_half_edge_storage_size_m;
+       i += sizeof(HalfEdgeType)) {
+    *reinterpret_cast<HalfEdgeType*>(storage_m[i]) = HalfEdgeType();
+  }
+  for (std::size_t i = initial_half_edge_storage_size_m;
+       i < initial_vertex_storage_size_m; i += sizeof(VertexType)) {
+    *reinterpret_cast<VertexType*>(storage_m[i]) = VertexType();
+  }
+  for (std::size_t i = initial_vertex_storage_size_m;
+       i < initial_face_storage_size_m; i += sizeof(FaceType)) {
+    *reinterpret_cast<FaceType*>(storage_m[i]) = FaceType();
+  }
 }
 
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
