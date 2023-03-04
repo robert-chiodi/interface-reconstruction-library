@@ -299,7 +299,7 @@ ReturnType computeType3ContributionWithSplit(
     // If we have had to split more than N times, something is wrong: switch to
     // QP and shake the polytope
     if constexpr (std::is_same_v<ScalarType, double>) {
-      if (*a_split_counter > 3) {
+      if (*a_split_counter > 5) {
         *a_requires_nudge = true;
         return ReturnType::fromScalarConstant(ZERO);
       }
@@ -378,6 +378,12 @@ ReturnType computeType3ContributionWithSplit(
     }
     // If the rational Bezier weight is negative, we switch to QP and shake the
     // polytope
+    if constexpr (std::is_same_v<ScalarType, double>) {
+      if (arc.weight() > 1.01) {
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
+      }
+    }
     if (arc.weight() < ZERO) {
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
@@ -1342,8 +1348,8 @@ ReturnType orientAndApplyType3Correction(
       }
     }
 
-    // We take steps to compute the control point (i.e. the intersection of the
-    // tangents)
+    // We take steps to compute the control point (i.e. the intersection of
+    // the tangents)
     const Normal n_cross_t0 = crossProduct(face_normal, tgt_0);
     const ScalarType triple_prod = n_cross_t0 * tgt_1;
     if (fabs(triple_prod) < ANGLE_EPSILON) {  // The tangents are (close
@@ -1381,9 +1387,17 @@ ReturnType orientAndApplyType3Correction(
         surface_arc.reset_end_point_id(reinterpret_cast<std::uintptr_t>(&pt_0));
         a_surface->addArc(surface_arc);
       }
-      if (arc.weight() < ZERO) {
-        *a_requires_nudge = true;
-        return ReturnType::fromScalarConstant(ZERO);
+
+      if constexpr (std::is_same_v<ScalarType, double>) {
+        if (arc.weight() < 0.99) {
+          *a_requires_nudge = true;
+          return ReturnType::fromScalarConstant(ZERO);
+        }
+      } else {
+        if (arc.weight() < ZERO) {
+          *a_requires_nudge = true;
+          return ReturnType::fromScalarConstant(ZERO);
+        }
       }
       return computeType3Contribution<ReturnType, ScalarType>(a_paraboloid,
                                                               arc);
@@ -1441,8 +1455,8 @@ ReturnType orientAndApplyType3Correction(
           face_plane.distance() < DISTANCE_EPSILON) {
         return ReturnType::fromScalarConstant(ZERO);
       }
-      // Use ellipse center to orient the tangents so as to intersect. They may
-      // still both point in the wrong direction
+      // Use ellipse center to orient the tangents so as to intersect. They
+      // may still both point in the wrong direction
       auto center_to_pt_0 = Normal(pt_0 - conic_center);
       auto center_to_pt_1 = Normal(pt_1 - conic_center);
       center_to_pt_0.normalize();
@@ -1468,10 +1482,12 @@ ReturnType orientAndApplyType3Correction(
           tgt_1 = -tgt_1;
         }
       } else {
-        if (a_paraboloid.a() < ZERO) {
-          tgt_0 = -tgt_0;
-          tgt_1 = -tgt_1;
-        }
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
+        // if (a_paraboloid.a() < ZERO) {
+        //   tgt_0 = -tgt_0;
+        //   tgt_1 = -tgt_1;
+        // }
       }
     }
     UnsignedIndex_t split_counter = 0;
@@ -1756,8 +1772,8 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
       typename SegmentedHalfEdgePolyhedronType::vertex_type::pt_type;
   static_assert(std::is_same_v<typename pt_type::value_type, Quad_t>);
 
-  // Create a random number generator and seed it with the number of prior nudge
-  // iterations (for reproductibility)
+  // Create a random number generator and seed it with the number of prior
+  // nudge iterations (for reproductibility)
   std::random_device rd;
   std::mt19937 gen(a_nudge_iter);
   std::uniform_real_distribution distr(-1.0, 1.0);
@@ -1925,8 +1941,8 @@ void convertPolytopeFromDoubleToQuadPrecision(
     face_QP->setStartingHalfEdge(half_edge_QP);
   }
 #else
-  // Old implementation: can lead to invalid structures if faces have less than
-  // 3 half-edges
+  // Old implementation: can lead to invalid structures if faces have less
+  // than 3 half-edges
 
   // Convert vertices to QP
   std::vector<PtBase<Quad_t>> pt_list;
@@ -2354,6 +2370,11 @@ formParaboloidIntersectionBases(
       std::cout
           << "ERROR: Nudged more than 100 times. Moments returned are wrong."
           << std::endl;
+      std::ofstream myfile("failed_nudge_comparison_cell.vtu");
+      if (myfile.is_open()) {
+        myfile << *a_polytope;
+        myfile.close();
+      }
       return ReturnType::fromScalarConstant(-static_cast<ScalarType>(DBL_MAX));
     }
   }
@@ -2367,7 +2388,8 @@ formParaboloidIntersectionBases(
                                        a_aligned_paraboloid, nudge_epsilon,
                                        &requires_nudge);
 
-  // Mark vertices clipped(= above paraboloid) or unclipped(= below paraboloid)
+  // Mark vertices clipped(= above paraboloid) or unclipped(= below
+  // paraboloid)
   const auto starting_number_of_vertices = a_polytope->getNumberOfVertices();
   const auto starting_number_of_faces = a_polytope->getNumberOfFaces();
   UnsignedIndex_t number_of_vertices_above = 0;
@@ -2393,7 +2415,8 @@ formParaboloidIntersectionBases(
   }
 
   if (!requires_nudge) {
-    // Early termination cases, only possible with elliptic thanks to convexity
+    // Early termination cases, only possible with elliptic thanks to
+    // convexity
     if (elliptic && a_aligned_paraboloid.a() > ZERO &&
         number_of_vertices_above == 0) {
       // Whole volume below
@@ -2698,8 +2721,8 @@ formParaboloidIntersectionBases(
         a_surface);
   }
 
-  // Check for face-only intersections (that are: the paraboloid intersects the
-  // face but not the edges). Can only happen with elliptic paraboloids
+  // Check for face-only intersections (that are: the paraboloid intersects
+  // the face but not the edges). Can only happen with elliptic paraboloids
   if (elliptic) {
     if (a_aligned_paraboloid.a() > ZERO) {
       for (UnsignedIndex_t f = 0; f < starting_number_of_faces; ++f) {
@@ -2866,12 +2889,12 @@ formParaboloidIntersectionBases(
       // All points below
       return ReturnType::calculateMoments(a_polytope) + full_moments;
     }
-    // ELSE: The polytope has 0 intersections, but a number of clipped vertices
-    // > 0 and a number of unclipped vertices > 0. This is very rare, and
-    // happens when the polytope actually consists of several manifolds that are
-    // either entirely above or entirely below the paraboloid. In which case,
-    // the remainder of this function will compute the volume of the unclipped
-    // elements by looping over their faces. else {
+    // ELSE: The polytope has 0 intersections, but a number of clipped
+    // vertices > 0 and a number of unclipped vertices > 0. This is very rare,
+    // and happens when the polytope actually consists of several manifolds
+    // that are either entirely above or entirely below the paraboloid. In
+    // which case, the remainder of this function will compute the volume of
+    // the unclipped elements by looping over their faces. else {
   }
 
   // There are edge-intersections. We then need to calculate the contributions
@@ -2885,8 +2908,8 @@ formParaboloidIntersectionBases(
     }
 
     // The starting half-edge is, by construction, an intersection which is an
-    // entry (i.e. goes from above to below paraboloid, following the half-edge
-    // structure)
+    // entry (i.e. goes from above to below paraboloid, following the
+    // half-edge structure)
     auto starting_half_edge = face.getStartingHalfEdge();
 
     // Count intersections, this cannot be an odd number otherwise it disobeys
@@ -2939,8 +2962,8 @@ formParaboloidIntersectionBases(
           a_aligned_paraboloid, ref_pt, starting_half_edge, exit_half_edge,
           true, false, &requires_nudge, a_surface);
     }
-    // The face has more than 2 intersections (i.e. more than 1 arc). We need to
-    // discriminate elliptic/hyperbolic/parabolic cases
+    // The face has more than 2 intersections (i.e. more than 1 arc). We need
+    // to discriminate elliptic/hyperbolic/parabolic cases
     else {
       // These flags identify the type of the conic section arcs in the face
       const bool elliptic_face =
@@ -2975,8 +2998,8 @@ formParaboloidIntersectionBases(
                     a_aligned_paraboloid, ref_pt, current_edge, exit_half_edge,
                     skip_first);
 
-            // From the exit intersection, we move to the next entry and compute
-            // type 2 and 3 moment contributions
+            // From the exit intersection, we move to the next entry and
+            // compute type 2 and 3 moment contributions
             if (reverse) {
               full_moments +=
                   computeNewEdgeSegmentContribution<ReturnType, ScalarType>(
@@ -3000,8 +3023,8 @@ formParaboloidIntersectionBases(
             found_intersections += 2;
           } while (found_intersections != intersection_size);
         }
-        // CASE: the conic section arcs are arcs of an hyperbola or parabola. We
-        // need to build a list of intersections
+        // CASE: the conic section arcs are arcs of an hyperbola or parabola.
+        // We need to build a list of intersections
         else {
           // The half-edges ending at an intersection will be stores in this
           // vector
@@ -3032,15 +3055,15 @@ formParaboloidIntersectionBases(
 
           // Now, we discriminate hyperbolic and parabolic cases
           if (hyperbolic_face) {
-            // We need the conic center to determine nappe ownership. Note that,
-            // by this point, normal[2] has to be different than 0
+            // We need the conic center to determine nappe ownership. Note
+            // that, by this point, normal[2] has to be different than 0
             const std::array<ScalarType, 2> conic_center{
                 {face_normal[0] /
                      (TWO * a_aligned_paraboloid.a() * face_normal[2]),
                  face_normal[1] /
                      (TWO * a_aligned_paraboloid.b() * face_normal[2])}};
-            // We need some point that lives in the plane of the face (e.g., the
-            // first intersection)
+            // We need some point that lives in the plane of the face (e.g.,
+            // the first intersection)
             const auto& pt_in_plane =
                 intersections[0]->getVertex()->getLocation().getPt();
             // The next lines calculate whether the conic center on the face
@@ -3388,8 +3411,8 @@ formParaboloidIntersectionBases(
             requires_nudge = true;
             break;
           }
-          // If the sorted intersections are too close to each other, we switch
-          // to QP
+          // If the sorted intersections are too close to each other, we
+          // switch to QP
           else {
             for (std::size_t i = 0; i < intersection_size - 1; ++i) {
               if (fabs(intersection_copy[i].second -
@@ -3570,8 +3593,8 @@ formParaboloidIntersectionBases(
         intersections.clear();
       }
     }
-    // If some ambiguous configuration has been detected, switch to QP and shake
-    // things up
+    // If some ambiguous configuration has been detected, switch to QP and
+    // shake things up
     if (requires_nudge) {
       break;
     }
