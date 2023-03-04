@@ -961,25 +961,25 @@ void SemiLagrangianCorrected::advectVOF(
 
         // Update VOF
         (*a_liquid_volume_fraction)(i, j, k) =
-            previous_liquid_volume_fraction +
-            ((face_flux[0])(i, j, k)[0].volume() -
+            (previous_liquid_volume_fraction * cell_volume +
+             (face_flux[0])(i, j, k)[0].volume() -
              (face_flux[0])(i + 1, j, k)[0].volume() +
              (face_flux[1])(i, j, k)[0].volume() -
              (face_flux[1])(i, j + 1, k)[0].volume() +
              (face_flux[2])(i, j, k)[0].volume() -
              (face_flux[2])(i, j, k + 1)[0].volume()) /
-                (cell_volume + (face_flux[0])(i, j, k)[0].volume() -
-                 (face_flux[0])(i + 1, j, k)[0].volume() +
-                 (face_flux[1])(i, j, k)[0].volume() -
-                 (face_flux[1])(i, j + 1, k)[0].volume() +
-                 (face_flux[2])(i, j, k)[0].volume() -
-                 (face_flux[2])(i, j, k + 1)[0].volume() +
-                 (face_flux[0])(i, j, k)[1].volume() -
-                 (face_flux[0])(i + 1, j, k)[1].volume() +
-                 (face_flux[1])(i, j, k)[1].volume() -
-                 (face_flux[1])(i, j + 1, k)[1].volume() +
-                 (face_flux[2])(i, j, k)[1].volume() -
-                 (face_flux[2])(i, j, k + 1)[1].volume());
+            (cell_volume + (face_flux[0])(i, j, k)[0].volume() -
+             (face_flux[0])(i + 1, j, k)[0].volume() +
+             (face_flux[1])(i, j, k)[0].volume() -
+             (face_flux[1])(i, j + 1, k)[0].volume() +
+             (face_flux[2])(i, j, k)[0].volume() -
+             (face_flux[2])(i, j, k + 1)[0].volume() +
+             (face_flux[0])(i, j, k)[1].volume() -
+             (face_flux[0])(i + 1, j, k)[1].volume() +
+             (face_flux[1])(i, j, k)[1].volume() -
+             (face_flux[1])(i, j + 1, k)[1].volume() +
+             (face_flux[2])(i, j, k)[1].volume() -
+             (face_flux[2])(i, j, k + 1)[1].volume());
 
         if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {
           (*a_liquid_volume_fraction)(i, j, k) = 0.0;
