@@ -291,8 +291,13 @@ int main(int argc, char* argv[]) {
       avg_length = std::sqrt(avg_length) / 3.0;
       for (IRL::UnsignedIndex_t j = 0; j < number_of_patches; j++) {
         if (length_scale <= 0.0) {
-          auto curv = std::fabs(surface_patches[j].getAverageMeanCurvature());
-          surface_patches[j].setLengthScale(std::min(0.1 / curv, avg_length));
+          auto mean_curv =
+              std::fabs(surface_patches[j].getAverageMeanCurvature());
+          auto gaussian_curv = surface_patches[j].getAverageGaussianCurvature();
+          auto curvness = std::sqrt(
+              std::max(0.0, 2.0 * mean_curv * mean_curv - gaussian_curv) / 2.0);
+          surface_patches[j].setLengthScale(
+              std::min(0.1 / std::max(mean_curv, curvness), avg_length));
         }
         triangulated_surface[j] =
             surface_patches[j].triangulate(length_scale, 1);
