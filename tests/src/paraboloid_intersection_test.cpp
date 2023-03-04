@@ -872,6 +872,9 @@ TEST(ParaboloidIntersection, PtQuad) {
 
   auto testsum0 = pt_double + Pt(1.0, 1.0, 1.0);
 
+  std::cout << "   DBL_EPSILON = " << DBL_EPSILON << std::endl;
+  std::cout << "FLT128_EPSILON = " << FLT128_EPSILON << std::endl;
+  std::cout << "        Pt double = " << pt_double << std::endl;
   std::cout << "        Pt double = " << pt_double << std::endl;
   std::cout << "          Pt quad = " << pt_quad << std::endl;
   std::cout << "Pt quad converted = " << pt_quad_conv << std::endl;
