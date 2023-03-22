@@ -475,13 +475,13 @@ void ProgressiveDistanceSolverParaboloid<CellType>::solveForDistance(
   auto tri_surf = surface.triangulate();
   tri_surf.write("failed_bissection_surface");
 
-  std::cout << "DISTANCE FAILED = " << bounding_values[0] << ","
-            << bounding_values[1] << "," << bounding_values[2]
-            << "diff = " << bounding_values[2] - bounding_values[0]
-            << " error = "
-            << moments.getMoments().volume() / cell_volume -
-                   target_volume_fraction_m
-            << std::endl;
+  // std::cout << "DISTANCE FAILED = " << bounding_values[0] << ","
+  //           << bounding_values[1] << "," << bounding_values[2]
+  //           << "diff = " << bounding_values[2] - bounding_values[0]
+  //           << " error = "
+  //           << moments.getMoments().volume() / cell_volume -
+  //                  target_volume_fraction_m
+  //           << std::endl;
   distances_m = -DBL_MAX;
 
   return;
