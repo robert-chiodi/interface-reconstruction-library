@@ -21,17 +21,22 @@
 module f_Serializer
   use f_DefinedTypes
   use f_PlanarSep_class
+  use f_Paraboloid_class
   use f_ByteBuffer_class
   implicit none
 
   interface serializeAndPack
     ! Pack a PlanarSep object into a ByteBuffer
     module procedure serializeAndPack_PlanarSep_ByteBuffer
+    ! Pack a Paraboloid object into a ByteBuffer
+    module procedure serializeAndPack_Paraboloid_ByteBuffer
   end interface serializeAndPack
 
   interface unpackAndStore
     ! Unpack a ByteBuffer to store into a PlanarSep
     module procedure unpackAndStore_PlanarSep_ByteBuffer
+    ! Unpack a ByteBuffer to store into a PAraboloid
+    module procedure unpackAndStore_Paraboloid_ByteBuffer
   end interface unpackAndStore
 
   interface
@@ -56,25 +61,65 @@ module f_Serializer
     end subroutine F_unpackAndStore_PlanarSep_ByteBuffer
   end interface
 
+  interface
+  subroutine F_serializeAndPack_Paraboloid_ByteBuffer(a_paraboloid, a_byte_buffer) &
+  bind(C, name="c_serializeAndPack_Paraboloid_ByteBuffer")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    type(c_Paraboloid) :: a_paraboloid ! Pointer to PlanarSep object
+    type(c_ByteBuffer) :: a_byte_buffer ! Pointer to ByteBuffer object
+  end subroutine F_serializeAndPack_Paraboloid_ByteBuffer
+end interface
+
+interface
+  subroutine F_unpackAndStore_Paraboloid_ByteBuffer(a_paraboloid, a_byte_buffer) &
+  bind(C, name="c_unpackAndStore_Paraboloid_ByteBuffer")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    type(c_Paraboloid) :: a_paraboloid ! Pointer to PlanarSep object
+    type(c_ByteBuffer) :: a_byte_buffer ! Pointer to ByteBuffer object
+  end subroutine F_unpackAndStore_Paraboloid_ByteBuffer
+end interface
+
 contains
 
-  subroutine serializeAndPack_PlanarSep_ByteBuffer(a_separator, a_byte_buffer)
-    implicit none
-      type(PlanarSep_type) :: a_separator
-      type(ByteBuffer_type) :: a_byte_buffer
+subroutine serializeAndPack_PlanarSep_ByteBuffer(a_separator, a_byte_buffer)
+  implicit none
+    type(PlanarSep_type) :: a_separator
+    type(ByteBuffer_type) :: a_byte_buffer
 
-      call F_serializeAndPack_PlanarSep_ByteBuffer &
-          (a_separator%c_object, a_byte_buffer%c_object)
-  end subroutine serializeAndPack_PlanarSep_ByteBuffer
+    call F_serializeAndPack_PlanarSep_ByteBuffer &
+        (a_separator%c_object, a_byte_buffer%c_object)
+end subroutine serializeAndPack_PlanarSep_ByteBuffer
 
-  subroutine unpackAndStore_PlanarSep_ByteBuffer(a_separator, a_byte_buffer)
-    implicit none
-      type(PlanarSep_type) :: a_separator
-      type(ByteBuffer_type) :: a_byte_buffer
+subroutine unpackAndStore_PlanarSep_ByteBuffer(a_separator, a_byte_buffer)
+  implicit none
+    type(PlanarSep_type) :: a_separator
+    type(ByteBuffer_type) :: a_byte_buffer
 
-      call F_unpackAndStore_PlanarSep_ByteBuffer &
-          (a_separator%c_object, a_byte_buffer%c_object)
-  end subroutine unpackAndStore_PlanarSep_ByteBuffer
+    call F_unpackAndStore_PlanarSep_ByteBuffer &
+        (a_separator%c_object, a_byte_buffer%c_object)
+end subroutine unpackAndStore_PlanarSep_ByteBuffer
+
+subroutine serializeAndPack_Paraboloid_ByteBuffer(a_paraboloid, a_byte_buffer)
+  implicit none
+    type(Paraboloid_type) :: a_paraboloid
+    type(ByteBuffer_type) :: a_byte_buffer
+
+    call F_serializeAndPack_Paraboloid_ByteBuffer &
+        (a_paraboloid%c_object, a_byte_buffer%c_object)
+end subroutine serializeAndPack_Paraboloid_ByteBuffer
+
+subroutine unpackAndStore_Paraboloid_ByteBuffer(a_paraboloid, a_byte_buffer)
+  implicit none
+    type(Paraboloid_type) :: a_paraboloid
+    type(ByteBuffer_type) :: a_byte_buffer
+
+    call F_unpackAndStore_Paraboloid_ByteBuffer &
+        (a_paraboloid%c_object, a_byte_buffer%c_object)
+end subroutine unpackAndStore_Paraboloid_ByteBuffer
 
 
 end module f_Serializer

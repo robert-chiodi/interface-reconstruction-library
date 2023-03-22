@@ -21,19 +21,20 @@ namespace IRL {
 
 // Class that has storage in raw bytes (char)
 class HalfEdgeStorage {
-
-public:
+ public:
   HalfEdgeStorage(void)
-      : data_blocks_start_m(), block_size_m(),
-        open_block_m(static_cast<std::size_t>(-1)), free_location_m(nullptr),
+      : data_blocks_start_m(),
+        block_size_m(),
+        open_block_m(static_cast<std::size_t>(-1)),
+        free_location_m(nullptr),
         open_block_end_m(nullptr) {}
 
-  char *operator[](const std::size_t a_index) {
+  char* operator[](const std::size_t a_index) {
     assert(!data_blocks_start_m.empty());
     assert(a_index < std::min(this->size(), this->blockSize(0)));
     return data_blocks_start_m[0] + a_index;
   }
-  const char *operator[](const std::size_t a_index) const {
+  const char* operator[](const std::size_t a_index) const {
     assert(!data_blocks_start_m.empty());
     assert(a_index < std::min(this->size(), this->blockSize(0)));
     return data_blocks_start_m[0] + a_index;
@@ -70,7 +71,8 @@ public:
     }
   }
 
-  template <class ObjectType> ObjectType *getNewObject(void) {
+  template <class ObjectType>
+  ObjectType* getNewObject(void) {
     static constexpr auto OBJECT_SIZE = sizeof(ObjectType);
     if (free_location_m + OBJECT_SIZE > open_block_end_m) {
       if (open_block_m + 1 == data_blocks_start_m.size()) {
@@ -80,8 +82,8 @@ public:
       free_location_m = data_blocks_start_m[open_block_m];
       open_block_end_m = free_location_m + block_size_m[open_block_m];
     }
-    ObjectType *const new_object =
-        reinterpret_cast<ObjectType *>(free_location_m);
+    ObjectType* const new_object =
+        reinterpret_cast<ObjectType*>(free_location_m);
     free_location_m += OBJECT_SIZE;
     return new_object;
   }
@@ -95,7 +97,7 @@ public:
   }
 
   // NOTE: ONLY EVER COPIES FIRST BLOCK FROM RHS.
-  HalfEdgeStorage(const HalfEdgeStorage &a_rhs) noexcept {
+  HalfEdgeStorage(const HalfEdgeStorage& a_rhs) noexcept {
     this->resize(a_rhs.size());
     assert(this->size() == a_rhs.size());
     if (a_rhs.size() > 0) {
@@ -106,10 +108,10 @@ public:
   }
 
   // NOTE: ONLY EVER COPIES FIRST BLOCK FROM RHS.
-  HalfEdgeStorage(const HalfEdgeStorage &&a_rhs) noexcept = delete;
+  HalfEdgeStorage(const HalfEdgeStorage&& a_rhs) noexcept = delete;
 
   // NOTE: ONLY EVER COPIES FIRST BLOCK FROM RHS.
-  HalfEdgeStorage &operator=(const HalfEdgeStorage &a_rhs) noexcept {
+  HalfEdgeStorage& operator=(const HalfEdgeStorage& a_rhs) noexcept {
     if (this != &a_rhs) {
       this->resize(a_rhs.size());
       assert(this->size() == a_rhs.size());
@@ -122,32 +124,32 @@ public:
     return (*this);
   }
 
-  HalfEdgeStorage &operator=(const HalfEdgeStorage &&a_rhs) noexcept = delete;
+  HalfEdgeStorage& operator=(const HalfEdgeStorage&& a_rhs) noexcept = delete;
 
   ~HalfEdgeStorage(void) {
-    for (auto &block : data_blocks_start_m) {
+    for (auto& block : data_blocks_start_m) {
       ::operator delete(block);
     }
     open_block_m = 0;
     free_location_m = nullptr;
   }
 
-private:
-  static void copyData(const char *__restrict__ a_other_data,
-                       char *const __restrict__ a_my_data,
+ private:
+  static void copyData(const char* __restrict__ a_other_data,
+                       char* const __restrict__ a_my_data,
                        const std::size_t a_size) {
     std::memcpy(a_my_data, a_other_data, a_size);
   }
 
   void resetToSize(const std::size_t a_size) {
     if (data_blocks_start_m.empty() || this->blockSize(0) < a_size) {
-      for (auto &block : data_blocks_start_m) {
+      for (auto& block : data_blocks_start_m) {
         ::operator delete(block);
         block = nullptr;
       }
       data_blocks_start_m.resize(1);
       block_size_m.resize(1);
-      data_blocks_start_m[0] = static_cast<char *>(::operator new(a_size));
+      data_blocks_start_m[0] = static_cast<char*>(::operator new(a_size));
       block_size_m[0] = a_size;
     }
   }
@@ -158,15 +160,15 @@ private:
     const std::size_t new_block_size =
         static_cast<std::size_t>(growth * static_cast<double>(this->size()));
     data_blocks_start_m.push_back(
-        static_cast<char *>(::operator new(new_block_size)));
+        static_cast<char*>(::operator new(new_block_size)));
     block_size_m.push_back(new_block_size);
   }
 
-  SmallVector<char *, 8> data_blocks_start_m;
+  SmallVector<char*, 8> data_blocks_start_m;
   SmallVector<std::size_t, 8> block_size_m;
   std::size_t open_block_m;
-  char *free_location_m;
-  char *open_block_end_m;
+  char* free_location_m;
+  char* open_block_end_m;
 };
 
 namespace half_edge_polytope {
@@ -174,8 +176,8 @@ namespace default_sizes {
 static constexpr UnsignedIndex_t complete_block_vertices = 64;
 static constexpr UnsignedIndex_t complete_block_faces = 32;
 static constexpr UnsignedIndex_t complete_block_half_edges = 128;
-} // namespace default_sizes
-} // namespace half_edge_polytope
+}  // namespace default_sizes
+}  // namespace half_edge_polytope
 
 template <class PtType, class VertexType = Vertex<PtType>,
           class HalfEdgeType = HalfEdge<VertexType>,
@@ -187,7 +189,7 @@ template <class PtType, class VertexType = Vertex<PtType>,
           UnsignedIndex_t kMaxFaces =
               half_edge_polytope::default_sizes::complete_block_faces>
 class HalfEdgePolytope {
-public:
+ public:
   using pt_type = PtType;
   using vertex_type = VertexType;
   using half_edge_type = HalfEdgeType;
@@ -198,13 +200,15 @@ public:
   static constexpr UnsignedIndex_t maxFaces = kMaxFaces;
 
   HalfEdgePolytope(void)
-      : initial_half_edge_storage_size_m(0), initial_vertex_storage_size_m(0),
-        initial_face_storage_size_m(0), storage_m() {}
+      : initial_half_edge_storage_size_m(0),
+        initial_vertex_storage_size_m(0),
+        initial_face_storage_size_m(0),
+        storage_m() {}
 
-  static HalfEdgePolytope
-  fromKnownSizes(const UnsignedIndex_t a_number_of_half_edges,
-                 const UnsignedIndex_t a_number_of_vertices,
-                 const UnsignedIndex_t a_number_of_faces);
+  static HalfEdgePolytope fromKnownSizes(
+      const UnsignedIndex_t a_number_of_half_edges,
+      const UnsignedIndex_t a_number_of_vertices,
+      const UnsignedIndex_t a_number_of_faces);
 
   void reset(void);
 
@@ -212,27 +216,27 @@ public:
               const UnsignedIndex_t a_number_of_vertices,
               const UnsignedIndex_t a_number_of_faces);
 
-  HalfEdgeType &getHalfEdge(const UnsignedIndex_t a_index);
+  HalfEdgeType& getHalfEdge(const UnsignedIndex_t a_index);
 
-  const HalfEdgeType &getHalfEdge(const UnsignedIndex_t a_index) const;
+  const HalfEdgeType& getHalfEdge(const UnsignedIndex_t a_index) const;
 
-  VertexType &getVertex(const UnsignedIndex_t a_index);
-  const VertexType &getVertex(const UnsignedIndex_t a_index) const;
-  FaceType &getFace(const UnsignedIndex_t a_index);
-  const FaceType &getFace(const UnsignedIndex_t a_index) const;
+  VertexType& getVertex(const UnsignedIndex_t a_index);
+  const VertexType& getVertex(const UnsignedIndex_t a_index) const;
+  FaceType& getFace(const UnsignedIndex_t a_index);
+  const FaceType& getFace(const UnsignedIndex_t a_index) const;
 
-  HalfEdgeType *getNewHalfEdge(void);
-  HalfEdgeType *getNewHalfEdge(const HalfEdgeType &a_half_edge);
-  HalfEdgeType *getNewHalfEdge(HalfEdgeType &&a_half_edge);
+  HalfEdgeType* getNewHalfEdge(void);
+  HalfEdgeType* getNewHalfEdge(const HalfEdgeType& a_half_edge);
+  HalfEdgeType* getNewHalfEdge(HalfEdgeType&& a_half_edge);
 
-  VertexType *getNewVertex(void);
-  VertexType *getNewVertex(VertexType &&a_vertex);
+  VertexType* getNewVertex(void);
+  VertexType* getNewVertex(VertexType&& a_vertex);
 
-  FaceType *getNewFace(void);
-  FaceType *getNewFace(FaceType &&a_face);
+  FaceType* getNewFace(void);
+  FaceType* getNewFace(FaceType&& a_face);
 
   template <class GeometryType>
-  void setVertexLocations(const GeometryType &a_geometry);
+  void setVertexLocations(const GeometryType& a_geometry);
 
   std::size_t rawCapacity(void) const { return storage_m.capacity(); }
   std::size_t firstBlockCapacity(void) const { return storage_m.blockSize(0); }
@@ -240,7 +244,7 @@ public:
     storage_m.resize(a_raw_size);
   }
 
-protected:
+ protected:
   UnsignedIndex_t getNumberOfInitialFaces(void) const;
   UnsignedIndex_t getNumberOfInitialVertices(void) const;
 
@@ -264,8 +268,8 @@ protected:
 //            FaceType,
 //                                   kMaxHalfEdges, kMaxVertices, kMaxFaces>
 //               &a_polyhedron);
-} // namespace IRL
+}  // namespace IRL
 
 #include "irl/geometry/half_edge_structures/half_edge_polytope.tpp"
 
-#endif // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_POLYTOPE_H_
+#endif  // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_POLYTOPE_H_

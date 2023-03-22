@@ -15,7 +15,6 @@
 
 namespace IRL {
 
-
 // Creates a vertex by interpolating the distances to find the
 // zero location, and then subdivides the edge, creating
 // new half edges and adjusting connectivity to
@@ -32,18 +31,19 @@ namespace IRL {
 // old_vertex  .----------x----------->. old_vertex
 //               <-------   <--------
 //                 old         new
-//  
+//
 template <class HalfEdgeType, class SegmentedHalfEdgePolytopeType,
           class HalfEdgePolytopeType>
 void subdivideEdge(HalfEdgeType* a_half_edge_with_intersection,
                    SegmentedHalfEdgePolytopeType* a_polytope,
                    HalfEdgePolytopeType* a_complete_polytope);
 
-template <class HalfEdgeType, class SegmentedHalfEdgePolygonType,
-          class HalfEdgePolytopeType>
+template <class VertexType, class HalfEdgeType,
+          class SegmentedHalfEdgePolytopeType, class HalfEdgePolytopeType>
 inline HalfEdgeType* separateIntersectedHalfEdge(
+    VertexType* a_intersection_vertex,
     HalfEdgeType* a_half_edge_with_intersection,
-    SegmentedHalfEdgePolygonType* a_polytope,
+    SegmentedHalfEdgePolytopeType* a_polytope,
     HalfEdgePolytopeType* a_complete_polytope);
 
 template <class HalfEdgeType, class HalfEdgePolytopeType>
@@ -56,4 +56,4 @@ inline void createOppositeHalfEdgeFromIntersection(
 
 #include "irl/generic_cutting/half_edge_cutting/half_edge_cutting_helpers.tpp"
 
-#endif // IRL_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_HELPERS_H_
+#endif  // IRL_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_HELPERS_H_

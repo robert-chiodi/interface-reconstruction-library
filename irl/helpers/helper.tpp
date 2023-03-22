@@ -16,12 +16,35 @@ inline double safelyTiny(const double a_value) {
   return std::copysign(std::max(std::fabs(a_value), DBL_MIN), a_value);
 }
 
+inline Quad_t safelyTiny(const Quad_t a_value) {
+  if (fabsq(a_value) < FLT128_MIN) {
+    if (a_value > 0.0q) {
+      return FLT128_MIN;
+    } else {
+      return -FLT128_MIN;
+    }
+  } else {
+    return a_value;
+  }
+}
+
 inline double safelyEpsilon(const double a_value) {
   return std::copysign(std::max(std::fabs(a_value), DBL_EPSILON), a_value);
 }
 
+inline Quad_t safelyEpsilon(const Quad_t a_value) {
+  if (fabsq(a_value) < FLT128_EPSILON) {
+    if (a_value > 0.0q) {
+      return FLT128_EPSILON;
+    } else {
+      return -FLT128_EPSILON;
+    }
+  } else {
+    return a_value;
+  }
+}
+
 inline double safelySmall(const double a_value, const double a_small_value) {
-  assert(a_small_value > 0.0);
   return std::copysign(std::max(std::fabs(a_value), a_small_value), a_value);
 }
 
@@ -43,7 +66,7 @@ inline bool wantPurelyExternal(const double a_internal_fraction) {
   return a_internal_fraction < global_constants::VF_LOW;
 }
 
-inline void sort3Ascending(double *a_items) {
+inline void sort3Ascending(double* a_items) {
   double tmp;
   if (a_items[1] < a_items[0]) {
     tmp = a_items[1];
@@ -62,7 +85,7 @@ inline void sort3Ascending(double *a_items) {
   }
 }
 
-inline void sort3Descending(double *a_items) {
+inline void sort3Descending(double* a_items) {
   double tmp;
   if (a_items[1] > a_items[0]) {
     tmp = a_items[1];
@@ -82,8 +105,8 @@ inline void sort3Descending(double *a_items) {
 }
 
 template <class IndexType>
-inline void sort3AscendingTracked(double *a_items,
-                                  IndexType *a_original_index) {
+inline void sort3AscendingTracked(double* a_items,
+                                  IndexType* a_original_index) {
   double tmp;
   IndexType tmpi;
   if (a_items[1] < a_items[0]) {
@@ -113,8 +136,8 @@ inline void sort3AscendingTracked(double *a_items,
 }
 
 template <class IndexType>
-inline void sort3DescendingTracked(double *a_items,
-                                   IndexType *a_original_index) {
+inline void sort3DescendingTracked(double* a_items,
+                                   IndexType* a_original_index) {
   double tmp;
   IndexType tmpi;
   if (a_items[1] > a_items[0]) {
@@ -144,8 +167,8 @@ inline void sort3DescendingTracked(double *a_items,
 }
 
 template <class CarriedType, class DictatingType>
-inline void sortAscendingBasedOnOtherArray(CarriedType *a_carried_array,
-                                           DictatingType *a_dictating_array) {
+inline void sortAscendingBasedOnOtherArray(CarriedType* a_carried_array,
+                                           DictatingType* a_dictating_array) {
   assert(a_carried_array->size() == a_dictating_array->size());
   for (UnsignedIndex_t i = 1; i < a_dictating_array->size(); ++i) {
     for (UnsignedIndex_t j = i;
@@ -157,8 +180,8 @@ inline void sortAscendingBasedOnOtherArray(CarriedType *a_carried_array,
 }
 
 template <class CarriedType, class DictatingType>
-inline void sortDescendingBasedOnOtherArray(CarriedType *a_carried_array,
-                                            DictatingType *a_dictating_array) {
+inline void sortDescendingBasedOnOtherArray(CarriedType* a_carried_array,
+                                            DictatingType* a_dictating_array) {
   assert(a_carried_array->size() == a_dictating_array->size());
   for (UnsignedIndex_t i = 1; i < a_dictating_array->size(); ++i) {
     for (UnsignedIndex_t j = i;
@@ -169,6 +192,6 @@ inline void sortDescendingBasedOnOtherArray(CarriedType *a_carried_array,
   }
 }
 
-} // namespace IRL
+}  // namespace IRL
 
-#endif // SRC_HELPERS_HELPER_TPP_
+#endif  // SRC_HELPERS_HELPER_TPP_

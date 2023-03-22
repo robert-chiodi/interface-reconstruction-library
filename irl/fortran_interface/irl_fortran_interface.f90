@@ -86,5 +86,11 @@ module irl_fortran_interface
   use f_ByteBuffer_class
   use f_R2PWeighting_class
   use f_OptimizationBehavior_class
+  use f_Paraboloid_class
+  use f_ObjServer_Paraboloid_class
+  use f_TriangulatedParaboloid_class
+  use f_ObjServer_TriangulatedParaboloid_class
+  use f_ObjServer_LocParabLink_class
+  use f_LocParabLink_class
 
 end module irl_fortran_interface

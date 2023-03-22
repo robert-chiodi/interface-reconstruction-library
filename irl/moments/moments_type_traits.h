@@ -33,6 +33,16 @@ struct is_moments_volume<const C> : is_moments_volume<C> {};
 template <>
 struct is_moments_volume<Volume> : std::true_type {};
 
+/// If volume moments are more than Volume (and therefore include centroid)
+template <class C>
+struct is_more_than_volume : std::false_type {};
+
+template <class C>
+struct is_more_than_volume<const C> : is_more_than_volume<C> {};
+
+template <>
+struct is_more_than_volume<VolumeMoments> : std::true_type {};
+
 /// \brief Type trait to allow static checking that an object is a
 /// AccumulatedVolumeMoments.
 template <class C>
@@ -95,4 +105,4 @@ struct is_separated_moments<SeparatedMoments<MomentsType>> : std::true_type {};
 
 }  // namespace IRL
 
-#endif // IRL_MOMENTS_MOMENTS_TYPE_TRAITS_H_
+#endif  // IRL_MOMENTS_MOMENTS_TYPE_TRAITS_H_

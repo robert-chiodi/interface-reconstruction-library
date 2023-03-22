@@ -116,12 +116,76 @@ void advectVOF(const std::string& a_advection_method, const double a_dt,
     SemiLagrangianCorrected::advectVOF(
         a_dt, a_U, a_V, a_W, a_link_localized_separator,
         a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid);
+  } else if (a_advection_method == "Split") {
+    Split::advectVOF(a_dt, a_U, a_V, a_W, a_link_localized_separator,
+                     a_liquid_volume_fraction, a_liquid_centroid,
+                     a_gas_centroid);
   } else {
     std::cout << "Unknown advection method of : " << a_advection_method << '\n';
     std::cout << "Value entries are: FullLagrangian, SemiLagrangian, "
                  "SemiLagrangianCorrected. \n";
     std::exit(-1);
   }
+}
+
+void Split::advectVOF(
+    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+    const Data<double>& a_W,
+    Data<IRL::LocalizedSeparatorLink>* a_link_localized_separator,
+    Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
+    Data<IRL::Pt>* a_gas_centroid) {
+  const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
+  // For now, naively advect everywhere in domain
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        // Get the back project CappedDodecahedron.
+        IRL::Dodecahedron transported_cell;
+        for (IRL::UnsignedIndex_t n = 0; n < 8; ++n) {
+          transported_cell[n] =
+              back_project_vertex(cell[n], -a_dt, a_U, a_V, a_W);
+        }
+        // Determine the bounding volume that the transported Dodecahedron
+        // covers.
+
+        // Now perform the actual cutting.
+        IRL::SeparatedMoments<IRL::VolumeMoments> cell_volume_moments =
+            IRL::getNormalizedVolumeMoments<
+                IRL::SeparatedMoments<IRL::VolumeMoments>>(
+                transported_cell, (*a_link_localized_separator)(i, j, k));
+        (*a_liquid_volume_fraction)(i, j, k) =
+            cell_volume_moments[0].volume() /
+            (cell_volume_moments[0].volume() + cell_volume_moments[1].volume());
+        (*a_liquid_centroid)(i, j, k) = cell_volume_moments[0].centroid();
+        (*a_gas_centroid)(i, j, k) = cell_volume_moments[1].centroid();
+
+        if ((*a_liquid_volume_fraction)(i, j, k) <
+            IRL::global_constants::VF_LOW) {
+          (*a_liquid_volume_fraction)(i, j, k) = 0.0;
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        } else if ((*a_liquid_volume_fraction)(i, j, k) >
+                   IRL::global_constants::VF_HIGH) {
+          (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        } else {
+          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
+              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+          (*a_gas_centroid)(i, j, k) = back_project_vertex(
+              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+        }
+      }
+    }
+  }
+  a_liquid_volume_fraction->updateBorder();
+  // Technically wrong below, need to move to new reference frame for periodic
+  a_liquid_centroid->updateBorder();
+  a_gas_centroid->updateBorder();
+  correctCentroidLocation(a_liquid_centroid, a_gas_centroid);
 }
 
 void FullLagrangian::advectVOF(

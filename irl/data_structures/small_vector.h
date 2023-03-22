@@ -11,13 +11,13 @@
 #define IRL_DATA_STRUCTURES_SMALL_VECTOR_H_
 
 #ifndef IRL_NO_ABSL
-#include "external/abseil-cpp/absl/container/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 namespace IRL {
 template <class T, std::size_t BuffSizeInElements>
 using SmallVector =
     absl::InlinedVector<T, BuffSizeInElements, std::allocator<T>>;
-} // namespace IRL
-#endif // #ifndef IRL_NO_ABSL
+}  // namespace IRL
+#endif  // #ifndef IRL_NO_ABSL
 
 #ifdef IRL_NO_ABSL
 #include <cstddef>
@@ -30,7 +30,8 @@ using SmallVector =
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
-template <class T, std::size_t BuffSizeInElements> class SmallVector {
+template <class T, std::size_t BuffSizeInElements>
+class SmallVector {
   using BaseVector = std::vector<
       T, short_alloc::short_alloc<
              T, static_cast<std::size_t>(BuffSizeInElements) * sizeof(T),
@@ -39,7 +40,7 @@ template <class T, std::size_t BuffSizeInElements> class SmallVector {
   static_assert(!std::is_same<T, bool>::value,
                 "SmallVector does not support bool.");
 
-public:
+ public:
   using iterator = typename BaseVector::iterator;
   using const_iterator = typename BaseVector::const_iterator;
 
@@ -47,13 +48,13 @@ public:
 
   explicit SmallVector(const std::size_t a_initial_size);
 
-  SmallVector(const std::size_t a_initial_size, const T &a_value);
+  SmallVector(const std::size_t a_initial_size, const T& a_value);
 
   explicit SmallVector(std::initializer_list<T> init);
 
-  T &operator[](const std::size_t a_index);
+  T& operator[](const std::size_t a_index);
 
-  const T &operator[](const std::size_t a_index) const;
+  const T& operator[](const std::size_t a_index) const;
 
   std::size_t size(void) const;
 
@@ -64,26 +65,26 @@ public:
 
   void reserve(const std::size_t a_count);
 
-  void assign(const std::size_t a_count, const T &a_value);
+  void assign(const std::size_t a_count, const T& a_value);
 
-  T &front(void);
+  T& front(void);
 
-  const T &front(void) const;
+  const T& front(void) const;
 
-  T &back(void);
+  T& back(void);
 
-  const T &back(void) const;
+  const T& back(void) const;
 
   bool empty(void) const;
   bool full(void) const;
 
   void pop_back(void);
 
-  void insert(const_iterator a_pos, const T &a_object);
-  void emplace(const_iterator a_pos, T &&a_object);
+  void insert(const_iterator a_pos, const T& a_object);
+  void emplace(const_iterator a_pos, T&& a_object);
 
-  void push_back(const T &a_object);
-  void emplace_back(T &&a_object);
+  void push_back(const T& a_object);
+  void emplace_back(T&& a_object);
 
   void erase(iterator a_pos);
   void erase(iterator a_start, iterator a_end);
@@ -91,10 +92,10 @@ public:
   void clear(void);
 
   // Copy constructor
-  SmallVector(const SmallVector &a_rhs);
+  SmallVector(const SmallVector& a_rhs);
 
   // Copy assignment
-  SmallVector &operator=(const SmallVector &a_rhs);
+  SmallVector& operator=(const SmallVector& a_rhs);
 
   iterator begin(void) noexcept;
   const_iterator begin(void) const noexcept;
@@ -105,15 +106,15 @@ public:
 
   ~SmallVector(void) = default;
 
-private:
+ private:
   typename BaseVector::allocator_type::arena_type memory_pool_m;
   BaseVector vector_m;
 };
 
-} // namespace IRL
+}  // namespace IRL
 
 #include "irl/data_structures/small_vector.tpp"
 
-#endif // #ifndef IRL_NO_ABSL
+#endif  // #ifndef IRL_NO_ABSL
 
-#endif // SRC_DATA_STRUCTURES_SMALL_VECTOR_H_
+#endif  // SRC_DATA_STRUCTURES_SMALL_VECTOR_H_

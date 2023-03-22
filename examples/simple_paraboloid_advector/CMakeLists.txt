@@ -1,0 +1,21 @@
+IRLAddExample_cpp(
+  TARGET_NAME
+    simple_paraboloid_advector
+  HDRS
+    "basic_mesh.h"
+    "data.h"
+    "diagnostics.h"
+    "solver.h"
+    "vtk.h"
+  SRCS
+    "basic_mesh.cpp"
+    "diagnostics.cpp"
+    "main.cpp"
+    "solver.cpp"
+    "vtk.cpp"
+  OUTPUT_DIR
+    "${IRL_EXAMPLES_OUTPUT_DIR}/simple_paraboloid_advector"
+  COLLECTION
+    "examples_simple_paraboloid_advector"
+)
+

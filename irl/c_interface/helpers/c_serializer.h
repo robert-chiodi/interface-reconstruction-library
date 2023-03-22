@@ -26,8 +26,10 @@
 /// all big-endian representation to be used.
 
 #include "irl/c_interface/helpers/c_byte_buffer.h"
+#include "irl/c_interface/paraboloid_reconstruction/c_paraboloid.h"
 #include "irl/c_interface/planar_reconstruction/c_separators.h"
 #include "irl/helpers/serializer.h"
+#include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/parameters/defined_types.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 
@@ -38,6 +40,12 @@ void c_serializeAndPack_PlanarSep_ByteBuffer(const c_PlanarSep* a_separator,
 
 void c_unpackAndStore_PlanarSep_ByteBuffer(c_PlanarSep* a_separator,
                                            c_ByteBuffer* a_container);
+
+void c_serializeAndPack_Paraboloid_ByteBuffer(const c_Paraboloid* a_separator,
+                                              c_ByteBuffer* a_container);
+
+void c_unpackAndStore_Paraboloid_ByteBuffer(c_Paraboloid* a_separator,
+                                            c_ByteBuffer* a_container);
 }
 
-#endif // IRL_C_INTERFACE_HELPERS_C_SERIALIZER_H_
+#endif  // IRL_C_INTERFACE_HELPERS_C_SERIALIZER_H_

@@ -47,11 +47,16 @@
 #include "irl/c_interface/moments/c_tagged_accumulated_volume.h"
 #include "irl/c_interface/moments/c_tagged_accumulated_volume_moments.h"
 #include "irl/c_interface/moments/c_volume_moments.h"
+
 #include "irl/c_interface/planar_reconstruction/c_localized_separator.h"
 #include "irl/c_interface/planar_reconstruction/c_localized_separator_group_link.h"
 #include "irl/c_interface/planar_reconstruction/c_localized_separator_link.h"
 #include "irl/c_interface/planar_reconstruction/c_localizer_link.h"
 #include "irl/c_interface/planar_reconstruction/c_separators.h"
+
+#include "irl/c_interface/paraboloid_reconstruction/c_localized_paraboloid_link.h"
+#include "irl/c_interface/paraboloid_reconstruction/c_paraboloid.h"
+
 #include "irl/generic_cutting/generic_cutting.h"
 
 extern "C" {
@@ -104,6 +109,11 @@ void c_getNormMoments_CapDod_LocSepLink_SepVM(
     const c_CapDod* a_Cap_Dod, const c_LocSepLink* a_localized_separator_link,
     c_SepVM* a_moments_to_return);
 
+void c_getNormMoments_CapDod_LocParabLink_SepVM(
+    const c_CapDod* a_Cap_Dod,
+    const c_LocParabLink* a_localized_paraboloid_link,
+    c_SepVM* a_moments_to_return);
+
 void c_getNormMoments_CapDod_d3_LocSepLink_SepVM_d3(
     const c_CapDod_d3* a_Cap_Dod,
     const c_LocSepLink* a_localized_separator_link,
@@ -123,6 +133,11 @@ void c_getMoments_CapDod_LocSepLink_SepVM(
     const c_CapDod* a_Cap_Dod, const c_LocSepLink* a_localized_separator_link,
     c_SepVM* a_moments_to_return);
 
+void c_getMoments_CapDod_LocParabLink_SepVM(
+    const c_CapDod* a_Cap_Dod,
+    const c_LocParabLink* a_localized_paraboloid_link,
+    c_SepVM* a_moments_to_return);
+
 void c_getMoments_Dod_LocSepLink_SepVM(
     const c_Dod* a_Dod, const c_LocSepLink* a_localized_separator_link,
     c_SepVM* a_moments_to_return);
@@ -139,6 +154,10 @@ void c_getNormMoments_Tet_LocSepLink_SepVM(
 void c_getNormMoments_RectCub_PlanarSep_Vol(
     const c_RectCub* a_rectangular_cuboid,
     const c_PlanarSep* a_planar_separator, double* a_moments_to_return);
+
+void c_getNormMoments_RectCub_Paraboloid_Vol(
+    const c_RectCub* a_rectangular_cuboid, const c_Paraboloid* a_paraboloid,
+    double* a_moments_to_return);
 
 void c_getNormMoments_Tet_PlanarSep_Vol(const c_Tet* a_tet,
                                         const c_PlanarSep* a_planar_separator,
@@ -195,6 +214,10 @@ void c_getNormMoments_Octa_LocSepLink_TagAccVM_SepVol(
 void c_getNormMoments_RectCub_PlanarSep_SepVM(
     const c_RectCub* a_rectangular_cuboid,
     const c_PlanarSep* a_planar_separator, c_SepVM* a_moments_to_return);
+
+void c_getNormMoments_RectCub_Paraboloid_SepVM(
+    const c_RectCub* a_rectangular_cuboid, const c_Paraboloid* a_paraboloid,
+    c_SepVM* a_moments_to_return);
 
 void c_getNormMoments_Tri_LocLink_TagAccVM_VM(
     const c_Tri* a_tri, const c_LocLink* a_localizer_link,

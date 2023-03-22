@@ -11,6 +11,7 @@
 #define IRL_HELPERS_HELPER_H_
 
 #include <float.h>
+#include <quadmath.h>
 #include <type_traits>
 #include <utility>
 
@@ -36,10 +37,12 @@ namespace IRL {
 
 /// \brief Takes max between abs(`a_value`) and DBL_MIN while preserving sign.
 inline double safelyTiny(const double a_value);
+inline Quad_t safelyTiny(const Quad_t a_value);
 
 /// \brief Takes max between abs(`a_value`) and DBL_EPSILON while preserving
 /// sign.
 inline double safelyEpsilon(const double a_value);
+inline Quad_t safelyEpsilon(const Quad_t a_value);
 
 /// \brief Takes max between abs(`a_value`) and `the_smallest_value` while
 /// preserving sign.
@@ -120,4 +123,4 @@ inline void sortDescendingBasedOnOtherArray(CarriedType* a_carried_array,
 
 #include "irl/helpers/helper.tpp"
 
-#endif // IRL_HELPERS_HELPER_H_
+#endif  // IRL_HELPERS_HELPER_H_

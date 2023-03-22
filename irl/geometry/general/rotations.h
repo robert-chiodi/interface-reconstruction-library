@@ -38,8 +38,10 @@ namespace IRL {
 ///
 /// \param[in] a_normal_original Original normal we want to rotate.
 /// \param[in] a_normal_destination Normal we want original normal to become
-/// from rotation. \param[out] a_rotation_amount Amount of rotation used to make
-/// the returned `UnitQuaternion`. \param[out] a_rotation_axis Rotation axis
+/// from rotation.
+/// \param[out] a_rotation_amount Amount of rotation used to make
+/// the returned `UnitQuaternion`.
+/// \param[out] a_rotation_axis Rotation axis
 /// used to make the returned `UnitQuaternion`.
 UnitQuaternion rotateNormalOntoNormal(const Normal& a_normal_original,
                                       const Normal& a_normal_destination,
@@ -66,4 +68,4 @@ Normal getSharedNormal(const Normal& a_normal_0, const Normal& a_normal_1);
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_ROTATIONS_H_
+#endif  // IRL_GEOMETRY_GENERAL_ROTATIONS_H_

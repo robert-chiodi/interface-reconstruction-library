@@ -702,7 +702,7 @@ TEST(GenericCutting, getVolumeMomentsLocalizedSeparatorLink) {
   }
   setToPurePhaseReconstruction(1.0, &separators[1][1]);
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(static_cast<UnsignedIndex_t>(j * 3 + i));
@@ -796,7 +796,7 @@ TEST(GenericCutting, getVolumeMomentsListed) {
 
   setToPurePhaseReconstruction(1.0, &separators[1][1]);
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(static_cast<UnsignedIndex_t>(j * 3 + i));
@@ -910,7 +910,7 @@ TEST(GenericCutting, getVolumeMomentsNonCubicLocalizer) {
   }
   (localizers[1][1])[6].distance() = (-1000000.00);
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(static_cast<UnsignedIndex_t>(j * 3 + i));
@@ -1104,7 +1104,7 @@ TEST(GenericCutting, getVolumeMomentsNonCubicLocalizerAccumulated) {
     }
   }
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(static_cast<UnsignedIndex_t>(j * 3 + i));
@@ -1275,7 +1275,7 @@ TEST(GenericCutting, getVolumeMomentsNonCubicLocalizerTagged) {
     }
   }
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(
@@ -1452,7 +1452,7 @@ TEST(GenericCutting, getVolumeMomentsNonCubicLocalizerListedTri) {
     }
   }
 
-  LocalizedSeparatorLink *ptr;
+  LocalizedSeparatorLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(static_cast<UnsignedIndex_t>(j * 3 + i));
@@ -1780,7 +1780,7 @@ TEST(GenericCutting, getVolumeMomentsPlanarSeparatorPathGroupTagged) {
     }
   }
 
-  LocalizedSeparatorGroupLink *ptr;
+  LocalizedSeparatorGroupLink* ptr;
   for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 3; ++i) {
       link_combined[j][i].setId(
@@ -2032,8 +2032,8 @@ TEST(GenericCutting, CircularHanging) {
 
 TEST(GenericCutting, MethodDifference) {
   auto cap_octa = CappedOctahedron_LLL(
-      {Pt(0, 0.40625, -0.015625), Pt(0.03125, 0.375, 0.015625),
-       Pt(0, 0.375, 0.015625),
+      {Pt(0.0, 0.40625, -0.015625), Pt(0.03125, 0.375, 0.015625),
+       Pt(0.0, 0.375, 0.015625),
        Pt(0.0252686335297825, 0.405993193219365, -0.015625),
        Pt(0.0549982680028043, 0.373222827692387, 0.015625),
        Pt(0.0237482680028043, 0.375186323100881, 0.015625),

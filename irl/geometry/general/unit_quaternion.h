@@ -16,60 +16,68 @@
 namespace IRL {
 
 /// \brief Unit quaternion to be used to perform rotations.
-class UnitQuaternion {
+template <class ScalarType>
+class UnitQuaternionBase {
  public:
-  UnitQuaternion(void) = default;
+  using value_type = ScalarType;
+  UnitQuaternionBase(void) = default;
 
   /// \brief Construct quaternion given rotation amount (in radians) and
   /// rotation axis
-  UnitQuaternion(const double a_rotation_amount_in_radians,
-                 const Normal& a_rotation_axis);
+  UnitQuaternionBase(const ScalarType a_rotation_amount_in_radians,
+                     const NormalBase<ScalarType>& a_rotation_axis);
 
-  static UnitQuaternion fromFourElements(double a_q0, double a_q1, double a_q2,
-                                         double a_q3);
+  static UnitQuaternionBase fromFourElements(ScalarType a_q0, ScalarType a_q1,
+                                             ScalarType a_q2, ScalarType a_q3);
 
-  static UnitQuaternion fromFourElementsNormalized(double a_q0, double a_q1,
-                                                   double a_q2, double a_q3);
+  static UnitQuaternionBase fromFourElementsNormalized(ScalarType a_q0,
+                                                       ScalarType a_q1,
+                                                       ScalarType a_q2,
+                                                       ScalarType a_q3);
 
   /// \brief Const access through `overload[]`
-  const double& operator[](const UnsignedIndex_t a_elem) const;
+  const ScalarType& operator[](const UnsignedIndex_t a_elem) const;
 
   /// \brief Normalize the unit quaternion
   inline void normalize(void);
 
   /// \brief Return magnitude of the quaternion.
-  double magnitude(void) const;
+  ScalarType magnitude(void) const;
 
-  /// \brief Return a copy of the inverse UnitQuaternion
-  inline UnitQuaternion inverse(void) const;
+  /// \brief Return a copy of the inverse UnitQuaternionBase
+  inline UnitQuaternionBase inverse(void) const;
 
   /// \brief Compile unit quaternions to perform successive rotations.
-  inline UnitQuaternion operator*(
-      const UnitQuaternion& a_unit_quaternion) const;
+  inline UnitQuaternionBase operator*(
+      const UnitQuaternionBase& a_unit_quaternion) const;
 
   /// \brief Rotate a normal
-  inline Normal operator*(const Normal& a_normal) const;
+  inline NormalBase<ScalarType> operator*(
+      const NormalBase<ScalarType>& a_normal) const;
 
   /// \brief Rotate a reference frame
-  inline ReferenceFrame operator*(
-      const ReferenceFrame& a_reference_frame) const;
+  inline ReferenceFrameBase<ScalarType> operator*(
+      const ReferenceFrameBase<ScalarType>& a_reference_frame) const;
 
   /// \brief Default destructor
-  ~UnitQuaternion(void) = default;
+  ~UnitQuaternionBase(void) = default;
 
  private:
   /// \brief Access through `overload[]`
-  double& operator[](const UnsignedIndex_t a_elem);
+  ScalarType& operator[](const UnsignedIndex_t a_elem);
 
   /// \brief Constructor given 4 doubles
-  UnitQuaternion(double a_q0, double a_q1, double a_q2, double a_q3);
+  UnitQuaternionBase(ScalarType a_q0, ScalarType a_q1, ScalarType a_q2,
+                     ScalarType a_q3);
 
   /// \brief Storage for the 4 elements of a quaternion
-  std::array<double, 4> quat_m;
+  std::array<ScalarType, 4> quat_m;
 };
+
+using UnitQuaternion = UnitQuaternionBase<double>;
 
 }  // namespace IRL
 
 #include "irl/geometry/general/unit_quaternion.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_UNIT_QUATERNION_H_
+#endif  // IRL_GEOMETRY_GENERAL_UNIT_QUATERNION_H_

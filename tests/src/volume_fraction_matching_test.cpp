@@ -9,9 +9,9 @@
 
 #include "irl/interface_reconstruction_methods/volume_fraction_matching.h"
 
+#include <float.h>
 #include <algorithm>
 #include <cmath>
-#include <float.h>
 #include <random>
 
 #include "gtest/gtest.h"
@@ -47,9 +47,9 @@ TEST(VolumeFractionMatching,
                    -global_constants::ARBITRARILY_LARGE_DISTANCE);
 
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_distance(-0.5, 0.5);
@@ -129,9 +129,9 @@ TEST(VolumeFractionMatching,
                    -global_constants::ARBITRARILY_LARGE_DISTANCE);
 
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> random_VF(global_constants::VF_LOW,
@@ -140,7 +140,7 @@ TEST(VolumeFractionMatching,
     double nx = random_normal(eng);
     double ny = random_normal(eng);
     double nz = random_normal(eng);
-    const auto normal = Normal::Normal::normalized(nx, ny, nz);
+    const auto normal = Normal::normalized(nx, ny, nz);
     Plane plane(normal, normal * hex_centroid);
     PlanarSeparator reconstruction = PlanarSeparator::fromOnePlane(plane);
     double cut_volume = getVolumeFraction(hex_cell, reconstruction);
@@ -170,9 +170,9 @@ TEST(VolumeFractionMatching, setDistanceToMatchVolumeFractionPartialFill_Tet) {
                    -global_constants::ARBITRARILY_LARGE_DISTANCE);
 
   std::random_device
-      rd; // Get a random seed from the OS entropy device, or whatever
-  std::mt19937_64 eng(rd()); // Use the 64-bit Mersenne Twister 19937
-                             // generator and seed it with entropy.
+      rd;  // Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());  // Use the 64-bit Mersenne Twister 19937
+                              // generator and seed it with entropy.
   static const int ncycles = 500;
   std::uniform_real_distribution<double> random_normal(-1.0, 1.0);
   std::uniform_real_distribution<double> volume_fraction(0.0, 1.0);
@@ -226,4 +226,4 @@ TEST(VolumeFractionMatching, setGroupDistanceToMatchVolumeFraction) {
   // TODO: more complicated arrangment of 4 materials.
 }
 
-} // namespace
+}  // namespace

@@ -118,8 +118,8 @@ class Vertex {
   PtType vertex_location_m;
   HalfEdge<Vertex>* half_edge_m;  // HalfEdge that ends at this vertex
   double distance_m;
-  bool is_clipped_m;
-  bool needs_to_seek_m;
+  bool is_clipped_m = false;
+  bool needs_to_seek_m = false;
 };
 
 template <class HalfEdgeType>
@@ -157,11 +157,11 @@ class Face {
 
  private:
   HalfEdgeType* starting_half_edge_m;
-  bool has_been_visited_m;
+  bool has_been_visited_m = false;
 };
 
 }  // namespace IRL
 
 #include "irl/geometry/half_edge_structures/half_edge.tpp"
 
-#endif // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_H_
+#endif  // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_H_

@@ -49,8 +49,10 @@ void GeneralPolyhedronSpecialization<Derived, VertexType>::setHalfEdgeVersion(
   const auto number_of_vertices = connectivity_m->number_of_vertices;
   assert(number_of_half_edges >= 12);
   assert(number_of_vertices > 3);
-  const auto number_of_faces =
-      number_of_half_edges / 2 - number_of_vertices + 2;
+  // Euler's formula is only valid for polyhedra that map to a sphere
+  // const auto number_of_faces = number_of_half_edges / 2 - number_of_vertices
+  // + 2;
+  const auto number_of_faces = connectivity_m->number_of_faces;
   a_half_edge_version->resize(number_of_half_edges, number_of_vertices,
                               number_of_faces);
 
@@ -117,7 +119,8 @@ StoredGeneralPolyhedron<VertexType, kStaticAllocSize>::StoredGeneralPolyhedron(
     : StoredGeneralPolyhedron<VertexType, kStaticAllocSize>::Base(
           a_connectivity) {
   assert(a_vertex_list.size() == this->connectivity_m->number_of_vertices);
-  vertex_list_m.setNumberOfPts(static_cast<UnsignedIndex_t>(a_vertex_list.size()));
+  vertex_list_m.setNumberOfPts(
+      static_cast<UnsignedIndex_t>(a_vertex_list.size()));
   std::copy(a_vertex_list.begin(), a_vertex_list.end(), vertex_list_m.begin());
 }
 
@@ -189,4 +192,4 @@ StoredGeneralPolyhedron<VertexType, kStaticAllocSize>::StoredGeneralPolyhedron(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_POLYHEDRONS_GENERAL_POLYHEDRON_TPP_
+#endif  // IRL_GEOMETRY_POLYHEDRONS_GENERAL_POLYHEDRON_TPP_

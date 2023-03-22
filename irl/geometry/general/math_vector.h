@@ -17,27 +17,29 @@
 #include "irl/helpers/mymath.h"
 #include "irl/helpers/serializer.h"
 #include "irl/parameters/defined_types.h"
+
 #include "irl/helpers/expression_templates.h"
 
 namespace IRL {
 
-template <UnsignedIndex_t kNumberOfElements>
-class MathVector : public Expr<MathVector<kNumberOfElements>>{
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+class MathVector : public Expr<MathVector<kNumberOfElements, ScalarType>> {
  public:
-  using value_type = double;
-  using iterator = typename std::array<double, kNumberOfElements>::iterator;
+  using value_type = ScalarType;
+  using iterator = typename std::array<ScalarType, kNumberOfElements>::iterator;
   using const_iterator =
-      typename std::array<double, kNumberOfElements>::const_iterator;
+      typename std::array<ScalarType, kNumberOfElements>::const_iterator;
 
   /// \brief Default constructor.
   constexpr MathVector(void) = default;
 
   /// \brief Constructor for vector given 3 different values.
-  constexpr MathVector(const double a_element_0, const double a_element_1,
-                       const double a_element_2);
-  static MathVector fromRawDoublePointer(const double* a_vec);
+  constexpr MathVector(const ScalarType a_element_0,
+                       const ScalarType a_element_1,
+                       const ScalarType a_element_2);
+  static MathVector fromRawDoublePointer(const ScalarType* a_vec);
 
-  static MathVector fromScalarConstant(const double a_constant);
+  static MathVector fromScalarConstant(const ScalarType a_constant);
 
   // Purposefully not marked explicit to allow elevation from vector_sum to
   // Expr<vector_sum<>>
@@ -59,10 +61,10 @@ class MathVector : public Expr<MathVector<kNumberOfElements>>{
   static constexpr UnsignedIndex_t size(void);
 
   /// \brief Return address of `a_d` index of the MathVector.
-  double& operator[](const UnsignedIndex_t a_d);
+  ScalarType& operator[](const UnsignedIndex_t a_d);
 
   /// \brief Const version of `operator[]`.
-  const double& operator[](const UnsignedIndex_t a_d) const;
+  const ScalarType& operator[](const UnsignedIndex_t a_d) const;
 
   MathVector operator-(void) const;
 
@@ -70,18 +72,18 @@ class MathVector : public Expr<MathVector<kNumberOfElements>>{
 
   MathVector& operator-=(const MathVector& a_other_vector);
 
-  MathVector& operator+=(const double a_scalar);
+  MathVector& operator+=(const ScalarType a_scalar);
 
-  MathVector& operator-=(const double a_scalar);
+  MathVector& operator-=(const ScalarType a_scalar);
 
-  MathVector& operator*=(const double a_scalar);
+  MathVector& operator*=(const ScalarType a_scalar);
 
-  MathVector& operator/=(const double a_scalar);
+  MathVector& operator/=(const ScalarType a_scalar);
 
   /// \brief Return the index of the component with maximum magnitude.
   UnsignedIndex_t calculateIndexOfLargestMagnitude(void) const;
 
-  double calculateMagnitude(void) const;
+  ScalarType calculateMagnitude(void) const;
 
   iterator begin(void) noexcept;
   const_iterator begin(void) const noexcept;
@@ -101,54 +103,58 @@ class MathVector : public Expr<MathVector<kNumberOfElements>>{
 
  private:
   /// \brief Constructor for normal given an array containing 3 values.
-  explicit MathVector(const double* a_vec);
+  explicit MathVector(const ScalarType* a_vec);
 
-  explicit MathVector(const double a_constant);
+  explicit MathVector(const ScalarType a_constant);
 
-  std::array<double, kNumberOfElements> elements_m;
+  std::array<ScalarType, kNumberOfElements> elements_m;
 };
 
-using Vec3 = MathVector<3>;
+template <class ScalarType>
+using Vec3 = MathVector<3, ScalarType>;
 
 /// \brief Overload * operator to be dot product of the two vectors
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline double operator*(
-    const MathVector<kNumberOfElements>& a_vec_0,
-    const MathVector<kNumberOfElements>& a_vec_1);
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline ScalarType operator*(
+    const MathVector<kNumberOfElements, ScalarType>& a_vec_0,
+    const MathVector<kNumberOfElements, ScalarType>& a_vec_1);
 
 /// \brief Overload + operator between MathVectors of same length to add
 /// elements.
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline MathVector<kNumberOfElements> operator+(
-    const MathVector<kNumberOfElements>& a_vec_0,
-    const MathVector<kNumberOfElements>& a_vec_1);
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline MathVector<kNumberOfElements, ScalarType>
+operator+(const MathVector<kNumberOfElements, ScalarType>& a_vec_0,
+          const MathVector<kNumberOfElements, ScalarType>& a_vec_1);
 
 /// \brief Overload - operator between MathVectors of same length to add
 /// elements.
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline MathVector<kNumberOfElements> operator-(
-    const MathVector<kNumberOfElements>& a_vec_0,
-    const MathVector<kNumberOfElements>& a_vec_1);
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline MathVector<kNumberOfElements, ScalarType>
+operator-(const MathVector<kNumberOfElements, ScalarType>& a_vec_0,
+          const MathVector<kNumberOfElements, ScalarType>& a_vec_1);
 
-/// \brief Overload * operator between double and MathVector to return a
+/// \brief Overload * operator between scalar and MathVector to return a
 /// MathVector.
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline MathVector<kNumberOfElements> operator*(
-    const double a_double, const MathVector<kNumberOfElements>& a_vec);
-/// \brief Overload * operator between double and MathVector to be return a
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline MathVector<kNumberOfElements, ScalarType>
+operator*(const ScalarType a_scalar,
+          const MathVector<kNumberOfElements, ScalarType>& a_vec);
+/// \brief Overload * operator between scalar and MathVector to be return a
 /// MathVector.
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline MathVector<kNumberOfElements> operator*(
-    const MathVector<kNumberOfElements>& a_vec, const double a_double);
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline MathVector<kNumberOfElements, ScalarType>
+operator*(const MathVector<kNumberOfElements, ScalarType>& a_vec,
+          const ScalarType a_scalar);
 
-/// \brief Overload / operator between double and MathVector to be return a
+/// \brief Overload / operator between scalar and MathVector to be return a
 /// MathVector.
-template <UnsignedIndex_t kNumberOfElements>
-__attribute__((const)) inline MathVector<kNumberOfElements> operator/(
-    const MathVector<kNumberOfElements>& a_vec, const double a_double);
+template <UnsignedIndex_t kNumberOfElements, class ScalarType>
+__attribute__((const)) inline MathVector<kNumberOfElements, ScalarType>
+operator/(const MathVector<kNumberOfElements, ScalarType>& a_vec,
+          const ScalarType a_scalar);
 
 }  // namespace IRL
 
 #include "irl/geometry/general/math_vector.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_MATH_VECTOR_H_
+#endif  // IRL_GEOMETRY_GENERAL_MATH_VECTOR_H_

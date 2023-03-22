@@ -18,6 +18,14 @@ template <class ObjectType, UnsignedIndex_t kMaxSize>
 StackVector<ObjectType, kMaxSize>::StackVector(void) : size_m(0) {}
 
 template <class ObjectType, UnsignedIndex_t kMaxSize>
+StackVector<ObjectType, kMaxSize>::StackVector(
+    std::initializer_list<ObjectType> a_list)
+    : size_m(static_cast<UnsignedIndex_t>(a_list.size())) {
+  assert(size_m <= kMaxSize);
+  std::copy(a_list.begin(), a_list.end(), this->begin());
+}
+
+template <class ObjectType, UnsignedIndex_t kMaxSize>
 template <UnsignedIndex_t kOtherMaxSize>
 StackVector<ObjectType, kMaxSize>::StackVector(
     const StackVector<ObjectType, kOtherMaxSize>& other)
@@ -188,4 +196,4 @@ inline std::ostream& operator<<(
 
 }  // namespace IRL
 
-#endif // IRL_DATA_STRUCTURES_STACK_VECTOR_TPP_
+#endif  // IRL_DATA_STRUCTURES_STACK_VECTOR_TPP_
