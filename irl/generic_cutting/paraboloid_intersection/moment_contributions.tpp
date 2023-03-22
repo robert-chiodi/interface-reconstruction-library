@@ -329,6 +329,16 @@ inline std::array<ContainerType, 12> coeffsV3andC3SeriesOne(
         max_diff = maximum(max_diff, fabs(add_to_coeff));
       }
     }
+    if (max_diff < static_cast<ScalarType>(DBL_EPSILON)) {
+      break;
+    }
+    x *= a_weight - ContainerType(static_cast<ScalarType>(1));
+    i++;
+  }
+  i = 0;
+  x = ContainerType(static_cast<ScalarType>(1));
+  while (i <= 40) {
+    max_diff = static_cast<ScalarType>(0);
     for (UnsignedIndex_t j = 0; j < 4; ++j) {
       ContainerType add_to_coeff = static_cast<ScalarType>(cx3Series[i][j]) * x;
       coeffs[3 + j] += add_to_coeff;
