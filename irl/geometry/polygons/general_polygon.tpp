@@ -373,12 +373,12 @@ template <class Derived, class VertexType, class SimplexType>
 Pt GeneralPolygon<Derived, VertexType, SimplexType>::getProjectedPtOnEdge(
     const Pt& a_pt_to_project, const Pt& a_edge_pt_0,
     const Pt& a_edge_pt_1) const {
-  Vec3 edge_vector = (a_edge_pt_1 - a_edge_pt_0);
+  Vec3<double> edge_vector = (a_edge_pt_1 - a_edge_pt_0);
   double edge_length_squared = squaredMagnitude(edge_vector);
   if (edge_length_squared < DBL_MIN) {
     return a_edge_pt_0;
   }
-  Vec3 vertex_to_pt_vector = (a_pt_to_project - a_edge_pt_0);
+  Vec3<double> vertex_to_pt_vector = (a_pt_to_project - a_edge_pt_0);
   double distance_along_line =
       (edge_vector * vertex_to_pt_vector) / edge_length_squared;
   distance_along_line = clipBetween(0.0, distance_along_line, 1.0);
@@ -416,4 +416,4 @@ inline std::ostream& operator<<(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_POLYGONS_GENERAL_POLYGON_TPP_
+#endif  // IRL_GEOMETRY_POLYGONS_GENERAL_POLYGON_TPP_

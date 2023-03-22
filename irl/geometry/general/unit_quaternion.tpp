@@ -12,55 +12,71 @@
 
 namespace IRL {
 
-inline UnitQuaternion::UnitQuaternion(const double a_rotation_amount_in_radians,
-                                      const Normal& a_rotation_axis) {
-  quat_m[0] = std::cos(0.5 * a_rotation_amount_in_radians);
-  double scaling = std::sin(0.5 * a_rotation_amount_in_radians);
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType>::UnitQuaternionBase(
+    const ScalarType a_rotation_amount_in_radians,
+    const NormalBase<ScalarType>& a_rotation_axis) {
+  quat_m[0] = cos(a_rotation_amount_in_radians / static_cast<ScalarType>(2));
+  ScalarType scaling =
+      sin(a_rotation_amount_in_radians / static_cast<ScalarType>(2));
   quat_m[1] = scaling * a_rotation_axis[0];
   quat_m[2] = scaling * a_rotation_axis[1];
   quat_m[3] = scaling * a_rotation_axis[2];
 }
 
-inline UnitQuaternion UnitQuaternion::fromFourElements(double a_q0, double a_q1,
-                                                       double a_q2,
-                                                       double a_q3) {
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType>
+UnitQuaternionBase<ScalarType>::fromFourElements(ScalarType a_q0,
+                                                 ScalarType a_q1,
+                                                 ScalarType a_q2,
+                                                 ScalarType a_q3) {
   return UnitQuaternion(a_q0, a_q1, a_q2, a_q3);
 }
 
-inline UnitQuaternion UnitQuaternion::fromFourElementsNormalized(double a_q0,
-                                                                 double a_q1,
-                                                                 double a_q2,
-                                                                 double a_q3) {
-  auto quaternion_to_normalize = UnitQuaternion(a_q0, a_q1, a_q2, a_q3);
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType>
+UnitQuaternionBase<ScalarType>::fromFourElementsNormalized(ScalarType a_q0,
+                                                           ScalarType a_q1,
+                                                           ScalarType a_q2,
+                                                           ScalarType a_q3) {
+  auto quaternion_to_normalize =
+      UnitQuaternionBase<ScalarType>(a_q0, a_q1, a_q2, a_q3);
   quaternion_to_normalize.normalize();
   return quaternion_to_normalize;
 }
 
-inline const double& UnitQuaternion::operator[](
+template <class ScalarType>
+inline const ScalarType& UnitQuaternionBase<ScalarType>::operator[](
     const UnsignedIndex_t a_elem) const {
   assert(a_elem < 4);
   return quat_m[a_elem];
 }
 
-inline void UnitQuaternion::normalize(void) {
-  double magnitude = this->magnitude();
+template <class ScalarType>
+inline void UnitQuaternionBase<ScalarType>::normalize(void) {
+  ScalarType magnitude = this->magnitude();
   for (auto& element : quat_m) {
     element /= magnitude;
   }
 }
 
-inline double UnitQuaternion::magnitude(void) const {
-  return std::sqrt(quat_m[0] * quat_m[0] + quat_m[1] * quat_m[1] +
-                   quat_m[2] * quat_m[2] + quat_m[3] * quat_m[3]);
+template <class ScalarType>
+inline ScalarType UnitQuaternionBase<ScalarType>::magnitude(void) const {
+  return sqrt(quat_m[0] * quat_m[0] + quat_m[1] * quat_m[1] +
+              quat_m[2] * quat_m[2] + quat_m[3] * quat_m[3]);
 }
 
-inline UnitQuaternion UnitQuaternion::inverse(void) const {
-  return UnitQuaternion(quat_m[0], -quat_m[1], -quat_m[2], -quat_m[3]);
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType> UnitQuaternionBase<ScalarType>::inverse(
+    void) const {
+  return UnitQuaternionBase<ScalarType>(quat_m[0], -quat_m[1], -quat_m[2],
+                                        -quat_m[3]);
 }
 
-inline UnitQuaternion UnitQuaternion::operator*(
-    const UnitQuaternion& a_unit_quaternion) const {
-  UnitQuaternion unit_quat_to_return;
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType> UnitQuaternionBase<ScalarType>::operator*(
+    const UnitQuaternionBase<ScalarType>& a_unit_quaternion) const {
+  UnitQuaternionBase<ScalarType> unit_quat_to_return;
   unit_quat_to_return[0] =
       a_unit_quaternion[0] * quat_m[0] - a_unit_quaternion[1] * quat_m[1] -
       a_unit_quaternion[2] * quat_m[2] - a_unit_quaternion[3] * quat_m[3];
@@ -81,32 +97,42 @@ inline UnitQuaternion UnitQuaternion::operator*(
   return unit_quat_to_return;
 }
 
-inline Normal UnitQuaternion::operator*(const Normal& a_normal) const {
-  UnitQuaternion rotated_quat =
-      (*this) * UnitQuaternion(0.0, a_normal[0], a_normal[1], a_normal[2]) *
+template <class ScalarType>
+inline NormalBase<ScalarType> UnitQuaternionBase<ScalarType>::operator*(
+    const NormalBase<ScalarType>& a_normal) const {
+  UnitQuaternionBase<ScalarType> rotated_quat =
+      (*this) *
+      UnitQuaternionBase<ScalarType>(static_cast<ScalarType>(0), a_normal[0],
+                                     a_normal[1], a_normal[2]) *
       this->inverse();
-  Normal rotated_normal =
-      Normal(rotated_quat[1], rotated_quat[2], rotated_quat[3]);
+  NormalBase<ScalarType> rotated_normal =
+      NormalBase<ScalarType>(rotated_quat[1], rotated_quat[2], rotated_quat[3]);
   rotated_normal.normalize();
   return rotated_normal;
 }
 
-inline ReferenceFrame UnitQuaternion::operator*(
-    const ReferenceFrame& a_reference_frame) const {
-  return ReferenceFrame((*this) * a_reference_frame[0],
-                        (*this) * a_reference_frame[1],
-                        (*this) * a_reference_frame[2]);
+template <class ScalarType>
+inline ReferenceFrameBase<ScalarType> UnitQuaternionBase<ScalarType>::operator*(
+    const ReferenceFrameBase<ScalarType>& a_reference_frame) const {
+  return ReferenceFrameBase<ScalarType>((*this) * a_reference_frame[0],
+                                        (*this) * a_reference_frame[1],
+                                        (*this) * a_reference_frame[2]);
 }
 
-inline double& UnitQuaternion::operator[](const UnsignedIndex_t a_elem) {
+template <class ScalarType>
+inline ScalarType& UnitQuaternionBase<ScalarType>::operator[](
+    const UnsignedIndex_t a_elem) {
   assert(a_elem < 4);
   return quat_m[a_elem];
 }
 
-inline UnitQuaternion::UnitQuaternion(double a_q0, double a_q1, double a_q2,
-                                      double a_q3)
+template <class ScalarType>
+inline UnitQuaternionBase<ScalarType>::UnitQuaternionBase(ScalarType a_q0,
+                                                          ScalarType a_q1,
+                                                          ScalarType a_q2,
+                                                          ScalarType a_q3)
     : quat_m{a_q0, a_q1, a_q2, a_q3} {}
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_UNIT_QUATERNION_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_UNIT_QUATERNION_TPP_

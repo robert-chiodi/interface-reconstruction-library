@@ -39,15 +39,24 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-static inline void writeLicense(std::ostream& out){
-  out << "// This file is part of the Interface Reconstruction Library (IRL)" << std::endl;
-  out << "// a library for interface reconstruction and computational geometry operations" << std::endl;
+static inline void writeLicense(std::ostream& out) {
+  out << "// This file is part of the Interface Reconstruction Library (IRL)"
+      << std::endl;
+  out << "// a library for interface reconstruction and computational geometry "
+         "operations"
+      << std::endl;
   out << "//" << std::endl;
-  out << "// Copyright (C) 2019 Robert Chiodi <robert.chiodi@gmail.com>" << std::endl;
+  out << "// Copyright (C) 2019 Robert Chiodi <robert.chiodi@gmail.com>"
+      << std::endl;
   out << "//" << std::endl;
-  out << "// This Source Code Form is subject to the terms of the Mozilla Public" << std::endl;
-  out << "// License, v. 2.0. If a copy of the MPL was not distributed with this" << std::endl;
-  out << "// file, You can obtain one at https://mozilla.org/MPL/2.0/.\n"<<std::endl;
+  out << "// This Source Code Form is subject to the terms of the Mozilla "
+         "Public"
+      << std::endl;
+  out << "// License, v. 2.0. If a copy of the MPL was not distributed with "
+         "this"
+      << std::endl;
+  out << "// file, You can obtain one at https://mozilla.org/MPL/2.0/.\n"
+      << std::endl;
 }
 
 void PolyhedronCreator::createPolyhedronFile(
@@ -150,6 +159,8 @@ void PolyhedronCreator::writeHeaderIncludeGuard(void) {
 }
 
 void PolyhedronCreator::writeHeaderDependencies(void) {
+  header_file_m << "#include \"irl/geometry/general/geometry_type_traits.h\""
+                << std::endl;
   header_file_m << "#include \"irl/geometry/general/stored_vertex_access.h\""
                 << std::endl;
   header_file_m
@@ -178,9 +189,10 @@ void PolyhedronCreator::writeSpecializationClass(void) {
 
 void PolyhedronCreator::writeSpecializationClassHeader(void) {
   header_file_m << "template <class Derived, class VertexType>" << std::endl;
-  header_file_m << "class " << requested_polyhedron_name_m << "Specialization"
-                << ": public GeneralPolyhedron<Derived, VertexType, ProxyTet<Derived>> {"
-                << std::endl;
+  header_file_m
+      << "class " << requested_polyhedron_name_m << "Specialization"
+      << ": public BasePolyhedron<Derived, VertexType, ProxyTet<Derived>> {"
+      << std::endl;
   header_file_m << "public: \n" << std::endl;
 }
 
@@ -270,6 +282,12 @@ void PolyhedronCreator::writePredefinedType(void) {
   header_file_m << "using " << requested_polyhedron_name_m << "= Stored"
                 << requested_polyhedron_name_m << "<Pt>; \n"
                 << std::endl;
+
+  std::string stored_name = "Stored" + requested_polyhedron_name_m;
+  header_file_m << std::endl;
+  header_file_m << "template<class VertexType>" << std::endl;
+  header_file_m << "struct is_polyhedron<" << stored_name
+                << "<VertexType>> : std::true_type {};" << std::endl;
 }
 
 void PolyhedronCreator::writeEndOfHeaderFile(void) {
@@ -461,9 +479,9 @@ void PolyhedronCreator::writeNumberOfSimplicesDefinition(void) {
   this->functionDefinitionHeaderWriter(
       implementation_file_m, "constexpr UnsignedIndex_t",
       "getNumberOfSimplicesInDecomposition", "void", " ");
-  implementation_file_m << "return static_cast<UnsignedIndex_t>(" << base_file_name_m
-                        << "_triangulation::face_triangle_decomposition.size());"
-                        << std::endl;
+  implementation_file_m
+      << "return static_cast<UnsignedIndex_t>(" << base_file_name_m
+      << "_triangulation::face_triangle_decomposition.size());" << std::endl;
   implementation_file_m << "}\n" << std::endl;
 }
 
@@ -562,14 +580,9 @@ void PolyhedronCreator::setVertices(void) {
   implementation_file_m << "for (UnsignedIndex_t v = 0; v < "
                         << number_of_vertices_in_polyhedron_m << "; ++v){"
                         << std::endl;
-  implementation_file_m
-      << "a_half_edge_version->getVertexLocation(v).setLocation((*"
-         "this)[v]);"
-      << std::endl;
-  implementation_file_m
-      << "a_half_edge_version->getVertex(v).setVertexLocation(&a_"
-         "half_edge_version->getVertexLocation(v));"
-      << std::endl;
+  implementation_file_m << "a_half_edge_version->getVertex(v).setLocation((*"
+                           "this)[v]);"
+                        << std::endl;
   implementation_file_m << "}\n" << std::endl;
 }
 
@@ -677,4 +690,3 @@ void PolyhedronCreator::writeEndOfTPPIncludeGuard(void) {
       "SRC_GEOMETRY_POLYHEDRONS_" + upper_case_header_name + "_TPP_";
   implementation_file_m << "#endif //" << include_string << std::endl;
 }
-

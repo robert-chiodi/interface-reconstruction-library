@@ -12,67 +12,94 @@
 
 namespace IRL {
 
-inline Plane::Plane(void) : normal_m(), distance_m{0.0} {}
+template <class ScalarType>
+inline PlaneBase<ScalarType>::PlaneBase(void)
+    : normal_m(), distance_m(static_cast<ScalarType>(0.0)) {}
 
-inline Plane::Plane(const Normal& a_normal, const double a_distance)
+template <class ScalarType>
+inline PlaneBase<ScalarType>::PlaneBase(const NormalBase<ScalarType>& a_normal,
+                                        const ScalarType a_distance)
     : normal_m(a_normal), distance_m(a_distance) {
   this->checkValidNormal();
 }
 
-inline Normal& Plane::normal(void) {
+template <class ScalarType>
+inline NormalBase<ScalarType>& PlaneBase<ScalarType>::normal(void) {
   this->checkValidNormal();
   return normal_m;
 }
 
-inline const Normal& Plane::normal(void) const {
+template <class ScalarType>
+inline const NormalBase<ScalarType>& PlaneBase<ScalarType>::normal(void) const {
   this->checkValidNormal();
   return normal_m;
 }
 
-inline double& Plane::distance(void) { return distance_m; }
+template <class ScalarType>
+inline ScalarType& PlaneBase<ScalarType>::distance(void) {
+  return distance_m;
+}
 
-inline const double& Plane::distance(void) const { return distance_m; }
+template <class ScalarType>
+inline const ScalarType& PlaneBase<ScalarType>::distance(void) const {
+  return distance_m;
+}
 
-inline bool Plane::operator==(const Plane& a_other_plane) const {
+template <class ScalarType>
+inline bool PlaneBase<ScalarType>::operator==(
+    const PlaneBase<ScalarType>& a_other_plane) const {
   return this->normal() == a_other_plane.normal() &&
          this->distance() == a_other_plane.distance();
 }
 
-inline bool Plane::operator!=(const Plane& a_other_plane) const {
+template <class ScalarType>
+inline bool PlaneBase<ScalarType>::operator!=(
+    const PlaneBase<ScalarType>& a_other_plane) const {
   return !((*this) == a_other_plane);
 }
 
+template <class ScalarType>
 template <class PtType>
-__attribute__((const)) inline double Plane::signedDistanceToPoint(
-    const PtType& a_pt) const {
-  return this->normal()*a_pt.getPt() - this->distance();
+__attribute__((const)) inline ScalarType
+PlaneBase<ScalarType>::signedDistanceToPoint(const PtType& a_pt) const {
+  return this->normal() * a_pt.getPt() - this->distance();
 }
 
-inline LargeOffsetIndex_t Plane::getSerializedSize(void) const {
+template <class ScalarType>
+inline LargeOffsetIndex_t PlaneBase<ScalarType>::getSerializedSize(void) const {
   return static_cast<LargeOffsetIndex_t>(normal_m.getSerializedSize() +
-                                         sizeof(double));
+                                         sizeof(ScalarType));
 }
 
-inline void Plane::serialize(ByteBuffer* a_buffer) const {
+template <class ScalarType>
+inline void PlaneBase<ScalarType>::serialize(ByteBuffer* a_buffer) const {
   normal_m.serialize(a_buffer);
   a_buffer->pack(&distance_m, 1);
 }
 
-inline void Plane::unpackSerialized(ByteBuffer* a_buffer) {
+template <class ScalarType>
+inline void PlaneBase<ScalarType>::unpackSerialized(ByteBuffer* a_buffer) {
   normal_m.unpackSerialized(a_buffer);
   a_buffer->unpack(&distance_m, 1);
 }
 
-inline Plane Plane::generateFlippedPlane(void) const {
-  return Plane(-1.0 * normal_m, -distance_m);
+template <class ScalarType>
+inline PlaneBase<ScalarType> PlaneBase<ScalarType>::generateFlippedPlane(
+    void) const {
+  return PlaneBase<ScalarType>(-static_cast<ScalarType>(1) * normal_m,
+                               -distance_m);
 }
 
-inline void Plane::checkValidNormal(void) const {
-  assert(std::fabs(normal_m * normal_m - 1.0) < 1.0e-14 ||
-         normal_m * normal_m < 1.0e-14);
+template <class ScalarType>
+inline void PlaneBase<ScalarType>::checkValidNormal(void) const {
+  assert(fabs(normal_m * normal_m - static_cast<ScalarType>(1)) <
+             static_cast<ScalarType>(1.0e-14) ||
+         normal_m * normal_m < static_cast<ScalarType>(1.0e-14));
 }
 
-inline std::ostream& operator<<(std::ostream& out, const Plane& a_plane) {
+template <class ScalarType>
+inline std::ostream& operator<<(std::ostream& out,
+                                const PlaneBase<ScalarType>& a_plane) {
   out << std::setprecision(15);
   out << "( " << a_plane.normal()[0];
   out << ", " << a_plane.normal()[1];
@@ -84,4 +111,4 @@ inline std::ostream& operator<<(std::ostream& out, const Plane& a_plane) {
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_PLANE_TPP_
+#endif  // IRL_GEOMETRY_GENERAL_PLANE_TPP_

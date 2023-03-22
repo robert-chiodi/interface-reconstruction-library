@@ -39,7 +39,7 @@ void runSimulation(const int a_number_of_cells, const int a_number_of_rotations,
   // Calculate constant timestep for CFL = 0.5 and number of steps per
   // revolution at this time. Also make sure it is multiple of
   // a_viz_out_freq for ease of visualization output.
-  constexpr double max_vel =
+  const double max_vel =
       std::sqrt(0.5 * 0.5 + 0.5 * 0.5) * M_PI * std::sqrt(2.0);
   constexpr double desired_CFL = 0.5;
   double dt = desired_CFL * mesh.dx() / max_vel;

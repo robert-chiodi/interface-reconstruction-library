@@ -18,6 +18,7 @@ using UnsignedIndex_t = uint32_t;
 using LargeOffsetIndex_t = std::size_t;
 using LookupIndex_t = uint8_t;
 using Byte_t = unsigned char;
+using Quad_t = __float128;
 }  // namespace IRL
 
-#endif // IRL_DEFINED_TYPES_H_
+#endif  // IRL_DEFINED_TYPES_H_

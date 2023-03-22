@@ -15,13 +15,14 @@ namespace IRL {
 class LinearInterpolation_Functor {
  public:
   template <class PtWithDataType>
-  PtWithDataType operator()(const PtWithDataType& a_pt_0, const double a_dist_0,
+  PtWithDataType operator()(const PtWithDataType& a_pt_0,
+                            const typename PtWithDataType::value_type a_dist_0,
                             const PtWithDataType& a_pt_1,
-                            const double a_dist_1);
+                            const typename PtWithDataType::value_type a_dist_1);
 };
 
 }  // namespace IRL
 
 #include "irl/geometry/general/new_pt_calculation_functors.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_NEW_PT_CALCULATION_FUNCTORS_H_
+#endif  // IRL_GEOMETRY_GENERAL_NEW_PT_CALCULATION_FUNCTORS_H_

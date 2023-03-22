@@ -10,15 +10,17 @@
 #ifndef IRL_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_INITIALIZER_TPP_
 #define IRL_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_INITIALIZER_TPP_
 
+#include "irl/geometry/half_edge_structures/half_edge_polyhedron_paraboloid.h"
+
 namespace IRL {
 
 // Foward declare getVolumeMoments to avoid circular dependency.
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType, class ReconstructionType>
-__attribute__((hot)) inline ReturnType
-getVolumeMoments(SegmentedPolytopeType *a_polytope,
-                 HalfEdgePolytopeType *a_complete_polytope,
-                 const ReconstructionType &a_reconstruction);
+__attribute__((hot)) inline ReturnType getVolumeMoments(
+    SegmentedPolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const ReconstructionType& a_reconstruction);
 
 /// Setting the half edge structure using lazy evaluation.
 /// During the first access by the particular object type,
@@ -35,9 +37,9 @@ getVolumeMoments(SegmentedPolytopeType *a_polytope,
 /// need to be reset for each new instance of the class object. For a
 /// polygon, the plane of existence will also need to be reset
 /// during each access.
-template <class PolytopeType> class HalfEdgeGeometryInitializer {
-
-public:
+template <class PolytopeType>
+class HalfEdgeGeometryInitializer {
+ public:
   HalfEdgeGeometryInitializer(void) = default;
 
   void setAllToUpdate(void) {
@@ -51,7 +53,7 @@ public:
   }
 
   template <class GeometryType>
-  std::size_t getID(const GeometryType &a_geometry) {
+  std::size_t getID(const GeometryType& a_geometry) {
     static bool already_set = false;
     static std::size_t type_id = static_cast<std::size_t>(-1);
     if (!already_set) {
@@ -82,7 +84,7 @@ public:
   }
 
   template <class GeometryType>
-  void resetTemplatePolytope(const GeometryType &a_geometry,
+  void resetTemplatePolytope(const GeometryType& a_geometry,
                              const std::size_t a_type_id) {
     assert(a_type_id < template_polytopes_m.size());
     assert(a_type_id < needs_updating_m.size());
@@ -92,7 +94,7 @@ public:
   }
 
   template <class GeometryType>
-  PolytopeType &getHalfEdgePolytopeBase(const GeometryType &a_geometry) {
+  PolytopeType& getHalfEdgePolytopeBase(const GeometryType& a_geometry) {
     const std::size_t type_id = this->getID(a_geometry);
     assert(type_id < needs_updating_m.size());
     assert(type_id < template_polytopes_m.size());
@@ -106,14 +108,14 @@ public:
 
   ~HalfEdgeGeometryInitializer(void) = default;
 
-private:
+ private:
   PolytopeType central_polytope_storage_m;
   SmallVector<PolytopeType, 8> template_polytopes_m;
   SmallVector<UnsignedIndex_t, 8> needs_updating_m;
 };
 
 template <class VertexType>
-HalfEdgeGeometryInitializer<HalfEdgePolyhedron<VertexType>> &
+HalfEdgeGeometryInitializer<HalfEdgePolyhedron<VertexType>>&
 getHalfEdgePolyhedronStorage(void);
 
 template <class EncompassingGeometryType>
@@ -138,68 +140,125 @@ enable_if_t<is_polygon<EncompassingGeometryType>::value &&
             void>
 updatePolytopeStorage(void);
 
-template <class VertexType, class GeometryType>
-HalfEdgePolyhedron<VertexType> &getHalfEdgePolyhedron(void);
-
-template <class VertexType>
-HalfEdgePolygon<VertexType> &getHalfEdgePolygonStorage(void);
-
 template <class EncompassingGeometryType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
                 !is_general_polyhedron<EncompassingGeometryType>::value,
-            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry);
+            void>
+updatePolytopeStorageParaboloid(void);
 
 template <class EncompassingGeometryType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
                 is_general_polyhedron<EncompassingGeometryType>::value,
-            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry);
+            void>
+updatePolytopeStorageParaboloid(void);
+
+template <class VertexType, class GeometryType>
+HalfEdgePolyhedron<VertexType>& getHalfEdgePolyhedron(void);
+
+template <class VertexType>
+HalfEdgePolygon<VertexType>& getHalfEdgePolygonStorage(void);
+
+template <class VertexType, class GeometryType>
+HalfEdgePolyhedronParaboloid<VertexType>& getHalfEdgePolyhedronParaboloid(void);
+
+template <class EncompassingGeometryType>
+enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
+                !is_general_polyhedron<EncompassingGeometryType>::value,
+            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry);
+
+template <class EncompassingGeometryType>
+enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
+                is_general_polyhedron<EncompassingGeometryType>::value,
+            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry);
 
 template <class EncompassingGeometryType>
 enable_if_t<is_tri<EncompassingGeometryType>::value,
-            HalfEdgePolygon<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry);
+            HalfEdgePolygon<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry);
 
 template <class EncompassingGeometryType>
 enable_if_t<is_polygon<EncompassingGeometryType>::value &&
                 !is_tri<EncompassingGeometryType>::value,
-            HalfEdgePolygon<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry);
+            HalfEdgePolygon<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry);
+
+template <class EncompassingGeometryType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value &&
+        !is_general_polyhedron<EncompassingGeometryType>::value,
+    HalfEdgePolyhedronParaboloid<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructureParaboloid(const EncompassingGeometryType& a_geometry);
+
+template <class EncompassingGeometryType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value &&
+        is_general_polyhedron<EncompassingGeometryType>::value,
+    HalfEdgePolyhedronParaboloid<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructureParaboloid(const EncompassingGeometryType& a_geometry);
 
 template <class EncompassingGeometryType, class PolytopeType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value,
             SegmentedHalfEdgePolyhedron<typename PolytopeType::face_type,
                                         typename PolytopeType::vertex_type>>
-generateSegmentedVersion(PolytopeType *a_complete_polytope);
+generateSegmentedVersion(PolytopeType* a_complete_polytope);
 
 template <class EncompassingGeometryType, class PolytopeType>
 enable_if_t<is_polygon<EncompassingGeometryType>::value,
             SegmentedHalfEdgePolygon<typename PolytopeType::face_type,
                                      typename PolytopeType::vertex_type>>
-generateSegmentedVersion(PolytopeType *a_complete_polytope);
+generateSegmentedVersion(PolytopeType* a_complete_polytope);
+
+template <class EncompassingGeometryType, class PolytopeType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value,
+    SegmentedHalfEdgePolyhedronParaboloid<typename PolytopeType::face_type,
+                                          typename PolytopeType::vertex_type>>
+generateSegmentedVersionParaboloid(PolytopeType* a_complete_polytope);
 
 //******************************************************************* //
 //     Function template definitions placed below this
 //******************************************************************* //
 template <class ReturnType, class EncompassingType, class ReconstructionType>
-ReturnType
-cutThroughHalfEdgeStructures(const EncompassingType &a_polytope,
-                             const ReconstructionType &a_reconstruction) {
-  auto &complete_polytope = setHalfEdgeStructure(a_polytope);
-  auto half_edge_polytope =
-      generateSegmentedVersion<EncompassingType>(&complete_polytope);
-  assert(half_edge_polytope.checkValidHalfEdgeStructure());
-  const ReturnType moments = getVolumeMoments<ReturnType, HalfEdgeCutting>(
-      &half_edge_polytope, &complete_polytope, a_reconstruction);
-  updatePolytopeStorage<EncompassingType>();
+ReturnType cutThroughHalfEdgeStructures(
+    const EncompassingType& a_polytope,
+    const ReconstructionType& a_reconstruction) {
+  ReturnType moments;
+  if constexpr (HasAParaboloidReconstruction<ReconstructionType>::value) {
+    auto& complete_polytope = setHalfEdgeStructureParaboloid(a_polytope);
+    auto half_edge_polytope =
+        generateSegmentedVersionParaboloid<EncompassingType>(
+            &complete_polytope);
+    assert(half_edge_polytope.checkValidHalfEdgeStructure());
+    moments = getVolumeMoments<ReturnType, HalfEdgeCutting>(
+        &half_edge_polytope, &complete_polytope, a_reconstruction);
+    updatePolytopeStorageParaboloid<EncompassingType>();
+
+  } else {
+    auto& complete_polytope = setHalfEdgeStructure(a_polytope);
+    auto half_edge_polytope =
+        generateSegmentedVersion<EncompassingType>(&complete_polytope);
+    assert(half_edge_polytope.checkValidHalfEdgeStructure());
+    moments = getVolumeMoments<ReturnType, HalfEdgeCutting>(
+        &half_edge_polytope, &complete_polytope, a_reconstruction);
+    updatePolytopeStorage<EncompassingType>();
+  }
   return moments;
 }
 
 template <class VertexType>
-HalfEdgeGeometryInitializer<HalfEdgePolyhedron<VertexType>> &
+HalfEdgeGeometryInitializer<HalfEdgePolyhedron<VertexType>>&
 getHalfEdgePolyhedronStorage(void) {
   static HalfEdgeGeometryInitializer<HalfEdgePolyhedron<VertexType>> storage;
+  return storage;
+}
+
+template <class VertexType>
+HalfEdgeGeometryInitializer<HalfEdgePolyhedronParaboloid<VertexType>>&
+getHalfEdgePolyhedronStorageParaboloid(void) {
+  static HalfEdgeGeometryInitializer<HalfEdgePolyhedronParaboloid<VertexType>>
+      storage;
   return storage;
 }
 
@@ -208,7 +267,7 @@ enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
                 !is_general_polyhedron<EncompassingGeometryType>::value,
             void>
 updatePolytopeStorage(void) {
-  auto &storage = getHalfEdgePolyhedronStorage<
+  auto& storage = getHalfEdgePolyhedronStorage<
       typename EncompassingGeometryType::pt_type>();
   storage.resetCentralStorageToCurrentSize();
 }
@@ -229,15 +288,38 @@ enable_if_t<is_polygon<EncompassingGeometryType>::value &&
             void>
 updatePolytopeStorage(void) {}
 
+template <class EncompassingGeometryType>
+enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
+                !is_general_polyhedron<EncompassingGeometryType>::value,
+            void>
+updatePolytopeStorageParaboloid(void) {
+  auto& storage = getHalfEdgePolyhedronStorageParaboloid<
+      typename EncompassingGeometryType::pt_type>();
+  storage.resetCentralStorageToCurrentSize();
+}
+
+template <class EncompassingGeometryType>
+enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
+                is_general_polyhedron<EncompassingGeometryType>::value,
+            void>
+updatePolytopeStorageParaboloid(void) {}
+
 template <class VertexType, class GeometryType>
-HalfEdgePolyhedron<VertexType> &
-getHalfEdgePolyhedron(const GeometryType &a_geometry) {
-  auto &storage = getHalfEdgePolyhedronStorage<VertexType>();
+HalfEdgePolyhedron<VertexType>& getHalfEdgePolyhedron(
+    const GeometryType& a_geometry) {
+  auto& storage = getHalfEdgePolyhedronStorage<VertexType>();
+  return storage.getHalfEdgePolytopeBase(a_geometry);
+}
+
+template <class VertexType, class GeometryType>
+HalfEdgePolyhedronParaboloid<VertexType>& getHalfEdgePolyhedronParaboloid(
+    const GeometryType& a_geometry) {
+  auto& storage = getHalfEdgePolyhedronStorageParaboloid<VertexType>();
   return storage.getHalfEdgePolytopeBase(a_geometry);
 }
 
 template <class VertexType>
-HalfEdgePolygon<VertexType> &getHalfEdgePolygonStorage(void) {
+HalfEdgePolygon<VertexType>& getHalfEdgePolygonStorage(void) {
   static HalfEdgePolygon<VertexType> storage;
   return storage;
 }
@@ -245,9 +327,9 @@ HalfEdgePolygon<VertexType> &getHalfEdgePolygonStorage(void) {
 template <class EncompassingGeometryType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
                 !is_general_polyhedron<EncompassingGeometryType>::value,
-            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
-  auto &complete_polyhedron_buffer =
+            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry) {
+  auto& complete_polyhedron_buffer =
       getHalfEdgePolyhedron<typename EncompassingGeometryType::pt_type>(
           a_geometry);
   complete_polyhedron_buffer.setVertexLocations(a_geometry);
@@ -257,8 +339,8 @@ setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
 template <class EncompassingGeometryType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value &&
                 is_general_polyhedron<EncompassingGeometryType>::value,
-            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
+            HalfEdgePolyhedron<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry) {
   // Can't lazy evaluate GeneralPolyhedron's because they change, i.e.
   // since a GeneralPolyhedron doesn't have a fixed number of vertices or
   // connectivity like other polyhedrons in IRL, the connectivity cannot
@@ -271,8 +353,8 @@ setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
 
 template <class EncompassingGeometryType>
 enable_if_t<is_tri<EncompassingGeometryType>::value,
-            HalfEdgePolygon<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
+            HalfEdgePolygon<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry) {
   static bool already_set = false;
   static HalfEdgePolygon<typename EncompassingGeometryType::pt_type>
       half_edge_geometry_template;
@@ -295,24 +377,53 @@ setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
 template <class EncompassingGeometryType>
 enable_if_t<is_polygon<EncompassingGeometryType>::value &&
                 !is_tri<EncompassingGeometryType>::value,
-            HalfEdgePolygon<typename EncompassingGeometryType::pt_type> &>
-setHalfEdgeStructure(const EncompassingGeometryType &a_geometry) {
+            HalfEdgePolygon<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructure(const EncompassingGeometryType& a_geometry) {
   // Can't lazy evaluate polygons because they change, i.e.
   // since a Polygon doesn't have a fixed number of vertices like
   // a polyhedron does in IRL, the connectivity cannot simply
   // be stored and copied over.
   HalfEdgePolygon<
-      typename EncompassingGeometryType::pt_type> &complete_polygon_buffer =
+      typename EncompassingGeometryType::pt_type>& complete_polygon_buffer =
       getHalfEdgePolygonStorage<typename EncompassingGeometryType::pt_type>();
   a_geometry.setHalfEdgeVersion(&complete_polygon_buffer);
   return complete_polygon_buffer;
+}
+
+template <class EncompassingGeometryType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value &&
+        !is_general_polyhedron<EncompassingGeometryType>::value,
+    HalfEdgePolyhedronParaboloid<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructureParaboloid(const EncompassingGeometryType& a_geometry) {
+  auto& complete_polyhedron_buffer = getHalfEdgePolyhedronParaboloid<
+      typename EncompassingGeometryType::pt_type>(a_geometry);
+  complete_polyhedron_buffer.setVertexLocations(a_geometry);
+  return complete_polyhedron_buffer;
+}
+
+template <class EncompassingGeometryType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value &&
+        is_general_polyhedron<EncompassingGeometryType>::value,
+    HalfEdgePolyhedronParaboloid<typename EncompassingGeometryType::pt_type>&>
+setHalfEdgeStructureParaboloid(const EncompassingGeometryType& a_geometry) {
+  // Can't lazy evaluate GeneralPolyhedron's because they change, i.e.
+  // since a GeneralPolyhedron doesn't have a fixed number of vertices or
+  // connectivity like other polyhedrons in IRL, the connectivity cannot
+  // simply be stored and copied over.
+  static HalfEdgePolyhedronParaboloid<
+      typename EncompassingGeometryType::pt_type>
+      complete_polyhedron_buffer;
+  a_geometry.setHalfEdgeVersion(&complete_polyhedron_buffer);
+  return complete_polyhedron_buffer;
 }
 
 template <class EncompassingGeometryType, class PolytopeType>
 enable_if_t<is_polyhedron<EncompassingGeometryType>::value,
             SegmentedHalfEdgePolyhedron<typename PolytopeType::face_type,
                                         typename PolytopeType::vertex_type>>
-generateSegmentedVersion(PolytopeType *a_complete_polytope) {
+generateSegmentedVersion(PolytopeType* a_complete_polytope) {
   return a_complete_polytope->generateSegmentedPolyhedron();
 }
 
@@ -320,7 +431,7 @@ template <class EncompassingGeometryType, class PolytopeType>
 enable_if_t<is_polygon<EncompassingGeometryType>::value,
             SegmentedHalfEdgePolygon<typename PolytopeType::face_type,
                                      typename PolytopeType::vertex_type>>
-generateSegmentedVersion(PolytopeType *a_complete_polytope) {
+generateSegmentedVersion(PolytopeType* a_complete_polytope) {
   auto segmented_half_edge_geometry_template =
       a_complete_polytope->generateSegmentedPolygon();
   segmented_half_edge_geometry_template.setPlaneOfExistence(
@@ -328,6 +439,15 @@ generateSegmentedVersion(PolytopeType *a_complete_polytope) {
   return segmented_half_edge_geometry_template;
 }
 
-} // namespace IRL
+template <class EncompassingGeometryType, class PolytopeType>
+enable_if_t<
+    is_polyhedron<EncompassingGeometryType>::value,
+    SegmentedHalfEdgePolyhedronParaboloid<typename PolytopeType::face_type,
+                                          typename PolytopeType::vertex_type>>
+generateSegmentedVersionParaboloid(PolytopeType* a_complete_polytope) {
+  return a_complete_polytope->generateSegmentedPolyhedron();
+}
 
-#endif // SRC_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_INITIALIZER_TPP_
+}  // namespace IRL
+
+#endif  // SRC_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_INITIALIZER_TPP_

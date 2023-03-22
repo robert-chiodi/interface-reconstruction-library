@@ -8,4 +8,4 @@ add_subdirectory(interface_reconstruction_methods)
 add_subdirectory(moments)
 add_subdirectory(parameters)
 add_subdirectory(planar_reconstruction)
-
+add_subdirectory(paraboloid_reconstruction)

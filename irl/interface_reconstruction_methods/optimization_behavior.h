@@ -17,7 +17,9 @@ namespace IRL {
 /// \brief Struct to contain LVIRA/MoF/R2P optimization parameters
 struct OptimizationBehavior {
   /// \brief If `this->calculateScalarError()` is less than this, exit.
-  double acceptable_error = 1.0e-4 * 1.0e-4;
+  double acceptable_error = 1.0e-5 * 1.0e-5;
+  /// \brief If `this->calculateScalarError()` is less than this, exit.
+  double acceptable_constraint_error = 1.0e-4 * 1.0e-4;
   /// \brief Maximum number of attempted iterations before exiting.
   UnsignedIndex_t maximum_iterations = 20;
   /// \brief Minimum change in angle related delta below which minimum is

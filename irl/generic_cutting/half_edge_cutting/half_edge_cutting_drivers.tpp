@@ -17,19 +17,19 @@ namespace IRL {
 // Foward declare getVolumeMoments to avoid circular dependency.
 template <class ReturnType, class CuttingMethod, class SegmentedPolytopeType,
           class HalfEdgePolytopeType, class ReconstructionType>
-__attribute__((hot)) inline ReturnType
-getVolumeMoments(SegmentedPolytopeType *a_polytope,
-                 HalfEdgePolytopeType *a_complete_polytope,
-                 const ReconstructionType &a_reconstruction);
+__attribute__((hot)) inline ReturnType getVolumeMoments(
+    SegmentedPolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const ReconstructionType& a_reconstruction);
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
 enable_if_t<HasAReconstructionLink<ReconstructionType>::value>
-getVolumeMomentsForPolytope(SegmentedPolytopeType *a_polytope,
-                            HalfEdgePolytopeType *a_complete_polytope,
-                            const ReconstructionType &a_reconstruction,
-                            EncounteredIdList *a_id_list,
-                            ReturnType *a_moments_to_return);
+getVolumeMomentsForPolytope(SegmentedPolytopeType* a_polytope,
+                            HalfEdgePolytopeType* a_complete_polytope,
+                            const ReconstructionType& a_reconstruction,
+                            EncounteredIdList* a_id_list,
+                            ReturnType* a_moments_to_return);
 
 namespace getVolumeMomentsForPolytopeDetails {
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -43,10 +43,10 @@ struct getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<DoesNotHaveAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -56,10 +56,10 @@ struct getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -70,10 +70,10 @@ struct getVolumeMomentsForPolytopeStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -84,10 +84,10 @@ struct getVolumeMomentsForPolytopeStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -97,10 +97,10 @@ struct getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 HasACollection<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction,
+      ReturnType* a_moments_to_return);
 };
 
 // For ReconstructionLink cutting with informed origin.
@@ -115,10 +115,10 @@ struct getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction, EncounteredIdList *a_id_list,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction, EncounteredIdList* a_id_list,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -129,10 +129,10 @@ struct getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction, EncounteredIdList *a_id_list,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction, EncounteredIdList* a_id_list,
+      ReturnType* a_moments_to_return);
 };
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
@@ -142,37 +142,36 @@ struct getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 HasACollection<ReturnType>::value>> {
   static void getVolumeMomentsForPolytopeImplementation(
-      SegmentedPolytopeType *a_polytope,
-      HalfEdgePolytopeType *a_complete_polytope,
-      const ReconstructionType &a_reconstruction, EncounteredIdList *a_id_list,
-      ReturnType *a_moments_to_return);
+      SegmentedPolytopeType* a_polytope,
+      HalfEdgePolytopeType* a_complete_polytope,
+      const ReconstructionType& a_reconstruction, EncounteredIdList* a_id_list,
+      ReturnType* a_moments_to_return);
 };
 
-} // namespace getVolumeMomentsForPolytopeDetails
+}  // namespace getVolumeMomentsForPolytopeDetails
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType>
-inline void
-localizeInternalToReconstruction(SegmentedPolytopeType *a_polytope,
-                                 HalfEdgePolytopeType *a_complete_polytope,
-                                 const ReconstructionType &a_reconstruction);
+inline void localizeInternalToReconstruction(
+    SegmentedPolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const ReconstructionType& a_reconstruction);
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
-inline void
-splitAndShareThroughLinks(SegmentedPolytopeType *a_polytope,
-                          HalfEdgePolytopeType *a_complete_polytope,
-                          const ReconstructionType &a_reconstruction,
-                          EncounteredIdList *a_id_list,
-                          ReturnType *a_moments_to_return);
+inline void splitAndShareThroughLinks(
+    SegmentedPolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const ReconstructionType& a_reconstruction, EncounteredIdList* a_id_list,
+    ReturnType* a_moments_to_return);
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
-void splitAndShareThroughLinks(SegmentedPolytopeType *a_polytope,
-                               HalfEdgePolytopeType *a_complete_polytope,
-                               const ReconstructionType &a_reconstruction,
-                               EncounteredIdList *a_id_list,
-                               ReturnType *a_moments_to_return);
+void splitAndShareThroughLinks(SegmentedPolytopeType* a_polytope,
+                               HalfEdgePolytopeType* a_complete_polytope,
+                               const ReconstructionType& a_reconstruction,
+                               EncounteredIdList* a_id_list,
+                               ReturnType* a_moments_to_return);
 
 //******************************************************************* //
 //     Function template definitions placed below this
@@ -180,10 +179,10 @@ void splitAndShareThroughLinks(SegmentedPolytopeType *a_polytope,
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
-void getVolumeMomentsForPolytope(SegmentedPolytopeType *a_polytope,
-                                 HalfEdgePolytopeType *a_complete_polytope,
-                                 const ReconstructionType &a_reconstruction,
-                                 ReturnType *a_moments_to_return) {
+void getVolumeMomentsForPolytope(SegmentedPolytopeType* a_polytope,
+                                 HalfEdgePolytopeType* a_complete_polytope,
+                                 const ReconstructionType& a_reconstruction,
+                                 ReturnType* a_moments_to_return) {
   getVolumeMomentsForPolytopeDetails::
       getVolumeMomentsForPolytopeStaticStructWrapper<
           SegmentedPolytopeType, HalfEdgePolytopeType, ReconstructionType,
@@ -196,11 +195,11 @@ void getVolumeMomentsForPolytope(SegmentedPolytopeType *a_polytope,
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
 enable_if_t<HasAReconstructionLink<ReconstructionType>::value>
-getVolumeMomentsForPolytope(SegmentedPolytopeType *a_polytope,
-                            HalfEdgePolytopeType *a_complete_polytope,
-                            const ReconstructionType &a_reconstruction,
-                            EncounteredIdList *a_id_list,
-                            ReturnType *a_moments_to_return) {
+getVolumeMomentsForPolytope(SegmentedPolytopeType* a_polytope,
+                            HalfEdgePolytopeType* a_complete_polytope,
+                            const ReconstructionType& a_reconstruction,
+                            EncounteredIdList* a_id_list,
+                            ReturnType* a_moments_to_return) {
   getVolumeMomentsForPolytopeDetails::
       getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
           SegmentedPolytopeType, HalfEdgePolytopeType, ReconstructionType,
@@ -219,10 +218,10 @@ void getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<DoesNotHaveAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        ReturnType* a_moments_to_return) {
   localizeInternalToReconstruction(a_polytope, a_complete_polytope,
                                    a_reconstruction);
   if (a_polytope->getNumberOfFaces() > 0) {
@@ -239,10 +238,10 @@ void getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        ReturnType* a_moments_to_return) {
   static EncounteredIdList id_list;
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             &id_list, a_moments_to_return);
@@ -261,10 +260,10 @@ void getVolumeMomentsForPolytopeStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        ReturnType* a_moments_to_return) {
   localizeInternalToReconstruction(a_polytope, a_complete_polytope,
                                    a_reconstruction);
   using WantedVolumeMomentsType = typename ReturnType::contained_type;
@@ -284,10 +283,10 @@ void getVolumeMomentsForPolytopeStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        ReturnType* a_moments_to_return) {
   static EncounteredIdList id_list;
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             &id_list, a_moments_to_return);
@@ -308,10 +307,10 @@ void getVolumeMomentsForPolytopeStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 HasACollection<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        ReturnType* a_moments_to_return) {
   static EncounteredIdList id_list;
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             &id_list, a_moments_to_return);
@@ -333,10 +332,10 @@ void getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 DoesNotHaveANestedType<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        EncounteredIdList *a_id_list, ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        EncounteredIdList* a_id_list, ReturnType* a_moments_to_return) {
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             a_id_list, a_moments_to_return);
   if (a_polytope->getNumberOfFaces() > 0) {
@@ -354,10 +353,10 @@ void getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
                 HasANestedType<ReturnType>::value &&
                 DoesNotHaveACollection<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        EncounteredIdList *a_id_list, ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        EncounteredIdList* a_id_list, ReturnType* a_moments_to_return) {
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             a_id_list, a_moments_to_return);
   using WantedVolumeMomentsType = typename ReturnType::contained_type;
@@ -376,10 +375,10 @@ void getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
     enable_if_t<HasAReconstructionLink<ReconstructionType>::value &&
                 HasACollection<ReturnType>::value>>::
     getVolumeMomentsForPolytopeImplementation(
-        SegmentedPolytopeType *a_polytope,
-        HalfEdgePolytopeType *a_complete_polytope,
-        const ReconstructionType &a_reconstruction,
-        EncounteredIdList *a_id_list, ReturnType *a_moments_to_return) {
+        SegmentedPolytopeType* a_polytope,
+        HalfEdgePolytopeType* a_complete_polytope,
+        const ReconstructionType& a_reconstruction,
+        EncounteredIdList* a_id_list, ReturnType* a_moments_to_return) {
   splitAndShareThroughLinks(a_polytope, a_complete_polytope, a_reconstruction,
                             a_id_list, a_moments_to_return);
   using WantedVolumeMomentsType = typename ReturnType::contained_type;
@@ -392,7 +391,7 @@ void getVolumeMomentsForPolytopeKnownOriginStaticStructWrapper<
   }
 }
 
-} // namespace getVolumeMomentsForPolytopeDetails
+}  // namespace getVolumeMomentsForPolytopeDetails
 
 template <class SegmentedHalfEdgePolytopeType>
 static constexpr enable_if_t<
@@ -411,13 +410,13 @@ getGlobalVolumeTolerance(void) {
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType>
 void localizeInternalToReconstruction(
-    SegmentedPolytopeType *a_polytope,
-    HalfEdgePolytopeType *a_complete_polytope,
-    const ReconstructionType &a_reconstruction) {
-  const auto &cutting_reconstruction =
+    SegmentedPolytopeType* a_polytope,
+    HalfEdgePolytopeType* a_complete_polytope,
+    const ReconstructionType& a_reconstruction) {
+  const auto& cutting_reconstruction =
       a_reconstruction.getCurrentReconstruction();
 
-  for (const auto &plane : cutting_reconstruction) {
+  for (const auto& plane : cutting_reconstruction) {
     const auto cutting_plane = cutting_reconstruction.isFlipped()
                                    ? plane.generateFlippedPlane()
                                    : plane;
@@ -432,22 +431,22 @@ namespace details {
 
 // Check if ID is present but take advantage of the fact we know the last id
 // is the cell's own id (and is therefore ignored)
-inline bool isIdPresent(const EncounteredIdList &a_list,
+inline bool isIdPresent(const EncounteredIdList& a_list,
                         const UnsignedIndex_t a_id) {
   const auto end = a_list.end() - 1;
   return std::find(a_list.begin(), end, a_id) != end;
 }
 
-} // namespace details
+}  // namespace details
 
 template <class SegmentedPolytopeType, class HalfEdgePolytopeType,
           class ReconstructionType, class ReturnType>
-void splitAndShareThroughLinks(SegmentedPolytopeType *a_polytope,
-                               HalfEdgePolytopeType *a_complete_polytope,
-                               const ReconstructionType &a_reconstruction,
-                               EncounteredIdList *a_id_list,
-                               ReturnType *a_moments_to_return) {
-  const auto &cutting_reconstruction =
+void splitAndShareThroughLinks(SegmentedPolytopeType* a_polytope,
+                               HalfEdgePolytopeType* a_complete_polytope,
+                               const ReconstructionType& a_reconstruction,
+                               EncounteredIdList* a_id_list,
+                               ReturnType* a_moments_to_return) {
+  const auto& cutting_reconstruction =
       a_reconstruction.getCurrentReconstruction();
   a_id_list->push_back(a_reconstruction.getId());
 
@@ -482,6 +481,6 @@ void splitAndShareThroughLinks(SegmentedPolytopeType *a_polytope,
   a_id_list->pop_back();
 }
 
-} // namespace IRL
+}  // namespace IRL
 
-#endif // SRC_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_DRIVERS_TPP_
+#endif  // SRC_GENERIC_CUTTING_HALF_EDGE_CUTTING_HALF_EDGE_CUTTING_DRIVERS_TPP_

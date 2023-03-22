@@ -17,28 +17,28 @@
 #include "irl/geometry/polyhedrons/capped_dodecahedron.h"
 #include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LLLL.h"
 #include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LLLT.h"
-#include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LTLT.h"
 #include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LLTT.h"
+#include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LTLT.h"
 #include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_LTTT.h"
 #include "irl/geometry/polyhedrons/capped_dodecahedron_variations/capped_dodecahedron_TTTT.h"
 #include "irl/geometry/polyhedrons/capped_octahedron_variations/capped_octahedron_LLL.h"
 #include "irl/geometry/polyhedrons/capped_octahedron_variations/capped_octahedron_LLT.h"
 #include "irl/geometry/polyhedrons/capped_octahedron_variations/capped_octahedron_LTT.h"
 #include "irl/geometry/polyhedrons/capped_octahedron_variations/capped_octahedron_TTT.h"
-#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_tet.h"
-#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_pyramid.h"
-#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_triangular_prism.h"
-#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_hexahedron.h"
-#include "irl/geometry/polyhedrons/general_polyhedron.h"
 #include "irl/geometry/polyhedrons/concave_box.h"
 #include "irl/geometry/polyhedrons/dodecahedron.h"
+#include "irl/geometry/polyhedrons/general_polyhedron.h"
 #include "irl/geometry/polyhedrons/hexahedron.h"
-#include "irl/geometry/polyhedrons/polyhedron_24.h"
-#include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 #include "irl/geometry/polyhedrons/octahedron.h"
-#include "irl/geometry/polyhedrons/triangular_prism.h"
+#include "irl/geometry/polyhedrons/polyhedron_24.h"
 #include "irl/geometry/polyhedrons/pyramid.h"
+#include "irl/geometry/polyhedrons/rectangular_cuboid.h"
+#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_hexahedron.h"
+#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_pyramid.h"
+#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_tet.h"
+#include "irl/geometry/polyhedrons/symmetric_decompositions/symmetric_triangular_prism.h"
 #include "irl/geometry/polyhedrons/tet.h"
+#include "irl/geometry/polyhedrons/triangular_prism.h"
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
@@ -53,34 +53,44 @@ template <class VertexType>
 struct is_polyhedron<StoredCappedDodecahedron<VertexType>> : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_LLLL<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_LLLL<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_LLLT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_LLLT<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_LTLT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_LTLT<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_LLTT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_LLTT<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_LTTT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_LTTT<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedDodecahedron_TTTT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedDodecahedron_TTTT<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedOctahedron_LLL<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedOctahedron_LLL<VertexType>> : std::true_type {
+};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedOctahedron_LLT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedOctahedron_LLT<VertexType>> : std::true_type {
+};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedOctahedron_LTT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedOctahedron_LTT<VertexType>> : std::true_type {
+};
 
 template <class VertexType>
-struct is_polyhedron<StoredCappedOctahedron_TTT<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredCappedOctahedron_TTT<VertexType>> : std::true_type {
+};
 
 template <class VertexType>
 struct is_polyhedron<StoredSymmetricTet<VertexType>> : std::true_type {};
@@ -89,7 +99,8 @@ template <class VertexType>
 struct is_polyhedron<StoredSymmetricPyramid<VertexType>> : std::true_type {};
 
 template <class VertexType>
-struct is_polyhedron<StoredSymmetricTriangularPrism<VertexType>> : std::true_type {};
+struct is_polyhedron<StoredSymmetricTriangularPrism<VertexType>>
+    : std::true_type {};
 
 template <class VertexType>
 struct is_polyhedron<StoredSymmetricHexahedron<VertexType>> : std::true_type {};
@@ -138,10 +149,8 @@ struct is_polyhedron<
     : std::true_type {};
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
-struct is_polyhedron<
-  StoredGeneralPolyhedron<VertexType, kStaticAllocSize>>
+struct is_polyhedron<StoredGeneralPolyhedron<VertexType, kStaticAllocSize>>
     : std::true_type {};
-
 
 // General Polyhedron
 template <class C>
@@ -152,8 +161,7 @@ struct is_general_polyhedron<const C> : is_polyhedron<C> {};
 
 template <class VertexType, UnsignedIndex_t kStaticAllocSize>
 struct is_general_polyhedron<
-  StoredGeneralPolyhedron<VertexType, kStaticAllocSize>>
-    : std::true_type {};
+    StoredGeneralPolyhedron<VertexType, kStaticAllocSize>> : std::true_type {};
 
 // Tetrahedron
 template <class C>
@@ -214,4 +222,4 @@ struct is_tri<ProxyTri<GeometryType>> : std::true_type {};
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_GENERAL_GEOMETRY_TYPE_TRAITS_H_
+#endif  // IRL_GEOMETRY_GENERAL_GEOMETRY_TYPE_TRAITS_H_

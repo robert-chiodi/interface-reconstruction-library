@@ -17,16 +17,17 @@ namespace IRL {
 
 template <class FaceBREPType>
 PolyhedronConnectivity::PolyhedronConnectivity(
-    const FaceBREPType &a_face_brep) {
+    const FaceBREPType& a_face_brep) {
+  number_of_faces = a_face_brep.size();
   number_of_vertices = 0;
   UnsignedIndex_t number_of_half_edges = 0;
-  for (const auto &face : a_face_brep) {
-    for (const auto &vertex : face) {
+  for (const auto& face : a_face_brep) {
+    for (const auto& vertex : face) {
       number_of_vertices = std::max(number_of_vertices, vertex);
     }
     number_of_half_edges += static_cast<UnsignedIndex_t>(face.size());
   }
-  ++number_of_vertices; // Since 0-indexed, size is one greater
+  ++number_of_vertices;  // Since 0-indexed, size is one greater
 
   ending_vertex_mapping.resize(number_of_half_edges);
   previous_half_edge_mapping.resize(number_of_half_edges);
@@ -42,7 +43,7 @@ PolyhedronConnectivity::PolyhedronConnectivity(
   // Generate connectivity for all half edges except opposite
   UnsignedIndex_t next_half_edge = 0;
   for (UnsignedIndex_t f = 0; f < a_face_brep.size(); ++f) {
-    const auto &face = a_face_brep[f];
+    const auto& face = a_face_brep[f];
 
     ending_vertex_mapping[next_half_edge] = face[0];
     previous_half_edge_mapping[next_half_edge] =
@@ -70,7 +71,7 @@ PolyhedronConnectivity::PolyhedronConnectivity(
 
   // Fill in opoosite information for half edges
   next_half_edge = 0;
-  for (const auto &face : a_face_brep) {
+  for (const auto& face : a_face_brep) {
     opposite_half_edge_mapping[next_half_edge] =
         half_edge_mapping[face[0]][face.back()];
     ++next_half_edge;
@@ -89,7 +90,7 @@ PolyhedronConnectivity::PolyhedronConnectivity(
   face_triangle_decomposition.reserve(a_face_brep.size() -
                                       static_cast<std::size_t>(*max_loc));
 
-  for (const auto &face : a_face_brep) {
+  for (const auto& face : a_face_brep) {
     const auto found_loc = std::find(face.begin(), face.end(), datum_index);
     if (found_loc == face.end()) {
       // Datum not in face, so triangulate and add
@@ -102,6 +103,6 @@ PolyhedronConnectivity::PolyhedronConnectivity(
   }
 }
 
-} // namespace IRL
+}  // namespace IRL
 
-#endif // SRC_GEOMETRY_POLYHEDRONS_POLYHEDRON_CONNECTIVITY_TPP_
+#endif  // SRC_GEOMETRY_POLYHEDRONS_POLYHEDRON_CONNECTIVITY_TPP_

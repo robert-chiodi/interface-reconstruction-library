@@ -35,6 +35,15 @@ void advectVOF(const std::string& a_advection_method, const double a_dt,
                Data<double>* a_liquid_volume_fraction,
                Data<IRL::Pt>* a_liquid_centroid, Data<IRL::Pt>* a_gas_centroid);
 
+struct Split {
+  static void advectVOF(
+      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+      const Data<double>& a_W,
+      Data<IRL::LocalizedSeparatorLink>* a_link_localized_separator,
+      Data<double>* a_liquid_volume_fraction, Data<IRL::Pt>* a_liquid_centroid,
+      Data<IRL::Pt>* a_gas_centroid);
+};
+
 struct FullLagrangian {
   static void advectVOF(
       const double a_dt, const Data<double>& a_U, const Data<double>& a_V,

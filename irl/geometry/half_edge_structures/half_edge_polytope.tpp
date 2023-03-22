@@ -52,6 +52,18 @@ void HalfEdgePolytope<
   initial_face_storage_size_m = a_number_of_faces * sizeof(FaceType);
   storage_m.resize(initial_half_edge_storage_size_m +
                    initial_vertex_storage_size_m + initial_face_storage_size_m);
+  for (std::size_t i = 0; i < initial_half_edge_storage_size_m;
+       i += sizeof(HalfEdgeType)) {
+    *reinterpret_cast<HalfEdgeType*>(storage_m[i]) = HalfEdgeType();
+  }
+  for (std::size_t i = initial_half_edge_storage_size_m;
+       i < initial_vertex_storage_size_m; i += sizeof(VertexType)) {
+    *reinterpret_cast<VertexType*>(storage_m[i]) = VertexType();
+  }
+  for (std::size_t i = initial_vertex_storage_size_m;
+       i < initial_face_storage_size_m; i += sizeof(FaceType)) {
+    *reinterpret_cast<FaceType*>(storage_m[i]) = FaceType();
+  }
 }
 
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
@@ -67,10 +79,9 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-UnsignedIndex_t
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getNumberOfInitialVertices(void)
-    const {
+UnsignedIndex_t HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getNumberOfInitialVertices(void) const {
   return static_cast<UnsignedIndex_t>(initial_vertex_storage_size_m /
                                       sizeof(VertexType));
 }
@@ -79,11 +90,10 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-HalfEdgeType &
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getHalfEdge(const UnsignedIndex_t
-                                                           a_index) {
-  return *reinterpret_cast<HalfEdgeType *>(
+HalfEdgeType& HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getHalfEdge(const UnsignedIndex_t a_index) {
+  return *reinterpret_cast<HalfEdgeType*>(
       storage_m[a_index * sizeof(HalfEdgeType)]);
 }
 
@@ -91,11 +101,10 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-const HalfEdgeType &
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getHalfEdge(const UnsignedIndex_t
-                                                           a_index) const {
-  return *reinterpret_cast<const HalfEdgeType *>(
+const HalfEdgeType& HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getHalfEdge(const UnsignedIndex_t a_index) const {
+  return *reinterpret_cast<const HalfEdgeType*>(
       storage_m[a_index * sizeof(HalfEdgeType)]);
 }
 
@@ -103,11 +112,10 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-VertexType &
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getVertex(const UnsignedIndex_t
-                                                         a_index) {
-  return *reinterpret_cast<VertexType *>(
+VertexType& HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getVertex(const UnsignedIndex_t a_index) {
+  return *reinterpret_cast<VertexType*>(
       storage_m[initial_half_edge_storage_size_m +
                 a_index * sizeof(VertexType)]);
 }
@@ -116,11 +124,10 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-const VertexType &
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getVertex(const UnsignedIndex_t
-                                                         a_index) const {
-  return *reinterpret_cast<const VertexType *>(
+const VertexType& HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getVertex(const UnsignedIndex_t a_index) const {
+  return *reinterpret_cast<const VertexType*>(
       storage_m[initial_half_edge_storage_size_m +
                 a_index * sizeof(VertexType)]);
 }
@@ -129,10 +136,10 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-FaceType &HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType,
+FaceType& HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType,
                            kMaxHalfEdges, kMaxVertices,
                            kMaxFaces>::getFace(const UnsignedIndex_t a_index) {
-  return *reinterpret_cast<FaceType *>(
+  return *reinterpret_cast<FaceType*>(
       storage_m[initial_half_edge_storage_size_m +
                 initial_vertex_storage_size_m + a_index * sizeof(FaceType)]);
 }
@@ -140,11 +147,10 @@ FaceType &HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-const FaceType &
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getFace(const UnsignedIndex_t
-                                                       a_index) const {
-  return *reinterpret_cast<const FaceType *>(
+const FaceType& HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getFace(const UnsignedIndex_t a_index) const {
+  return *reinterpret_cast<const FaceType*>(
       storage_m[initial_half_edge_storage_size_m +
                 initial_vertex_storage_size_m + a_index * sizeof(FaceType)]);
 }
@@ -152,7 +158,7 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-HalfEdgeType *
+HalfEdgeType*
 HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
                  kMaxVertices, kMaxFaces>::getNewHalfEdge(void) {
   auto new_object = storage_m.template getNewObject<HalfEdgeType>();
@@ -163,10 +169,9 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-HalfEdgeType *
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getNewHalfEdge(const HalfEdgeType
-                                                              &a_half_edge) {
+HalfEdgeType* HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getNewHalfEdge(const HalfEdgeType& a_half_edge) {
   auto new_object = storage_m.template getNewObject<HalfEdgeType>();
   *new_object = a_half_edge;
   return new_object;
@@ -175,10 +180,9 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-HalfEdgeType *
-HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getNewHalfEdge(HalfEdgeType
-                                                              &&a_half_edge) {
+HalfEdgeType* HalfEdgePolytope<
+    PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
+    kMaxFaces>::getNewHalfEdge(HalfEdgeType&& a_half_edge) {
   auto new_object = storage_m.template getNewObject<HalfEdgeType>();
   *new_object = std::move(a_half_edge);
   return new_object;
@@ -187,7 +191,7 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-VertexType *
+VertexType*
 HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
                  kMaxVertices, kMaxFaces>::getNewVertex(void) {
   auto new_object = storage_m.template getNewObject<VertexType>();
@@ -198,10 +202,9 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-VertexType *
+VertexType*
 HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getNewVertex(VertexType &&a_vertex) {
-
+                 kMaxVertices, kMaxFaces>::getNewVertex(VertexType&& a_vertex) {
   auto new_object = storage_m.template getNewObject<VertexType>();
   *new_object = std::move(a_vertex);
   return new_object;
@@ -210,7 +213,7 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-FaceType *
+FaceType*
 HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
                  kMaxVertices, kMaxFaces>::getNewFace(void) {
   auto new_object = storage_m.template getNewObject<FaceType>();
@@ -221,9 +224,9 @@ HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
 template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
           UnsignedIndex_t kMaxHalfEdges, UnsignedIndex_t kMaxVertices,
           UnsignedIndex_t kMaxFaces>
-FaceType *
+FaceType*
 HalfEdgePolytope<PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges,
-                 kMaxVertices, kMaxFaces>::getNewFace(FaceType &&a_face) {
+                 kMaxVertices, kMaxFaces>::getNewFace(FaceType&& a_face) {
   auto new_object = storage_m.template getNewObject<FaceType>();
   *new_object = std::move(a_face);
   return new_object;
@@ -235,10 +238,10 @@ template <class PtType, class VertexType, class HalfEdgeType, class FaceType,
 template <class GeometryType>
 void HalfEdgePolytope<
     PtType, VertexType, HalfEdgeType, FaceType, kMaxHalfEdges, kMaxVertices,
-    kMaxFaces>::setVertexLocations(const GeometryType &a_geometry) {
+    kMaxFaces>::setVertexLocations(const GeometryType& a_geometry) {
   assert(a_geometry.getNumberOfVertices() ==
          this->getNumberOfInitialVertices());
-  auto vertex = reinterpret_cast<VertexType *>(
+  auto vertex = reinterpret_cast<VertexType*>(
       storage_m[initial_half_edge_storage_size_m]);
   for (UnsignedIndex_t v = 0; v < a_geometry.getNumberOfVertices(); ++v) {
     (vertex++)->setLocation(a_geometry[v]);
@@ -333,6 +336,6 @@ HalfEdgePolytope<
 //   return out;
 // }
 
-} // namespace IRL
+}  // namespace IRL
 
-#endif // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_POLYTOPE_TPP_
+#endif  // SRC_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_POLYTOPE_TPP_

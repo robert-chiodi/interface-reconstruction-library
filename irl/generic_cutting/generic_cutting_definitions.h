@@ -46,4 +46,4 @@ __attribute__((pure)) __attribute__((hot)) inline double getVolumeFraction(
 
 }  // namespace IRL
 
-#endif // IRL_GENERIC_CUTTING_GENERIC_CUTTING_DEFINITIONS_H_
+#endif  // IRL_GENERIC_CUTTING_GENERIC_CUTTING_DEFINITIONS_H_

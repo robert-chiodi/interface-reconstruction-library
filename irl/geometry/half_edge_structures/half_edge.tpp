@@ -34,8 +34,9 @@ inline HalfEdge<VertexType>::HalfEdge(void)
       corresponding_face_m(nullptr) {}
 
 template <class VertexType>
-inline HalfEdge<VertexType>::HalfEdge(VertexType* a_vertex, HalfEdge* a_previous,
-                               HalfEdge* a_next, Face<HalfEdge>* a_face)
+inline HalfEdge<VertexType>::HalfEdge(VertexType* a_vertex,
+                                      HalfEdge* a_previous, HalfEdge* a_next,
+                                      Face<HalfEdge>* a_face)
     : previous_m(a_previous),
       next_m(a_next),
       opposite_m(nullptr),
@@ -65,7 +66,8 @@ inline HalfEdge<VertexType>* HalfEdge<VertexType>::getNextHalfEdge(void) {
   return next_m;
 }
 template <class VertexType>
-inline const HalfEdge<VertexType>* HalfEdge<VertexType>::getNextHalfEdge(void) const {
+inline const HalfEdge<VertexType>* HalfEdge<VertexType>::getNextHalfEdge(
+    void) const {
   return next_m;
 }
 
@@ -92,7 +94,8 @@ inline Face<HalfEdge<VertexType>>* HalfEdge<VertexType>::getFace(void) {
   return corresponding_face_m;
 }
 template <class VertexType>
-inline const Face<HalfEdge<VertexType>>* HalfEdge<VertexType>::getFace(void) const {
+inline const Face<HalfEdge<VertexType>>* HalfEdge<VertexType>::getFace(
+    void) const {
   return corresponding_face_m;
 }
 
@@ -125,7 +128,7 @@ inline Vertex<PtType>::Vertex(void)
     : vertex_location_m(Pt(0.0, 0.0, 0.0)),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false) {}
 
 template <class PtType>
@@ -133,7 +136,7 @@ inline Vertex<PtType>::Vertex(const PtType& a_location)
     : vertex_location_m(a_location),
       half_edge_m(nullptr),
       distance_m(DBL_MAX),
-      is_clipped_m{false},
+      is_clipped_m(false),
       needs_to_seek_m(false) {}
 
 template <class PtType>
@@ -180,7 +183,7 @@ template <class PtType>
 inline void Vertex<PtType>::setClip(const bool a_is_clipped) {
   is_clipped_m = a_is_clipped;
 }
-	
+
 template <class PtType>
 inline bool Vertex<PtType>::isClipped(void) const {
   return is_clipped_m;
@@ -229,11 +232,11 @@ bool Vertex<PtType>::checkValidHalfEdgeCycle(void) const {
 
 template <class HalfEdgeType>
 inline Face<HalfEdgeType>::Face(void)
-    : starting_half_edge_m(nullptr), has_been_visited_m{false} {}
+    : starting_half_edge_m(nullptr), has_been_visited_m(false) {}
 
 template <class HalfEdgeType>
 inline Face<HalfEdgeType>::Face(HalfEdgeType* a_starting_half_edge)
-    : starting_half_edge_m(a_starting_half_edge), has_been_visited_m{false} {}
+    : starting_half_edge_m(a_starting_half_edge), has_been_visited_m(false) {}
 
 template <class HalfEdgeType>
 inline void Face<HalfEdgeType>::setStartingHalfEdge(
@@ -316,16 +319,17 @@ bool Face<HalfEdgeType>::checkValidCircuitOnFace(
     }
     if (next_half_edge->getPreviousHalfEdge() != current_half_edge) {
       std::cout << "Half edge goes from "
-                << current_half_edge->getPreviousVertex()->getLocation()
-                << " to " << current_half_edge->getVertex()->getLocation()
+                << current_half_edge->getPreviousVertex()->getLocation().getPt()
+                << " to "
+                << current_half_edge->getVertex()->getLocation().getPt()
                 << std::endl;
       std::cout << "Incorrect double linking between successive half edges."
                 << std::endl;
       std::cout << "Current half edge is at location "
-                << current_half_edge->getVertex()->getLocation()
+                << current_half_edge->getVertex()->getLocation().getPt()
                 << " with half edge address " << current_half_edge << std::endl;
       std::cout << "Next half edge has previous location as "
-                << next_half_edge->getPreviousVertex()->getLocation()
+                << next_half_edge->getPreviousVertex()->getLocation().getPt()
                 << " with previous half edge address of "
                 << next_half_edge->getPreviousHalfEdge() << std::endl;
       std::cout << "Two vertex addresses are " << current_half_edge->getVertex()
@@ -388,7 +392,8 @@ bool Face<HalfEdgeType>::checkAllHalfEdgesPointBackToFace(
   do {
     if (current_half_edge->getFace() != a_face) {
       std::cout << current_half_edge->getFace() << std::endl;
-      std::cout << current_half_edge->getVertex()->getLocation() << std::endl;
+      std::cout << current_half_edge->getVertex()->getLocation().getPt()
+                << std::endl;
       std::cout << "Half edge does not point to the face it is actually on. "
                 << std::endl;
       return false;
@@ -407,4 +412,4 @@ bool Face<HalfEdgeType>::checkAllHalfEdgesPointBackToFace(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_TPP_
+#endif  // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_HALF_EDGE_TPP_

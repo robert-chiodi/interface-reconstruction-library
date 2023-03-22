@@ -23,15 +23,18 @@
 
 namespace IRL {
 
-template <class VertexType, UnsignedIndex_t kMaxNumberOfPts> class Polyhedron;
+template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
+class Polyhedron;
 
-template <class VertexType, UnsignedIndex_t kMaxNumberOfPts> class PtList {
+template <class VertexType, UnsignedIndex_t kMaxNumberOfPts>
+class PtList {
   friend class Polyhedron<VertexType, kMaxNumberOfPts>;
 
-public:
+ public:
   using iterator = typename std::array<VertexType, kMaxNumberOfPts>::iterator;
   using const_iterator =
       typename std::array<VertexType, kMaxNumberOfPts>::const_iterator;
+  using value_type = typename VertexType::value_type;
 
   /// \brief Default constructor
   PtList(void) = default;
@@ -39,28 +42,28 @@ public:
   PtList(std::initializer_list<VertexType> a_list);
 
   static PtList fromRawPtPointer(const UnsignedIndex_t a_number_of_pts,
-                                 const VertexType *a_array_of_pts);
+                                 const VertexType* a_array_of_pts);
 
   static PtList fromRawDoublePointer(const UnsignedIndex_t a_number_of_pts,
-                                     const double *a_array_of_locs);
+                                     const value_type* a_array_of_locs);
 
   /// \brief Return the number of vertices in this polygon.
   static constexpr UnsignedIndex_t getNumberOfPts(void);
 
   /// \brief Return const pointer to the vertices
-  const VertexType *getPtList(void) const;
+  const VertexType* getPtList(void) const;
 
   /// \brief Access through overloaded operator[]
-  VertexType &operator[](const UnsignedIndex_t a_index);
+  VertexType& operator[](const UnsignedIndex_t a_index);
 
   /// \brief Const access through overloaded operator[]
-  const VertexType &operator[](const UnsignedIndex_t a_index) const;
+  const VertexType& operator[](const UnsignedIndex_t a_index) const;
 
   /// \brief Return a point for the lower limits of the polygon in 3D space.
-  IRL::Pt getLowerLimits(void) const;
+  PtBase<value_type> getLowerLimits(void) const;
 
   /// \brief Return a point for the upper limits of the polygon in 3D space.
-  IRL::Pt getUpperLimits(void) const;
+  PtBase<value_type> getUpperLimits(void) const;
 
   iterator begin(void) noexcept;
   const_iterator begin(void) const noexcept;
@@ -73,30 +76,31 @@ public:
   LargeOffsetIndex_t getSerializedSize(void) const;
 
   /// \brief Serialize and pack the points.
-  void serialize(ByteBuffer *a_buffer) const;
+  void serialize(ByteBuffer* a_buffer) const;
 
   /// \brief Unpack the points and store.
-  void unpackSerialized(ByteBuffer *a_buffer);
+  void unpackSerialized(ByteBuffer* a_buffer);
   /// \brief Default destructor
   ~PtList(void) = default;
 
-protected:
+ protected:
   /// \brief Construct a tetrahedron
-  constexpr PtList(const VertexType &a_pt0, const VertexType &a_pt1,
-                   const VertexType &a_pt2, const VertexType &a_pt3);
+  constexpr PtList(const VertexType& a_pt0, const VertexType& a_pt1,
+                   const VertexType& a_pt2, const VertexType& a_pt3);
   /// \brief Construct n-pts form array of points.
   PtList(const UnsignedIndex_t a_number_of_pts,
-         const VertexType *a_array_of_pts);
+         const VertexType* a_array_of_pts);
 
   /// \brief Construct n-pts form array of doubles.
-  PtList(const UnsignedIndex_t a_number_of_pts, const double *a_array_of_locs);
+  PtList(const UnsignedIndex_t a_number_of_pts,
+         const value_type* a_array_of_locs);
 
-private:
+ private:
   std::array<VertexType, kMaxNumberOfPts> pt_list_m;
 };
 
-} // namespace IRL
+}  // namespace IRL
 
 #include "irl/geometry/general/pt_list.tpp"
 
-#endif // SRC_GEOMETRY_GENERAL_PT_LIST_H_
+#endif  // SRC_GEOMETRY_GENERAL_PT_LIST_H_

@@ -70,10 +70,10 @@ class ExpandablePtList {
   void removeLastPt(void);
 
   /// \brief Return a point for the lower limits of the polygon in 3D space.
-  IRL::Pt getLowerLimits(void) const;
+  VertexType getLowerLimits(void) const;
 
   /// \brief Return a point for the upper limits of the polygon in 3D space.
-  IRL::Pt getUpperLimits(void) const;
+  VertexType getUpperLimits(void) const;
 
   iterator begin(void) noexcept;
   const_iterator begin(void) const noexcept;
@@ -110,4 +110,4 @@ class ExpandablePtList {
 
 #include "irl/geometry/general/expandable_pt_list.tpp"
 
-#endif // IRL_GEOMETRY_GENERAL_EXPANDABLE_PT_LIST_H_
+#endif  // IRL_GEOMETRY_GENERAL_EXPANDABLE_PT_LIST_H_

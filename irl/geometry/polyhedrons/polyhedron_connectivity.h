@@ -34,6 +34,7 @@ class PolyhedronConnectivity {
   ~PolyhedronConnectivity(void) = default;
 
  public:
+  UnsignedIndex_t number_of_faces;
   UnsignedIndex_t number_of_vertices;
   UnsignedIndex_t datum_index;
   std::vector<std::array<UnsignedIndex_t, 3>> face_triangle_decomposition;
@@ -47,4 +48,4 @@ class PolyhedronConnectivity {
 }  // namespace IRL
 
 #include "irl/geometry/polyhedrons/polyhedron_connectivity.tpp"
-#endif // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_CONNECTIVITY_H_
+#endif  // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_CONNECTIVITY_H_
