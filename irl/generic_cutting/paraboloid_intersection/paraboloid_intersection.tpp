@@ -1779,7 +1779,9 @@ void nudgePolyhedron(SegmentedHalfEdgePolyhedronType* a_polytope,
   std::uniform_real_distribution distr(-1.0, 1.0);
 
   // This is a-hoc but works well
-  const Quad_t nudge_epsilon = 1.0e10q * distance_epsilon<Quad_t>();
+  const Quad_t nudge_epsilon =
+      1.0e10q * powq(static_cast<Quad_t>(a_nudge_iter + 1), 1.05q) *
+      distance_epsilon<Quad_t>();
 
   // Compute polytope center to rotate about it
   auto center = a_polytope->calculateCentroid();
