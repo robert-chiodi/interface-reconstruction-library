@@ -79,7 +79,13 @@ module f_Paraboloid_class
   interface triangulateInsideCuboid
     module procedure Paraboloid_class_triangulateInsideCuboid
   end interface
-  interface isFlipped
+  interface getMeanCurvature
+  module procedure Paraboloid_class_getMeanCurvature
+end interface
+interface getSurfaceArea
+module procedure Paraboloid_class_getSurfaceArea
+end interface
+interface isFlipped
     module procedure Paraboloid_class_isFlipped
   end interface
   interface printToScreen
@@ -223,6 +229,24 @@ module f_Paraboloid_class
       type(c_TriangulatedParaboloid), intent(out) :: a_surface
     end subroutine F_Paraboloid_triangulateInsideCuboid
 
+    function F_Paraboloid_getMeanCurvature(this, a_cuboid) result(a_curv) &
+      bind(C, name="c_Paraboloid_getMeanCurvature")
+      import
+      implicit none
+      type(c_Paraboloid) :: this
+      type(c_RectCub), intent(in)  :: a_cuboid
+      real(C_DOUBLE) :: a_curv
+    end function F_Paraboloid_getMeanCurvature
+
+    function F_Paraboloid_getSurfaceArea(this, a_cuboid) result(a_area) &
+      bind(C, name="c_Paraboloid_getSurfaceArea")
+      import
+      implicit none
+      type(c_Paraboloid) :: this
+      type(c_RectCub), intent(in)  :: a_cuboid
+      real(C_DOUBLE) :: a_area
+    end function F_Paraboloid_getSurfaceArea
+
     subroutine F_Paraboloid_printToScreen(this) &
       bind(C, name="c_Paraboloid_printToScreen")
       import
@@ -352,6 +376,24 @@ module f_Paraboloid_class
       type(TriangulatedParaboloid_type) :: a_surface
       call F_Paraboloid_triangulateInsideCuboid(this%c_object, a_cuboid%c_object, a_surface%c_object)
     end subroutine Paraboloid_class_triangulateInsideCuboid
+
+    function Paraboloid_class_getMeanCurvature(this, a_cuboid) result(a_curv)
+      implicit none
+      type(Paraboloid_type), intent(in) :: this
+      type(RectCub_type), intent(in) :: a_cuboid
+      real(IRL_double) :: a_curv
+      a_curv = F_Paraboloid_getMeanCurvature(this%c_object, a_cuboid%c_object)
+      return
+    end function Paraboloid_class_getMeanCurvature
+
+    function Paraboloid_class_getSurfaceArea(this, a_cuboid) result(a_area)
+      implicit none
+      type(Paraboloid_type), intent(in) :: this
+      type(RectCub_type), intent(in) :: a_cuboid
+      real(IRL_double) :: a_area
+      a_area = F_Paraboloid_getSurfaceArea(this%c_object, a_cuboid%c_object)
+      return
+    end function Paraboloid_class_getSurfaceArea
 
     function Paraboloid_class_isFlipped(this) result(a_flipped)
       implicit none

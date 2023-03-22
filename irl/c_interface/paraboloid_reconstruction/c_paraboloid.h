@@ -77,6 +77,10 @@ void c_Paraboloid_triangulateInsideCuboid(c_Paraboloid* a_self,
                                           c_RectCub* a_cell,
                                           c_TriangulatedParaboloid* a_surface);
 
+double c_Paraboloid_getMeanCurvature(c_Paraboloid* a_self, c_RectCub* a_cell);
+
+double c_Paraboloid_getSurfaceArea(c_Paraboloid* a_self, c_RectCub* a_cell);
+
 void c_Paraboloid_printToScreen(const c_Paraboloid* a_self);
 
 }  // end extern C

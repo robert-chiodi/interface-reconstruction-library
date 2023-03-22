@@ -201,7 +201,7 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
     IRL::Pt datum;
     IRL::ReferenceFrame new_frame;
     double A, B, u, v, w;
-    for (IRL::UnsignedIndex_t it = 0; it < 5; ++it) {
+    for (IRL::UnsignedIndex_t it = 0; it < 3; ++it) {
       /* Setting up frame of reference */
       IRL::ReferenceFrame frame;
       IRL::UnsignedIndex_t largest_dir = 0;
@@ -230,7 +230,7 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
         // Local polygon normal and centroid
         IRL::Pt ploc = polygons[n].calculateCentroid();
         IRL::Normal nloc = polygons[n].calculateNormal();
-        if (nloc * normal_plane < -0.5) {
+        if (nloc * normal_plane < 0.0) {
           continue;
         }
         ploc -= pref;
@@ -290,8 +290,17 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
           vfrac_weight =
               0.5 - 0.5 * std::cos(M_PI * (1.0 - vfrac) / limit_vfrac);
         }
-        double ww = 1.0;
+        const double dist = magnitude(ploc);
+        double ww = dist < 2.5
+                        ? (1.0 + 4.0 * dist / 2.5) * pow(1.0 - dist / 2.5, 4.0)
+                        : 0.0;
         ww *= vfrac_weight;
+
+        if (it == 2) {
+          integrals(0) = 0.0;
+          integrals(1) = 0.0;
+          integrals(2) = 0.0;
+        }
 
         if (ww > 0.0) {
           A_mat += ww * integrals * integrals.transpose();
@@ -362,58 +371,109 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
     if (std::fabs(A) < 1.0e-6) {
       A = std::copysign(1.0e-6, A);
     }
+    if (std::fabs(A) > 1.0 / scale) {
+      A = std::copysign(1.0 / scale, A);
+    }
     if (std::fabs(B) < 1.0e-6) {
       B = std::copysign(1.0e-6, B);
     }
-
-    const double max_curvature_dx = 5.0;
-    if (std::sqrt(u * u + v * v + w * w) > 10.0 * scale ||
-        std::fabs(A) * scale > max_curvature_dx ||
-        std::fabs(B) * scale > max_curvature_dx) {
-      A = 1.0e-6;
-      B = -1.0e-6;
-      datum = pref - (pref * normal_plane - plane.distance()) * normal_plane;
+    if (std::fabs(B) > 1.0 / scale) {
+      B = std::copysign(1.0 / scale, B);
     }
+
+    // const double max_curvature_dx = 5.0;
+    // if (std::sqrt(u * u + v * v + w * w) > 10.0 * scale ||
+    //     std::fabs(A) * scale > max_curvature_dx ||
+    //     std::fabs(B) * scale > max_curvature_dx) {
+    //   A = 1.0e-6;
+    //   B = -1.0e-6;
+    //   datum = pref - (pref * normal_plane - plane.distance()) * normal_plane;
+    // }
 
     a_self->obj_ptr->setDatum(datum);
     a_self->obj_ptr->setReferenceFrame(new_frame);
     a_self->obj_ptr->setAlignedParaboloid(IRL::AlignedParaboloid({A, B}));
 
-    const auto cube_copy = cube;
+    auto cube_copy = cube;
+    for (auto& vertex : cube_copy) {
+      vertex *= 1.0 / scale;
+    }
     IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
-        solver_distance(cube, a_vfrac[0], 1.0e-14,
-                        IRL::Paraboloid(datum, new_frame, A, B));
+        solver_distance(cube_copy, a_vfrac[0], 1.0e-14,
+                        IRL::Paraboloid(IRL::Pt(datum / scale), new_frame,
+                                        A * scale, B * scale));
 
     // std::cout << std::scientific << std::setprecision(15)
     //           << "Distance = " << solver_distance.getDistance() <<
     // std::endl;
     if (solver_distance.getDistance() < -999.0) {
-      std::cout << "SOLVER DISTANCE FAILED" << std::endl;
-      datum = pref - (pref * normal_plane - plane.distance()) * normal_plane;
+      // std::cout << "SOLVER DISTANCE FAILED" << std::endl;
+      IRL::Normal plane_normal = plane.normal();
+      datum = IRL::Pt(0, 0, 0);
+      for (IRL::UnsignedIndex_t m = 0; m < a_nvert[0]; ++m) {
+        datum +=
+            IRL::Pt(a_vert_coords[3 * count + 0], a_vert_coords[3 * count + 1],
+                    a_vert_coords[3 * count + 2]);
+      }
+      datum *= 1.0 / static_cast<double>(a_nvert[0]);
+      IRL::ReferenceFrame plane_frame;
+      IRL::UnsignedIndex_t largest_dir = 0;
+      if (std::fabs(plane_normal[largest_dir]) < std::fabs(plane_normal[1]))
+        largest_dir = 1;
+      if (std::fabs(plane_normal[largest_dir]) < std::fabs(plane_normal[2]))
+        largest_dir = 2;
+      if (largest_dir == 0)
+        plane_frame[0] = crossProduct(plane_normal, IRL::Normal(0.0, 1.0, 0.0));
+      else if (largest_dir == 1)
+        plane_frame[0] = crossProduct(plane_normal, IRL::Normal(0.0, 0.0, 1.0));
+      else
+        plane_frame[0] = crossProduct(plane_normal, IRL::Normal(1.0, 0.0, 0.0));
+      plane_frame[0].normalize();
+      plane_frame[1] = crossProduct(plane_normal, plane_frame[0]);
+      plane_frame[2] = plane_normal;
+
       a_self->obj_ptr->setDatum(datum);
-      a_self->obj_ptr->setReferenceFrame(new_frame);
+      a_self->obj_ptr->setReferenceFrame(plane_frame);
       a_self->obj_ptr->setAlignedParaboloid(
-          IRL::AlignedParaboloid({1.0e-12, -1.0e-12}));
+          IRL::AlignedParaboloid({1.0e-6 / scale, -1.0e-6 / scale}));
+
+      IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
+          solver_distance_plane(cube_copy, a_vfrac[0], 1.0e-14,
+                                IRL::Paraboloid(IRL::Pt(datum / scale),
+                                                plane_frame, 1.0e-6, -1.0e-6));
+      if (solver_distance_plane.getDistance() < -999.0) {
+        std::cout << "SOLVER DISTANCE FAILED TWICE" << std::endl;
+        exit(1);
+      } else if (std::isnan(solver_distance_plane.getDistance())) {
+        std::cout << "SOLVER DISTANCE ISNAN" << std::endl;
+        exit(1);
+      } else {
+        auto new_datum = IRL::Pt(datum + solver_distance_plane.getDistance() *
+                                             scale * plane_frame[2]);
+        a_self->obj_ptr->setDatum(new_datum);
+      }
     } else if (std::isnan(solver_distance.getDistance())) {
       std::cout << "SOLVER DISTANCE ISNAN" << std::endl;
+      exit(1);
     } else {
       auto new_datum =
-          IRL::Pt(datum + solver_distance.getDistance() * new_frame[2]);
+          IRL::Pt(datum + solver_distance.getDistance() * scale * new_frame[2]);
       a_self->obj_ptr->setDatum(new_datum);
     }
 
-    auto volume = IRL::getVolumeMoments<IRL::Volume>(
-        cube_copy, IRL::Paraboloid(*a_self->obj_ptr));
+    // auto volume = IRL::getVolumeMoments<IRL::Volume>(
+    //     cube, IRL::Paraboloid(*(a_self->obj_ptr)));
 
-    if (std::fabs(volume / cube.calculateVolume() - a_vfrac[0]) > 1.0e-13) {
-      std::cout << "Error: vfrac = " << volume / cube.calculateVolume()
-                << " instead of " << a_vfrac[0] << "   ERROR = "
-                << std::fabs(volume / cube.calculateVolume() - a_vfrac[0])
-                << std::endl;
-      std::cout << cube << std::endl;
-      std::cout << (*a_self->obj_ptr) << std::endl;
-      exit(1);
-    }
+    // if (std::fabs(volume / cube.calculateVolume() - a_vfrac[0]) > 1.0e-12) {
+    //   std::cout << "Error: vfrac = " << volume / cube.calculateVolume()
+    //             << " instead of " << a_vfrac[0] << "   ERROR = "
+    //             << std::fabs(volume / cube.calculateVolume() - a_vfrac[0])
+    //             << std::endl;
+    //   std::cout << cube << std::endl;
+    //   std::cout << "A = " << A << " B = " << B << std::endl;
+    //   std::cout << (*a_self->obj_ptr) << std::endl;
+    //   exit(1);
+    // }
 
     // if (magnitude(a_self->obj_ptr->getDatum() -
     //               IRL::Pt(-0.0001025, -0.000165, 0.0001588)) < 1.0e-3
@@ -492,6 +552,32 @@ void c_Paraboloid_triangulateInsideCuboid(c_Paraboloid* a_self,
   // auto surface = moments.getSurface().triangulate(length_scale, 3);
   // (*a_surface->obj_ptr).getVertexList() =
   // std::move(surface.getVertexList());
+}
+
+double c_Paraboloid_getMeanCurvature(c_Paraboloid* a_self, c_RectCub* a_cell) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  assert(a_cell != nullptr);
+  assert(a_cell->obj_ptr != nullptr);
+  IRL::RectangularCuboid cube = (*a_cell->obj_ptr);
+  IRL::Paraboloid paraboloid = (*a_self->obj_ptr);
+  auto moments = IRL::getVolumeMoments<
+      IRL::AddSurfaceOutput<IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
+      cube, paraboloid);
+  return moments.getSurface().getAverageMeanCurvature();
+}
+
+double c_Paraboloid_getSurfaceArea(c_Paraboloid* a_self, c_RectCub* a_cell) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  assert(a_cell != nullptr);
+  assert(a_cell->obj_ptr != nullptr);
+  IRL::RectangularCuboid cube = (*a_cell->obj_ptr);
+  IRL::Paraboloid paraboloid = (*a_self->obj_ptr);
+  auto moments = IRL::getVolumeMoments<
+      IRL::AddSurfaceOutput<IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
+      cube, paraboloid);
+  return moments.getSurface().getSurfaceArea();
 }
 
 void c_Paraboloid_printToScreen(const c_Paraboloid* a_self) {
