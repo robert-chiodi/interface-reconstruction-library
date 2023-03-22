@@ -89,7 +89,7 @@ TEST(SubstituteTest, Substitute) {
   str = absl::Substitute("$0", char_buf);
   EXPECT_EQ("print me too", str);
 
-  // null char* is "doubly" special. Represented as the empty std::string.
+  // null char* is "doubly" special. Represented as the empty string.
   char_p = nullptr;
   str = absl::Substitute("$0", char_p);
   EXPECT_EQ("", str);
@@ -184,19 +184,67 @@ TEST(SubstituteTest, VectorBoolRef) {
   EXPECT_EQ("Logic be like: true false true false", str);
 }
 
+TEST(SubstituteTest, Enums) {
+  enum UnscopedEnum { kEnum0 = 0, kEnum1 = 1 };
+  EXPECT_EQ("0 1", absl::Substitute("$0 $1", UnscopedEnum::kEnum0,
+                                    UnscopedEnum::kEnum1));
+
+  enum class ScopedEnum { kEnum0 = 0, kEnum1 = 1 };
+  EXPECT_EQ("0 1",
+            absl::Substitute("$0 $1", ScopedEnum::kEnum0, ScopedEnum::kEnum1));
+
+  enum class ScopedEnumInt32 : int32_t { kEnum0 = 989, kEnum1 = INT32_MIN };
+  EXPECT_EQ("989 -2147483648",
+            absl::Substitute("$0 $1", ScopedEnumInt32::kEnum0,
+                             ScopedEnumInt32::kEnum1));
+
+  enum class ScopedEnumUInt32 : uint32_t { kEnum0 = 1, kEnum1 = UINT32_MAX };
+  EXPECT_EQ("1 4294967295", absl::Substitute("$0 $1", ScopedEnumUInt32::kEnum0,
+                                             ScopedEnumUInt32::kEnum1));
+
+  enum class ScopedEnumInt64 : int64_t { kEnum0 = -1, kEnum1 = 42949672950 };
+  EXPECT_EQ("-1 42949672950", absl::Substitute("$0 $1", ScopedEnumInt64::kEnum0,
+                                               ScopedEnumInt64::kEnum1));
+
+  enum class ScopedEnumUInt64 : uint64_t { kEnum0 = 1, kEnum1 = 42949672950 };
+  EXPECT_EQ("1 42949672950", absl::Substitute("$0 $1", ScopedEnumUInt64::kEnum0,
+                                              ScopedEnumUInt64::kEnum1));
+
+  enum class ScopedEnumChar : signed char { kEnum0 = -1, kEnum1 = 1 };
+  EXPECT_EQ("-1 1", absl::Substitute("$0 $1", ScopedEnumChar::kEnum0,
+                                     ScopedEnumChar::kEnum1));
+
+  enum class ScopedEnumUChar : unsigned char {
+    kEnum0 = 0,
+    kEnum1 = 1,
+    kEnumMax = 255
+  };
+  EXPECT_EQ("0 1 255", absl::Substitute("$0 $1 $2", ScopedEnumUChar::kEnum0,
+                                        ScopedEnumUChar::kEnum1,
+                                        ScopedEnumUChar::kEnumMax));
+
+  enum class ScopedEnumInt16 : int16_t { kEnum0 = -100, kEnum1 = 10000 };
+  EXPECT_EQ("-100 10000", absl::Substitute("$0 $1", ScopedEnumInt16::kEnum0,
+                                           ScopedEnumInt16::kEnum1));
+
+  enum class ScopedEnumUInt16 : uint16_t { kEnum0 = 0, kEnum1 = 10000 };
+  EXPECT_EQ("0 10000", absl::Substitute("$0 $1", ScopedEnumUInt16::kEnum0,
+                                        ScopedEnumUInt16::kEnum1));
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 
 TEST(SubstituteDeathTest, SubstituteDeath) {
   EXPECT_DEBUG_DEATH(
       static_cast<void>(absl::Substitute(absl::string_view("-$2"), "a", "b")),
-      "Invalid strings::Substitute\\(\\) format std::string: asked for \"\\$2\", "
+      "Invalid absl::Substitute\\(\\) format string: asked for \"\\$2\", "
       "but only 2 args were given.");
   EXPECT_DEBUG_DEATH(
-      static_cast<void>(absl::Substitute("-$z-")),
-      "Invalid strings::Substitute\\(\\) format std::string: \"-\\$z-\"");
+      static_cast<void>(absl::Substitute(absl::string_view("-$z-"))),
+      "Invalid absl::Substitute\\(\\) format string: \"-\\$z-\"");
   EXPECT_DEBUG_DEATH(
-      static_cast<void>(absl::Substitute("-$")),
-      "Invalid strings::Substitute\\(\\) format std::string: \"-\\$\"");
+      static_cast<void>(absl::Substitute(absl::string_view("-$"))),
+      "Invalid absl::Substitute\\(\\) format string: \"-\\$\"");
 }
 
 #endif  // GTEST_HAS_DEATH_TEST

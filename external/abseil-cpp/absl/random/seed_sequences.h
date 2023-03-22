@@ -28,12 +28,14 @@
 #include <iterator>
 #include <random>
 
+#include "absl/base/config.h"
 #include "absl/random/internal/salted_seed_seq.h"
 #include "absl/random/internal/seed_material.h"
 #include "absl/random/seed_gen_exception.h"
 #include "absl/types/span.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 // -----------------------------------------------------------------------------
 // absl::SeedSeq
@@ -103,6 +105,7 @@ SeedSeq CreateSeedSeqFrom(URBG* urbg) {
 //
 SeedSeq MakeSeedSeq();
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_SEED_SEQUENCES_H_

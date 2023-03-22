@@ -27,13 +27,14 @@
 #include "absl/synchronization/internal/per_thread_sem.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace synchronization_internal {
 
 // ThreadIdentity storage is persistent, we maintain a free-list of previously
 // released ThreadIdentity objects.
-static base_internal::SpinLock freelist_lock(
-    base_internal::kLinkerInitialized);
-static base_internal::ThreadIdentity* thread_identity_freelist;
+ABSL_CONST_INIT static base_internal::SpinLock freelist_lock(
+    absl::kConstInit, base_internal::SCHEDULE_KERNEL_ONLY);
+ABSL_CONST_INIT static base_internal::ThreadIdentity* thread_identity_freelist;
 
 // A per-thread destructor for reclaiming associated ThreadIdentity objects.
 // Since we must preserve their storage we cache them for re-use.
@@ -68,7 +69,12 @@ static intptr_t RoundUp(intptr_t addr, intptr_t align) {
   return (addr + align - 1) & ~(align - 1);
 }
 
-static void ResetThreadIdentity(base_internal::ThreadIdentity* identity) {
+void OneTimeInitThreadIdentity(base_internal::ThreadIdentity* identity) {
+  PerThreadSem::Init(identity);
+}
+
+static void ResetThreadIdentityBetweenReuse(
+    base_internal::ThreadIdentity* identity) {
   base_internal::PerThreadSynch* pts = &identity->per_thread_synch;
   pts->next = nullptr;
   pts->skip = nullptr;
@@ -84,7 +90,6 @@ static void ResetThreadIdentity(base_internal::ThreadIdentity* identity) {
   pts->wake = false;
   pts->cond_waiter = false;
   pts->all_locks = nullptr;
-  identity->waiter_state = {};
   identity->blocked_count_ptr = nullptr;
   identity->ticker.store(0, std::memory_order_relaxed);
   identity->wait_start.store(0, std::memory_order_relaxed);
@@ -114,8 +119,9 @@ static base_internal::ThreadIdentity* NewThreadIdentity() {
     identity = reinterpret_cast<base_internal::ThreadIdentity*>(
         RoundUp(reinterpret_cast<intptr_t>(allocation),
                 base_internal::PerThreadSynch::kAlignment));
+    OneTimeInitThreadIdentity(identity);
   }
-  ResetThreadIdentity(identity);
+  ResetThreadIdentityBetweenReuse(identity);
 
   return identity;
 }
@@ -125,13 +131,13 @@ static base_internal::ThreadIdentity* NewThreadIdentity() {
 // REQUIRES: CurrentThreadIdentity(false) == nullptr
 base_internal::ThreadIdentity* CreateThreadIdentity() {
   base_internal::ThreadIdentity* identity = NewThreadIdentity();
-  PerThreadSem::Init(identity);
   // Associate the value with the current thread, and attach our destructor.
   base_internal::SetCurrentThreadIdentity(identity, ReclaimThreadIdentity);
   return identity;
 }
 
 }  // namespace synchronization_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_LOW_LEVEL_ALLOC_MISSING

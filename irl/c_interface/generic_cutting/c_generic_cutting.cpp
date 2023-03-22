@@ -569,6 +569,17 @@ void c_getNormMoments_Tri_PlanarLoc_Vol(const c_Tri* a_tri,
       *a_tri->obj_ptr, *a_planar_localizer->obj_ptr, IRL::C_CUTTING_METHOD);
 }
 
+void c_getNormMoments_Poly_PlanarSep_Vol(const c_Poly* a_poly,
+                                         const c_PlanarSep* a_planar_separator,
+                                         double* a_moments_to_return) {
+  assert(a_poly != nullptr);
+  assert(a_poly->obj_ptr != nullptr);
+  assert(a_planar_separator != nullptr);
+  assert(a_planar_separator->obj_ptr != nullptr);
+  (*a_moments_to_return) = IRL::c_RuntimegetMoments<IRL::Volume>(
+      *a_poly->obj_ptr, *a_planar_separator->obj_ptr, IRL::C_CUTTING_METHOD);
+}
+
 void c_getNormMoments_Poly_PlanarLoc_Vol(const c_Poly* a_poly,
                                          const c_PlanarLoc* a_planar_localizer,
                                          double* a_moments_to_return) {

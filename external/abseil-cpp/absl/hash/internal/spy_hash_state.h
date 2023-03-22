@@ -15,6 +15,7 @@
 #ifndef ABSL_HASH_INTERNAL_SPY_HASH_STATE_H_
 #define ABSL_HASH_INTERNAL_SPY_HASH_STATE_H_
 
+#include <algorithm>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "absl/strings/str_join.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace hash_internal {
 
 // SpyHashState is an implementation of the HashState API that simply
@@ -146,12 +148,43 @@ class SpyHashStateImpl : public HashStateBase<SpyHashStateImpl<T>> {
   static SpyHashStateImpl combine_contiguous(SpyHashStateImpl hash_state,
                                              const unsigned char* begin,
                                              size_t size) {
+    const size_t large_chunk_stride = PiecewiseChunkSize();
+    if (size > large_chunk_stride) {
+      // Combining a large contiguous buffer must have the same effect as
+      // doing it piecewise by the stride length, followed by the (possibly
+      // empty) remainder.
+      while (size >= large_chunk_stride) {
+        hash_state = SpyHashStateImpl::combine_contiguous(
+            std::move(hash_state), begin, large_chunk_stride);
+        begin += large_chunk_stride;
+        size -= large_chunk_stride;
+      }
+    }
+
     hash_state.hash_representation_.emplace_back(
         reinterpret_cast<const char*>(begin), size);
     return hash_state;
   }
 
   using SpyHashStateImpl::HashStateBase::combine_contiguous;
+
+  template <typename CombinerT>
+  static SpyHashStateImpl RunCombineUnordered(SpyHashStateImpl state,
+                                              CombinerT combiner) {
+    UnorderedCombinerCallback cb;
+
+    combiner(SpyHashStateImpl<void>{}, std::ref(cb));
+
+    std::sort(cb.element_hash_representations.begin(),
+              cb.element_hash_representations.end());
+    state.hash_representation_.insert(state.hash_representation_.end(),
+                                      cb.element_hash_representations.begin(),
+                                      cb.element_hash_representations.end());
+    if (cb.error && cb.error->has_value()) {
+      state.error_ = std::move(cb.error);
+    }
+    return state;
+  }
 
   absl::optional<std::string> error() const {
     if (moved_from_) {
@@ -163,6 +196,22 @@ class SpyHashStateImpl : public HashStateBase<SpyHashStateImpl<T>> {
  private:
   template <typename U>
   friend class SpyHashStateImpl;
+
+  struct UnorderedCombinerCallback {
+    std::vector<std::string> element_hash_representations;
+    std::shared_ptr<absl::optional<std::string>> error;
+
+    // The inner spy can have a different type.
+    template <typename U>
+    void operator()(SpyHashStateImpl<U>& inner) {
+      element_hash_representations.push_back(
+          absl::StrJoin(inner.hash_representation_, ""));
+      if (inner.error_->has_value()) {
+        error = std::move(inner.error_);
+      }
+      inner = SpyHashStateImpl<void>{};
+    }
+  };
 
   // This is true if SpyHashStateImpl<T> has been passed to a call of
   // AbslHashValue with the wrong type. This detects that the user called
@@ -211,6 +260,7 @@ void AbslHashValue(SpyHashStateImpl<T>, const U&);
 using SpyHashState = SpyHashStateImpl<void>;
 
 }  // namespace hash_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_HASH_INTERNAL_SPY_HASH_STATE_H_

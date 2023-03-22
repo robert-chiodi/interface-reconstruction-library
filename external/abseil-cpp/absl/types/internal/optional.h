@@ -54,6 +54,7 @@
 #endif
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 // Forward declaration
 template <typename T>
@@ -84,13 +85,21 @@ class optional_data_dtor_base {
   bool engaged_;
   // Data storage
   union {
-    dummy_type dummy_;
     T data_;
+    dummy_type dummy_;
   };
 
   void destruct() noexcept {
     if (engaged_) {
+      // `data_` must be initialized if `engaged_` is true.
+#if ABSL_INTERNAL_HAVE_MIN_GNUC_VERSION(12, 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
       data_.~T();
+#if ABSL_INTERNAL_HAVE_MIN_GNUC_VERSION(12, 0)
+#pragma GCC diagnostic pop
+#endif
       engaged_ = false;
     }
   }
@@ -119,8 +128,8 @@ class optional_data_dtor_base<T, true> {
   bool engaged_;
   // Data storage
   union {
-    dummy_type dummy_;
     T data_;
+    dummy_type dummy_;
   };
   void destruct() noexcept { engaged_ = false; }
 
@@ -387,6 +396,7 @@ struct optional_hash_base<T, decltype(std::hash<absl::remove_const_t<T> >()(
 };
 
 }  // namespace optional_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #undef ABSL_OPTIONAL_USE_INHERITING_CONSTRUCTORS

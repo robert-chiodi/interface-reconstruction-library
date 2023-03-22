@@ -43,6 +43,18 @@ PlanarSeparator R2PCommon<CellType, kColumns>::getFinalReconstruction(void) {
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
+void R2PCommon<CellType, kColumns>::setOptimizationBehavior(
+    const OptimizationBehavior &a_parameters) {
+  optimization_behavior_m = a_parameters;
+}
+
+template <class CellType, UnsignedIndex_t kColumns>
+void R2PCommon<CellType, kColumns>::setCostFunctionBehavior(
+    const R2PWeighting &a_parameters) {
+  weight_importance_m = a_parameters;
+}
+
+template <class CellType, UnsignedIndex_t kColumns>
 Eigen::Matrix<double, Eigen::Dynamic, 1>
 R2PCommon<CellType, kColumns>::calculateVectorError(void) {
   return (correct_values_m - guess_values_m);
@@ -50,29 +62,29 @@ R2PCommon<CellType, kColumns>::calculateVectorError(void) {
 
 template <class CellType, UnsignedIndex_t kColumns>
 bool R2PCommon<CellType, kColumns>::errorTooHigh(const double a_error) {
-  return a_error > acceptable_error_m;
+  return a_error > optimization_behavior_m.acceptable_error;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 bool R2PCommon<CellType, kColumns>::iterationTooHigh(
     const UnsignedIndex_t a_iteration) {
-  return a_iteration > maximum_iterations_m;
+  return a_iteration > optimization_behavior_m.maximum_iterations;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 void R2PCommon<CellType, kColumns>::increaseLambda(double *a_lambda) {
-  (*a_lambda) *= lambda_increase_m;
+  (*a_lambda) *= optimization_behavior_m.lambda_increase;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 void R2PCommon<CellType, kColumns>::decreaseLambda(double *a_lambda) {
-  (*a_lambda) *= lambda_decrease_m;
+  (*a_lambda) *= optimization_behavior_m.lambda_decrease;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
 bool R2PCommon<CellType, kColumns>::shouldComputeJacobian(
     const UnsignedIndex_t a_iteration, const UnsignedIndex_t a_last_jacobian) {
-  return a_iteration - a_last_jacobian > delay_jacobian_amount_m;
+  return a_iteration - a_last_jacobian > optimization_behavior_m.delay_jacobian_amount;
 }
 
 template <class CellType, UnsignedIndex_t kColumns>
@@ -582,14 +594,14 @@ template <class CellType>
 bool R2P_2D1P<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> &delta) {
   return std::fabs(delta(0)) <
-         R2PCommon<CellType, columns_m>::minimum_angle_change_m;
+         R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change;
 }
 
 /// \brief Return initial delta to be used in optimization
 template <class CellType>
 auto R2P_2D1P<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1> & {
-  initial_delta_m(0) = R2PCommon<CellType, columns_m>::initial_angle_m;
+  initial_delta_m(0) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
   return initial_delta_m;
 }
 
@@ -615,7 +627,10 @@ void R2P_3D1P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
   double volume_weight_switch = {1.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
-  this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, 0.0);
+  this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
+                                            this->weight_importance_m.importance_of_liquid_centroid_relative_to_gas, 
+                                            this->weight_importance_m.importance_of_centroid, 
+                                            0.0);
   this->correct_values_m = this->correct_values_m.cwiseProduct(this->weights_m);
 
   this->best_reference_frame_m =
@@ -653,15 +668,15 @@ template <class CellType>
 bool R2P_3D1P<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> &delta) {
   return std::max(std::fabs(delta(0)), std::fabs(delta(1))) <
-         R2PCommon<CellType, columns_m>::minimum_angle_change_m;
+         R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change;
 }
 
 /// \brief Return initial delta to be used in optimization
 template <class CellType>
 auto R2P_3D1P<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1> & {
-  initial_delta_m(0) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(1) = R2PCommon<CellType, columns_m>::initial_angle_m;
+  initial_delta_m(0) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(1) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
   return initial_delta_m;
 }
 
@@ -789,22 +804,22 @@ template <class CellType>
 bool R2P_2D2P<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> &delta) {
   return (std::fabs(delta(0)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(1)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(2)) <
-              R2PCommon<CellType, columns_m>::minimum_distance_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_distance_change &&
           std::fabs(delta(3)) <
-              R2PCommon<CellType, columns_m>::minimum_distance_change_m);
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_distance_change);
 }
 
 template <class CellType>
 auto R2P_2D2P<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1> & {
-  initial_delta_m(0) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(1) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(2) = R2PCommon<CellType, columns_m>::initial_distance_m;
-  initial_delta_m(3) = R2PCommon<CellType, columns_m>::initial_distance_m;
+  initial_delta_m(0) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(1) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(2) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_distance;
+  initial_delta_m(3) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_distance;
   return initial_delta_m;
 }
 
@@ -862,9 +877,16 @@ void R2P_3D2P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   double weight_surface_area =
-      0.75 *
-      std::pow(2.0 * (0.5 - this->stencil_average_volume_fraction_m), 2.0);
-  this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, weight_surface_area);
+      this->weight_importance_m.importance_of_surface_area < 0.0
+          ? 0.75 *
+                std::pow(2.0 * (0.5 - this->stencil_average_volume_fraction_m),
+                         2.0)
+          : this->weight_importance_m.importance_of_surface_area;
+  // this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, weight_surface_area);
+  this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
+                                            this->weight_importance_m.importance_of_liquid_centroid_relative_to_gas, 
+                                            this->weight_importance_m.importance_of_centroid, 
+                                            weight_surface_area);
   this->correct_values_m = this->correct_values_m.cwiseProduct(this->weights_m);
 
   Normal tangent0;
@@ -940,28 +962,28 @@ template <class CellType>
 bool R2P_3D2P<CellType>::minimumReached(
     const Eigen::Matrix<double, columns_m, 1> &delta) {
   return (std::fabs(delta(0)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(1)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(2)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(3)) <
-              R2PCommon<CellType, columns_m>::minimum_angle_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_angle_change &&
           std::fabs(delta(4)) <
-              R2PCommon<CellType, columns_m>::minimum_distance_change_m &&
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_distance_change &&
           std::fabs(delta(5)) <
-              R2PCommon<CellType, columns_m>::minimum_distance_change_m);
+              R2PCommon<CellType, columns_m>::optimization_behavior_m.minimum_distance_change);
 }
 
 template <class CellType>
 auto R2P_3D2P<CellType>::getDefaultInitialDelta(void)
     -> const Eigen::Matrix<double, columns_m, 1> & {
-  initial_delta_m(0) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(1) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(2) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(3) = R2PCommon<CellType, columns_m>::initial_angle_m;
-  initial_delta_m(4) = R2PCommon<CellType, columns_m>::initial_distance_m;
-  initial_delta_m(5) = R2PCommon<CellType, columns_m>::initial_distance_m;
+  initial_delta_m(0) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(1) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(2) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(3) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_angle;
+  initial_delta_m(4) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_distance;
+  initial_delta_m(5) = R2PCommon<CellType, columns_m>::optimization_behavior_m.initial_distance;
   return initial_delta_m;
 }
 

@@ -17,13 +17,16 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <memory>
 
+#include "absl/base/config.h"
 #include "absl/base/internal/raw_logging.h"
 #include "absl/time/internal/cctz/include/cctz/zone_info_source.h"
 
 namespace cctz = absl::time_internal::cctz;
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace time_internal {
 
 TimeZone LoadTimeZone(const std::string& name) {
@@ -33,9 +36,11 @@ TimeZone LoadTimeZone(const std::string& name) {
 }
 
 }  // namespace time_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace time_internal {
 namespace cctz_extension {
 namespace {
@@ -62,10 +67,6 @@ const struct ZoneInfo {
     // Other zones named in tests but which should fail to load.
     {"Invalid/TimeZone", nullptr, 0},
     {"", nullptr, 0},
-
-    // Also allow for loading the local time zone under TZ=US/Pacific.
-    {"US/Pacific",  //
-     reinterpret_cast<char*>(America_Los_Angeles), America_Los_Angeles_len},
 
     // Allows use of the local time zone from a system-specific location.
 #ifdef _MSC_VER
@@ -110,14 +111,21 @@ std::unique_ptr<cctz::ZoneInfoSource> TestFactory(
           new TestZoneInfoSource(zoneinfo.data, zoneinfo.length));
     }
   }
-  ABSL_RAW_LOG(FATAL, "Unexpected time zone \"%s\" in test", name.c_str());
+
+  // The embedded zoneinfo data does not include the zone, so fallback to
+  // built-in UTC. The tests have been crafted so that this should only
+  // happen when testing absl::LocalTimeZone() with an unconstrained ${TZ}.
   return nullptr;
 }
 
 }  // namespace
 
+#if !defined(__MINGW32__)
+// MinGW does not support the weak symbol extension mechanism.
 ZoneInfoSourceFactory zone_info_source_factory = TestFactory;
+#endif
 
 }  // namespace cctz_extension
 }  // namespace time_internal
+ABSL_NAMESPACE_END
 }  // namespace absl

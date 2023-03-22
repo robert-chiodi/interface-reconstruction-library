@@ -22,12 +22,14 @@
 #include <ostream>
 #include <type_traits>
 
-#include "absl/random/internal/distribution_impl.h"
 #include "absl/random/internal/fast_uniform_bits.h"
 #include "absl/random/internal/fastmath.h"
+#include "absl/random/internal/generate_real.h"
 #include "absl/random/internal/iostream_state_saver.h"
+#include "absl/random/internal/traits.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 // absl::poisson_distribution:
 // Generates discrete variates conforming to a Poisson distribution.
@@ -79,7 +81,7 @@ class poisson_distribution {
     double log_k_;
     int split_;
 
-    static_assert(std::is_integral<IntType>::value,
+    static_assert(random_internal::IsIntegral<IntType>::value,
                   "Class-template absl::poisson_distribution<> must be "
                   "parameterized using an integral type.");
   };
@@ -132,7 +134,8 @@ template <typename IntType>
 poisson_distribution<IntType>::param_type::param_type(double mean)
     : mean_(mean), split_(0) {
   assert(mean >= 0);
-  assert(mean <= (std::numeric_limits<result_type>::max)());
+  assert(mean <=
+         static_cast<double>((std::numeric_limits<result_type>::max)()));
   // As a defensive measure, avoid large values of the mean.  The rejection
   // algorithm used does not support very large values well.  It my be worth
   // changing algorithms to better deal with these cases.
@@ -164,9 +167,9 @@ typename poisson_distribution<IntType>::result_type
 poisson_distribution<IntType>::operator()(
     URBG& g,  // NOLINT(runtime/references)
     const param_type& p) {
-  using random_internal::PositiveValueT;
-  using random_internal::RandU64ToDouble;
-  using random_internal::SignedValueT;
+  using random_internal::GeneratePositiveTag;
+  using random_internal::GenerateRealFromBits;
+  using random_internal::GenerateSignedTag;
 
   if (p.split_ != 0) {
     // Use Knuth's algorithm with range splitting to avoid floating-point
@@ -186,7 +189,8 @@ poisson_distribution<IntType>::operator()(
     for (int split = p.split_; split > 0; --split) {
       double r = 1.0;
       do {
-        r *= RandU64ToDouble<PositiveValueT, true>(fast_u64_(g));
+        r *= GenerateRealFromBits<double, GeneratePositiveTag, true>(
+            fast_u64_(g));  // U(-1, 0)
         ++n;
       } while (r > p.emu_);
       --n;
@@ -205,10 +209,11 @@ poisson_distribution<IntType>::operator()(
   // and k = max(f).
   const double a = p.mean_ + 0.5;
   for (;;) {
-    const double u =
-        RandU64ToDouble<PositiveValueT, false>(fast_u64_(g));  // (0, 1)
-    const double v =
-        RandU64ToDouble<SignedValueT, false>(fast_u64_(g));  // (-1, 1)
+    const double u = GenerateRealFromBits<double, GeneratePositiveTag, false>(
+        fast_u64_(g));  // U(0, 1)
+    const double v = GenerateRealFromBits<double, GenerateSignedTag, false>(
+        fast_u64_(g));  // U(-1, 1)
+
     const double x = std::floor(p.s_ * v / u + a);
     if (x < 0) continue;  // f(negative) = 0
     const double rhs = x * p.lmu_;
@@ -219,8 +224,9 @@ poisson_distribution<IntType>::operator()(
     // clang-format on
     const double lhs = 2.0 * std::log(u) + p.log_k_ + s;
     if (lhs < rhs) {
-      return x > (max)() ? (max)()
-                         : static_cast<result_type>(x);  // f(x)/k >= u^2
+      return x > static_cast<double>((max)())
+                 ? (max)()
+                 : static_cast<result_type>(x);  // f(x)/k >= u^2
     }
   }
 }
@@ -249,6 +255,7 @@ std::basic_istream<CharT, Traits>& operator>>(
   return is;
 }
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_POISSON_DISTRIBUTION_H_

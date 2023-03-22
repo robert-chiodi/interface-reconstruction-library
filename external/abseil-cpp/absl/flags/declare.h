@@ -25,9 +25,10 @@
 #ifndef ABSL_FLAGS_DECLARE_H_
 #define ABSL_FLAGS_DECLARE_H_
 
-#include "absl/strings/string_view.h"
+#include "absl/base/config.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace flags_internal {
 
 // absl::Flag<T> represents a flag of type 'T' created by ABSL_FLAG.
@@ -39,7 +40,7 @@ class Flag;
 // Flag
 //
 // Forward declaration of the `absl::Flag` type for use in defining the macro.
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
 template <typename T>
 class Flag;
 #else
@@ -47,6 +48,7 @@ template <typename T>
 using Flag = flags_internal::Flag<T>;
 #endif
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 // ABSL_DECLARE_FLAG()
@@ -58,6 +60,14 @@ using Flag = flags_internal::Flag<T>;
 // The ABSL_DECLARE_FLAG(type, name) macro expands to:
 //
 //   extern absl::Flag<type> FLAGS_name;
-#define ABSL_DECLARE_FLAG(type, name) extern ::absl::Flag<type> FLAGS_##name
+#define ABSL_DECLARE_FLAG(type, name) ABSL_DECLARE_FLAG_INTERNAL(type, name)
+
+// Internal implementation of ABSL_DECLARE_FLAG to allow macro expansion of its
+// arguments. Clients must use ABSL_DECLARE_FLAG instead.
+#define ABSL_DECLARE_FLAG_INTERNAL(type, name)               \
+  extern absl::Flag<type> FLAGS_##name;                      \
+  namespace absl /* block flags in namespaces */ {}          \
+  /* second redeclaration is to allow applying attributes */ \
+  extern absl::Flag<type> FLAGS_##name
 
 #endif  // ABSL_FLAGS_DECLARE_H_

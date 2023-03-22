@@ -51,7 +51,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -DNDEBUG_PERF")
 endif()
 
 # Find external packages needed by IRL
-find_package(Eigen) # Provide -D EIGEN_PATH=/path/to/Eigen
+find_package(Eigen3) # Provide -D EIGEN_PATH=/path/to/Eigen
 
 # Add packages IRL stores in external
 set(IRL_USE_ABSL ON)
@@ -63,6 +63,7 @@ endif()
 
 if(IRL_USE_ABSL)
   # Add Abseil as a sub-directory but temporarily turn testing off.
+  set(ABSL_PROPAGATE_CXX_STD ON)
   set(ABSEIL_DIR "${PROJECT_SOURCE_DIR}/external/abseil-cpp")
   set(BUILD_TESTING_ORIG ${BUILD_TESTING})
   set(BUILD_TESTING OFF)
@@ -74,7 +75,7 @@ if(IRL_USE_ABSL)
 endif()
 
 # Path for Fortran Module files
-set( CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod )
 
 # Add IRL Libraries that we are creating
 if(BUILD_SHARED_LIBS)
@@ -92,7 +93,7 @@ endif()
 
 # C++ IRL Base
 target_include_directories(irl PUBLIC "${PROJECT_SOURCE_DIR}")
-target_link_libraries(irl INTERFACE PUBLIC Eigen::Eigen)
+target_link_libraries(irl INTERFACE PUBLIC Eigen3::Eigen)
 if(IRL_USE_ABSL)
   target_include_directories(irl SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/external/abseil-cpp")
   target_link_libraries(irl PUBLIC absl::inlined_vector absl::flat_hash_map)
@@ -104,6 +105,10 @@ target_link_libraries(irl_c PUBLIC irl)
 # Fortran Interface
 target_link_libraries(irl_fortran PUBLIC irl_c)
 
+if(NOT IRL_BUILD_FORTRAN)
+  set_target_properties(irl_c irl_fortran 
+			PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
 
 # Directory for test files
 # Will automatically download GoogleTest and compile it to
@@ -136,6 +141,19 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/irl" # source directory
         FILES_MATCHING # install only matched files
         PATTERN "*.tpp"# select header files
 )
-install(TARGETS irl_c EXPORT "irl_c_exp" ARCHIVE DESTINATION "lib")
-install(TARGETS irl_fortran EXPORT "irl_fortran_exp" ARCHIVE DESTINATION "lib")
-install(DIRECTORY "${CMAKE_Fortran_MODULE_DIRECTORY}/" DESTINATION "include/irl_fortran")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/abseil-cpp" # source directory
+        DESTINATION "include/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h"# select header files
+)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/abseil-cpp" # source directory
+        DESTINATION "include/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.inc"# select header files
+)
+
+if(IRL_BUILD_FORTRAN)
+  install(TARGETS irl_c EXPORT "irl_c_exp" ARCHIVE DESTINATION "lib")
+  install(TARGETS irl_fortran EXPORT "irl_fortran_exp" ARCHIVE DESTINATION "lib")
+  install(DIRECTORY "${CMAKE_Fortran_MODULE_DIRECTORY}/" DESTINATION "include/irl_fortran")
+endif()

@@ -18,8 +18,14 @@
 
 #include "absl/base/config.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <sdkddkver.h>
+#else
 #include <pthread.h>
+#endif
+
+#ifdef __linux__
+#include <linux/futex.h>
 #endif
 
 #ifdef ABSL_HAVE_SEMAPHORE_H
@@ -30,6 +36,7 @@
 #include <cstdint>
 
 #include "absl/base/internal/thread_identity.h"
+#include "absl/synchronization/internal/futex.h"
 #include "absl/synchronization/internal/kernel_timeout.h"
 
 // May be chosen at compile time via -DABSL_FORCE_WAITER_MODE=<index>
@@ -40,9 +47,9 @@
 
 #if defined(ABSL_FORCE_WAITER_MODE)
 #define ABSL_WAITER_MODE ABSL_FORCE_WAITER_MODE
-#elif defined(_WIN32)
+#elif defined(_WIN32) && _WIN32_WINNT >= _WIN32_WINNT_VISTA
 #define ABSL_WAITER_MODE ABSL_WAITER_MODE_WIN32
-#elif defined(__linux__)
+#elif defined(ABSL_INTERNAL_HAVE_FUTEX)
 #define ABSL_WAITER_MODE ABSL_WAITER_MODE_FUTEX
 #elif defined(ABSL_HAVE_SEMAPHORE_H)
 #define ABSL_WAITER_MODE ABSL_WAITER_MODE_SEM
@@ -51,19 +58,18 @@
 #endif
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace synchronization_internal {
 
 // Waiter is an OS-specific semaphore.
 class Waiter {
  public:
-  // No constructor, instances use the reserved space in ThreadIdentity.
-  // All initialization logic belongs in `Init()`.
-  Waiter() = delete;
+  // Prepare any data to track waits.
+  Waiter();
+
+  // Not copyable or movable
   Waiter(const Waiter&) = delete;
   Waiter& operator=(const Waiter&) = delete;
-
-  // Prepare any data to track waits.
-  void Init();
 
   // Blocks the calling thread until a matching call to `Post()` or
   // `t` has passed. Returns `true` if woken (`Post()` called),
@@ -87,8 +93,8 @@ class Waiter {
   }
 
   // How many periods to remain idle before releasing resources
-#ifndef THREAD_SANITIZER
-  static const int kIdlePeriods = 60;
+#ifndef ABSL_HAVE_THREAD_SANITIZER
+  static constexpr int kIdlePeriods = 60;
 #else
   // Memory consumption under ThreadSanitizer is a serious concern,
   // so we release resources sooner. The value of 1 leads to 1 to 2 second
@@ -97,6 +103,12 @@ class Waiter {
 #endif
 
  private:
+  // The destructor must not be called since Mutex/CondVar
+  // can use PerThreadSem/Waiter after the thread exits.
+  // Waiter objects are embedded in ThreadIdentity objects,
+  // which are reused via a freelist and are never destroyed.
+  ~Waiter() = delete;
+
 #if ABSL_WAITER_MODE == ABSL_WAITER_MODE_FUTEX
   // Futexes are defined by specification to be 32-bits.
   // Thus std::atomic<int32_t> must be just an int32_t with lockfree methods.
@@ -104,10 +116,13 @@ class Waiter {
   static_assert(sizeof(int32_t) == sizeof(futex_), "Wrong size for futex");
 
 #elif ABSL_WAITER_MODE == ABSL_WAITER_MODE_CONDVAR
+  // REQUIRES: mu_ must be held.
+  void InternalCondVarPoke();
+
   pthread_mutex_t mu_;
   pthread_cond_t cv_;
-  std::atomic<int> waiter_count_;
-  std::atomic<int> wakeup_count_;  // Unclaimed wakeups, written under lock.
+  int waiter_count_;
+  int wakeup_count_;  // Unclaimed wakeups.
 
 #elif ABSL_WAITER_MODE == ABSL_WAITER_MODE_SEM
   sem_t sem_;
@@ -117,26 +132,22 @@ class Waiter {
   std::atomic<int> wakeups_;
 
 #elif ABSL_WAITER_MODE == ABSL_WAITER_MODE_WIN32
-  // The Windows API has lots of choices for synchronization
-  // primivitives.  We are using SRWLOCK and CONDITION_VARIABLE
-  // because they don't require a destructor to release system
-  // resources.
-  //
-  // However, we can't include Windows.h in our headers, so we use aligned
-  // storage buffers to define the storage.
-  using SRWLockStorage =
-      typename std::aligned_storage<sizeof(void*), alignof(void*)>::type;
-  using ConditionVariableStorage =
-      typename std::aligned_storage<sizeof(void*), alignof(void*)>::type;
-
   // WinHelper - Used to define utilities for accessing the lock and
   // condition variable storage once the types are complete.
   class WinHelper;
 
-  SRWLockStorage mu_storage_;
-  ConditionVariableStorage cv_storage_;
-  std::atomic<int> waiter_count_;
-  std::atomic<int> wakeup_count_;
+  // REQUIRES: WinHelper::GetLock(this) must be held.
+  void InternalCondVarPoke();
+
+  // We can't include Windows.h in our headers, so we use aligned character
+  // buffers to define the storage of SRWLOCK and CONDITION_VARIABLE.
+  // SRW locks and condition variables do not need to be explicitly destroyed.
+  // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-initializesrwlock
+  // https://stackoverflow.com/questions/28975958/why-does-windows-have-no-deleteconditionvariable-function-to-go-together-with
+  alignas(void*) unsigned char mu_storage_[sizeof(void*)];
+  alignas(void*) unsigned char cv_storage_[sizeof(void*)];
+  int waiter_count_;
+  int wakeup_count_;
 
 #else
   #error Unknown ABSL_WAITER_MODE
@@ -144,6 +155,7 @@ class Waiter {
 };
 
 }  // namespace synchronization_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_SYNCHRONIZATION_INTERNAL_WAITER_H_
