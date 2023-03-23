@@ -653,11 +653,11 @@ ReturnType computeType3Contribution(
     else  // This is within EPSILON of the actual value
     {
       coeffs = std::array<ScalarType, 12>(
-          {ScalarType(ONE / SIX), ScalarType(TWO / THREE),
+          {ScalarType(ONE / SIX), ScalarType(TWO / THREE), ScalarType(ZERO),
            ScalarType(-ONE / static_cast<ScalarType>(140)),
            ScalarType(ONE / static_cast<ScalarType>(420)),
            ScalarType(-ONE / static_cast<ScalarType>(280)),
-           ScalarType(ONE / static_cast<ScalarType>(14)), ScalarType(ZERO),
+           ScalarType(ONE / static_cast<ScalarType>(14)),
            ScalarType(ONE / static_cast<ScalarType>(630)),
            ScalarType(-ONE / static_cast<ScalarType>(1890)),
            ScalarType(ONE / static_cast<ScalarType>(3780)),
