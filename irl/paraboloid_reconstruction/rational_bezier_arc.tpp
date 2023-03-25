@@ -59,9 +59,11 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   // Defining constants and types
   const ScalarType EPSILON = machine_epsilon<ScalarType>();
   const ScalarType ZERO = static_cast<ScalarType>(0);
+  const ScalarType ONE = static_cast<ScalarType>(1);
   const ScalarType HALF = static_cast<ScalarType>(0.5);
   const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
   const ScalarType DISTANCE_EPSILON = ONEHUNDRED * EPSILON;
+  const ScalarType DEFAULT_WEIGHT = static_cast<ScalarType>(DBL_MAX);
 
   // Set what can already be set
   start_point_m = a_start_pt;
@@ -75,7 +77,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   // weight (Farin1992)
   const ScalarType L = squaredMagnitude(a_control_pt - a_start_pt);
   if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-    weight_m = static_cast<ScalarType>(DBL_MAX);
+    weight_m = DEFAULT_WEIGHT;
   } else {
     const NormalBase<ScalarType> start_normal =
         getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
@@ -87,7 +89,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
     const ScalarType D =
         fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
     if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      weight_m = static_cast<ScalarType>(DBL_MAX);
+      weight_m = DEFAULT_WEIGHT;
     } else {
       const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
       const ScalarType A =
@@ -99,7 +101,14 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   }
 
   // Clip weight to avoid variable overflows
-  weight_m = minimum(weight_m, static_cast<ScalarType>(1.0 / DBL_EPSILON));
+  if (a_paraboloid.a() * a_paraboloid.b() < 0.0) {
+    if (weight_m >= ZERO) {
+      weight_m = minimum(weight_m, static_cast<ScalarType>(1.0 / DBL_EPSILON));
+      weight_m = maximum(weight_m, ONE);
+    }
+  } else {
+    weight_m = minimum(weight_m, ONE);
+  }
 }
 
 template <class ScalarType>
@@ -119,6 +128,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
   const ScalarType ONEANDHALF = ONE + HALF;
   const ScalarType ONEHUNDRED = static_cast<ScalarType>(100);
   const ScalarType DISTANCE_EPSILON = ONEHUNDRED * EPSILON;
+  const ScalarType DEFAULT_WEIGHT = static_cast<ScalarType>(DBL_MAX);
 
   // Set what can already be set
   start_point_m = a_start_pt;
@@ -133,7 +143,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
       crossProduct(a_plane_normal, a_start_tangent);
   if (fabs(n_cross_t0 * a_end_tangent) < ONEHUNDRED * EPSILON) {
     control_point_m = average_pt;
-    weight_m = static_cast<ScalarType>(DBL_MAX);
+    weight_m = DEFAULT_WEIGHT;
   } else {
     assert(fabs(n_cross_t0 * a_end_tangent) >= ONEHUNDRED * EPSILON);
     const ScalarType lambda_1 =
@@ -150,7 +160,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
     // weight (Farin1992)
     const ScalarType L = squaredMagnitude(control_point_m - a_start_pt);
     if (L < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-      weight_m = static_cast<ScalarType>(DBL_MAX);
+      weight_m = DEFAULT_WEIGHT;
     } else {
       const NormalBase<ScalarType> start_normal =
           getParaboloidSurfaceNormal(a_paraboloid, a_start_pt);
@@ -162,7 +172,7 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
       const ScalarType D =
           fabs(a_paraboloid.a() * cross_sq_0 + a_paraboloid.b() * cross_sq_1);
       if (D < DISTANCE_EPSILON * DISTANCE_EPSILON) {
-        weight_m = static_cast<ScalarType>(DBL_MAX);
+        weight_m = DEFAULT_WEIGHT;
       } else {
         const ScalarType R = (cross_sq_0 + cross_sq_1 + cross_sq_2) / L;
         const ScalarType A =
@@ -225,7 +235,14 @@ inline RationalBezierArcBase<ScalarType>::RationalBezierArcBase(
 #endif
   }
   // Clip weight to avoid variable overflows
-  weight_m = minimum(weight_m, static_cast<ScalarType>(1.0 / DBL_EPSILON));
+  if (a_paraboloid.a() * a_paraboloid.b() < 0.0) {
+    if (weight_m >= ZERO) {
+      weight_m = minimum(weight_m, static_cast<ScalarType>(1.0 / DBL_EPSILON));
+      weight_m = maximum(weight_m, ONE);
+    }
+  } else {
+    weight_m = minimum(weight_m, ONE);
+  }
 }
 
 template <class ScalarType>
