@@ -378,12 +378,6 @@ ReturnType computeType3ContributionWithSplit(
     }
     // If the rational Bezier weight is negative, we switch to QP and shake the
     // polytope
-    if constexpr (std::is_same_v<ScalarType, double>) {
-      if (arc.weight() > 1.01) {
-        *a_requires_nudge = true;
-        return ReturnType::fromScalarConstant(ZERO);
-      }
-    }
     if (arc.weight() < ZERO) {
       *a_requires_nudge = true;
       return ReturnType::fromScalarConstant(ZERO);
@@ -1388,16 +1382,9 @@ ReturnType orientAndApplyType3Correction(
         a_surface->addArc(surface_arc);
       }
 
-      if constexpr (std::is_same_v<ScalarType, double>) {
-        if (arc.weight() < 0.99) {
-          *a_requires_nudge = true;
-          return ReturnType::fromScalarConstant(ZERO);
-        }
-      } else {
-        if (arc.weight() < ZERO) {
-          *a_requires_nudge = true;
-          return ReturnType::fromScalarConstant(ZERO);
-        }
+      if (arc.weight() < ZERO) {
+        *a_requires_nudge = true;
+        return ReturnType::fromScalarConstant(ZERO);
       }
       return computeType3Contribution<ReturnType, ScalarType>(a_paraboloid,
                                                               arc);
