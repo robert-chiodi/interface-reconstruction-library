@@ -1,6 +1,6 @@
 # Reproducing published results on paraboloid-polytope intersection
 
-This document explains how to reproduce the results presented in our [paper]() on paraboloid-polytope intersection.
+This document explains how to reproduce the results presented in our journal paper on paraboloid-polytope intersection, published in the SIAM Journal on Scientific Computing [link](). A preprint of this article is available in [arXiv](https://arxiv.org/pdf/2210.07772.pdf) as well as in the [current repository](manuscript_paraboloid_intersection.pdf).
 ## Unit cube translation (Section 7.1)
 
 In order to reproduce Figures 5 and 6 of the [paper](), it is necessary to build the unit tests of IRL (for which the option `-D BUILD_TESTING=ON` must be provided when building IRL itself). This requires executing the additional command:
@@ -20,6 +20,7 @@ This will generate a set of STL files which can be viewed with most visualizatio
 clipped_surface_*.stl
 unclipped_cube_*.stl
 ```
+resulting in the following visualizations:
 |<img src="./figures/figure5a.png" style="max-width:30%; object-fit: contain;"/>|<img src="./figures/figure5b.png" style="max-width:30%; object-fit: contain;"/>|<img src="./figures/figure5c.png" style="max-width:30%; object-fit: contain;"/>|
 |:---:|:---:|:---:|
 |Fig. 5a|Fig. 5b|Fig. 5c|
@@ -30,5 +31,9 @@ The exact moments and estimation errors plotted in Figure 6 of the [paper]() can
 ```
 
 This produces a text file named `fig6.txt` containing the raw data (i.e., the *unscaled* moments and associated estimation errors) used for generating the plots in Figure 6.
+
+|<img src="./figures/figure6a.pdf" style="max-width:30%; object-fit: contain;"/><img src="./figures/figure6b.pdf" style="max-width:30%; object-fit: contain;"/>|
+|:---:|
+|Fig. 6|
 
 ## Parameter sweep study (Section 7.2)
