@@ -20,7 +20,7 @@ This will generate a set of STL files which can be viewed with most visualizatio
 clipped_surface_*.stl
 unclipped_cube_*.stl
 ```
-|<img src="./figures/figure5a.png" width="128"/>|<img src="./figures/figure5b.png" width="128"/>|<img src="./figures/figure5c.png" width="128"/>|
+|<img src="./figures/figure5a.png" style="height:100vh; max-width:30%; object-fit: contain;"/>|<img src="./figures/figure5b.png" style="height:100vh; max-width:30%; object-fit: contain;"/>|<img src="./figures/figure5c.png" style="height:100vh; max-width:30%; object-fit: contain;"/>|
 |:---:|:---:|:---:|
 |Fig. 5a|Fig. 5b|Fig. 5c|
 
