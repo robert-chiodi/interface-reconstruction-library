@@ -33,7 +33,7 @@ The exact moments and estimation errors plotted in Figure 6 of the [paper]() can
 This produces a text file named `fig6.txt` containing the raw data (i.e., the *unscaled* moments and associated estimation errors) used for generating the plots in Figure 6, shown here:
 
 |<img src="./figures/figure6a.png" style="max-width:30%; object-fit: contain;"/>|<img src="./figures/figure6b.png" style="max-width:30%; object-fit: contain;"/>|
-|-|-|
-|Fig. 6||
+|:---:|:---:|
+|Fig. 6: Exact moments|Fig. 6: Errors|
 
 ## Parameter sweep study (Section 7.2)
