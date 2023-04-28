@@ -27,9 +27,13 @@ If you use IRL for your scientific work, please consider citing the [paper](http
 
     R. Chiodi and O. Desjardins, General, robust, and efficient polyhedron intersection in the interface reconstruction library, Journal of Computational Physics 449 (2022), 110787. 
 
-If you use IRL for paraboloid-polytope intersection, please consider citing the [preprint](https://arxiv.org/abs/2210.07772) introducing the closed-form expressions of the moments and their implementation
+If you use IRL for paraboloid-polytope intersection, please consider citing the [paper]() introducing the closed-form expressions of the moments and their implementation
 
-    F. Evrard, R. Chiodi, A. Han, B. van Wachem and O. Desjardins, First moments of a polyhedron clipped by a paraboloid, ArXiv:2210.07772 (2022).
+    F. Evrard, R. Chiodi, A. Han, B. van Wachem and O. Desjardins, First moments of a polyhedron clipped by a paraboloid, SIAM Journal on Scientific Computing, Under Review (2023).
+
+If you are interested in reproducing the test results presented in this publication, please follow this guide:
+
+- [Testing the paraboloid-polytope intersection](docs/markdown/paraboloid-polytope_intersection.md)
 
 ## Acknowledgements
 The development of paraboloid-polytope intersection in IRL has directly benefitted from research funding provided by the European Union's Horizon 2020 research and innovation programme under the Marie Skłodowska-Curie grant agreement No 101026017.
