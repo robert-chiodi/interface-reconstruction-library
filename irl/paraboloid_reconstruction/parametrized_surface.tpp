@@ -1220,7 +1220,7 @@ void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
     }
 
     if (no_duplicates) {
-      for (int i = 0; i < 5; ++i) {
+      for (int i = 0; i < 20; ++i) {
         splitLongEdges(vertices, triangles, edges, tri_neigh, tri_edges,
                        vert_tri, vert_neigh, high);
         // TODO: fix bug in edge collapse
@@ -1228,7 +1228,7 @@ void reMeshPolygon(VertexList& vertices, EdgeList& edges, TriList& triangles,
         //                    vert_tri, vert_neigh, low, high, fixed_vertices);
         equalizeValence(vertices, triangles, edges, tri_neigh, tri_edges,
                         vert_tri, vert_neigh, fixed_vertices);
-        relaxVertices(vertices, edges, vert_neigh, fixed_vertices, 10, 0.5);
+        relaxVertices(vertices, edges, vert_neigh, fixed_vertices, 30, 0.5);
         projectOnSurface(vertices, paraboloid, fixed_vertices);
       }
     }
