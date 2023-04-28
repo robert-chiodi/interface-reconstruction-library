@@ -34,6 +34,6 @@ This produces a text file named `fig6.txt` containing the raw data (i.e., the *u
 
 |<img src="./figures/figure6a.png" style="max-width:30%; object-fit: contain;"/>|<img src="./figures/figure6b.png" style="max-width:30%; object-fit: contain;"/>
 |-|-
-|:<td colspan=2>Fig. 6:
+|<td colspan=2>:Fig. 6:
 
 ## Parameter sweep study (Section 7.2)
