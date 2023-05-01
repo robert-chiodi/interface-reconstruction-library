@@ -1,8 +1,9 @@
 # Reproducing published results on paraboloid-polytope intersection
 
-This document explains how to reproduce the results presented in our journal paper on paraboloid-polytope intersection, published in the SIAM Journal on Scientific Computing [link](). 
+This document explains how to reproduce the results presented in our journal paper on paraboloid-polytope intersection, published in the SIAM Journal on Scientific Computing [[link](https://www.siam.org/publications/journals/siam-journal-on-scientific-computing-sisc)]. 
 
 A preprint of this article is available in [arXiv](https://arxiv.org/pdf/2210.07772.pdf) as well as in the [current repository](manuscript_paraboloid_intersection.pdf).
+
 ## Unit cube translation (Section 7.1)
 
 In order to reproduce Figures 5 and 6 of the [paper](), it is necessary to build the unit tests of IRL (for which the option `-D BUILD_TESTING=ON` must be provided when building IRL itself). This requires executing the additional command:
@@ -19,7 +20,7 @@ Once the unit tests have been built, the paraboloid-polyhedron intersections sho
 
 This will generate a set of STL files which can be viewed with most visualization softwares (e.g., [Paraview](https://www.paraview.org/)). The files used to generate Figure 5 of  the [paper]() are:
 ```
-clipped_surface_*.stl
+surface_*.stl
 unclipped_cube_*.stl
 ```
 resulting in the following visualizations:
@@ -75,7 +76,7 @@ As the name indicates, `amr_generate_result` produces reference results for our 
   }
 }
 ```
-The shapes available for testing, are those introduced in Table 1 of the manuscript: 
+The shapes available for testing are those introduced in Table 1 of the manuscript: 
 | `tet` | `cube` | `dodecahedron` | `cube_hole` | `bunny` |
 |:---:|:---:|:---:|:---:|:---:|
 |<img src="./figures/table1a.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1b.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1c.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1d.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1e.png" style="max-width:20%; object-fit: contain;"/>|
@@ -92,8 +93,8 @@ Once reference results have been produced and stored, our algorithm for calculat
 ``` 
 will test IRL against the results of the random parameter sweep of the cube, and summarize them in the output file `random_cube_results.txt`. This file lists information in the following format:
 ```
-<Input AMR result file> <Number of tests> <Avg. M0 error> <RMS M0 error> <Max. M0 error> <Avg. M1 error> <RMS M1 error> <Max. M1 error> <Avg. M0_surface error> <RMS M0_surface error> <Max. M0_surface error> <Avg. CPU time per moments calculation>
-random_cube.bin         100               1.86E-16        2.28E-17       5.55E-16        1.46E-16        1.97E-17       3.46E-15        0.00E+00                0.00E+00               0.00E+00                2.31E-06
+<Input AMR file> <Number of tests> <Avg. M0 error> <RMS M0 error> <Max. M0 error> <Avg. M1 error> <RMS M1 error> <Max. M1 error> <Avg. M0_surface error> <RMS M0_surface error> <Max. M0_surface error> <Avg. CPU time per moments calculation>
+random_cube.bin  100               1.86E-16        2.28E-17       5.55E-16        1.46E-16        1.97E-17       3.46E-15        0.00E+00                0.00E+00               0.00E+00                2.31E-06
 ```
 
 Finally, the Figures 7 and 8 of the manuscript have been generated using similar code as in the unit-test `SISCPaperFig5` introduced earlier.
