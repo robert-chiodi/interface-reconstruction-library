@@ -46,6 +46,9 @@ This project can be cloned and built using:
 ```
 git clone https://github.com/fabienevrard/irl-paraboloid-testing.git
 cd irl-paraboloid-testing
+cd external
+git clone https://github.com/nlohmann/json.git
+cd ..
 mkdir build
 cd build
 cmake -DIRL_ROOT_LOCATION=<path_to_IRL_project_directory> -DIRL_INSTALL_LOCATION=<path_to_IRL_install_directory> -DEIGEN_DIR=<path_to_eigen_directory> ..
