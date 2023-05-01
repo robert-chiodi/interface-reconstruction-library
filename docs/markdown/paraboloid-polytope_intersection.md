@@ -18,8 +18,8 @@ Once the unit tests have been built, the paraboloid-polyhedron intersections sho
 ```
 
 This will generate a set of STL files which can be viewed with most visualization softwares (e.g., [Paraview](https://www.paraview.org/)). The files used to generate Figure 5 of  the [paper]() are:
-```
-clipped_surface_*.stl
+[```
+](https://github.com/fabienevrard/irl-paraboloid-testing)clipped_surface_*.stl
 unclipped_cube_*.stl
 ```
 resulting in the following visualizations:
@@ -39,3 +39,76 @@ This produces a text file named `fig6.txt` containing the raw data (i.e., the *u
 |Fig. 6: Exact moments|Fig. 6: Errors|
 
 ## Parameter sweep study (Section 7.2)
+
+The moment estimation errors and execution times resulting from the graded and random parameter sweeps of Section 7.2, presented in Tables 2, 3, 4, and 6, have been generated using our [testing suite](https://github.com/fabienevrard/irl-paraboloid-testing).
+
+This project can be cloned and built using:
+```
+git clone https://github.com/fabienevrard/irl-paraboloid-testing.git
+cd irl-paraboloid-testing
+mkdir build
+cmake -DIRL_ROOT_LOCATION=<path_to_IRL_project_directory> -DIRL_INSTALL_LOCATION=<path_to_IRL_install_directory> -DEIGEN_DIR=<path_to_eigen_directory> ..
+make
+```
+This will generate two executables named `amr_generate_result` and `irl_confirm_result`. 
+
+As the name indicates, `amr_generate_result` produces reference results for our parameter sweeps using AMR (adaptive mesh-refinement) of the clipped polyhedron's faces. It takes an input file in the JSON format, which read as:
+```
+{
+    "test_name": "parameter_sweep", [* <- chosen between: parameter_sweep and translating_cube *]{style="float:right"} 
+    "out_file_name": "sweep_cube.bin",
+    "Sweep": {
+        "geometry": "cube",
+        "random": false,
+        "fix_to_paraboloid": false,
+        "translation": [
+            [
+                -0.5,
+                -0.5,
+                -0.5
+            ],
+            [
+                0.5,
+                0.5,
+                0.5
+            ]
+        ],
+        "rotation": [
+            [
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                3.1415926535897932384626433832795028841971693993751058209749445923,
+                3.1415926535897932384626433832795028841971693993751058209749445923,
+                3.1415926535897932384626433832795028841971693993751058209749445923
+            ]
+        ],
+        "coefficient": [
+            [
+                -5.0,
+                -5.0
+            ],
+            [
+                5.0,
+                5.0
+            ]
+        ],
+        "translation_steps": [
+            5,
+            5,
+            5
+        ],
+        "rotation_steps": [
+            5,
+            5,
+            5
+        ],
+        "coefficient_steps": [
+            11,
+            11
+        ]
+    }
+}
+```
