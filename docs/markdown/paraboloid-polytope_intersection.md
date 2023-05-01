@@ -6,7 +6,7 @@ A preprint of this article is available in [arXiv](https://arxiv.org/pdf/2210.07
 
 ## Unit cube translation (Section 7.1)
 
-In order to reproduce Figures 5 and 6 of the [paper](), it is necessary to build the unit tests of IRL (for which the option `-D BUILD_TESTING=ON` must be provided when building IRL itself). This requires executing the additional command:
+In order to reproduce Figures 5 and 6 of the [paper](), it is necessary to build the unit tests of IRL (for which the option `-D BUILD_TESTING=ON` must be provided when configuring IRL via CMake). This requires executing the additional command:
 
 ```
 make irl_test
