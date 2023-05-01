@@ -195,13 +195,18 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
       polygons[n].calculateAndSetPlaneOfExistence();
     }
 
+    double max_vfrac = 0.0;
+    for (IRL::UnsignedIndex_t n = 0; n < polygons.size(); ++n) {
+      max_vfrac = IRL::maximum(max_vfrac, a_vfrac[n]);
+    }
+
     /* Setting up reference point */
     IRL::Pt pref = polygons[0].calculateCentroid();
     IRL::Paraboloid paraboloid;
     IRL::Pt datum;
     IRL::ReferenceFrame new_frame;
-    double A, B, u, v, w;
-    for (IRL::UnsignedIndex_t it = 0; it < 3; ++it) {
+    double A = 1.0e-6, B = -1.0e-6, u, v, w;
+    for (IRL::UnsignedIndex_t it = 0; it < 1; ++it) {
       /* Setting up frame of reference */
       IRL::ReferenceFrame frame;
       IRL::UnsignedIndex_t largest_dir = 0;
@@ -219,149 +224,156 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
       frame[1] = crossProduct(normal_plane, frame[0]);
       frame[2] = normal_plane;
 
-      Eigen::MatrixXd A_mat = Eigen::MatrixXd::Zero(6, 6);
-      Eigen::VectorXd b_vec = Eigen::VectorXd::Zero(6);
+      if (polygons.size() >= 6 && max_vfrac > 0.5) {
+        Eigen::MatrixXd A_mat = Eigen::MatrixXd::Zero(6, 6);
+        Eigen::VectorXd b_vec = Eigen::VectorXd::Zero(6);
 
-      for (IRL::UnsignedIndex_t n = 0; n < polygons.size(); ++n) {
-        const IRL::UnsignedIndex_t shape = polygons[n].getNumberOfVertices();
-        if (shape == 0) {
-          continue;
-        }
-        // Local polygon normal and centroid
-        IRL::Pt ploc = polygons[n].calculateCentroid();
-        IRL::Normal nloc = polygons[n].calculateNormal();
-        if (nloc * normal_plane < 0.0) {
-          continue;
-        }
-        ploc -= pref;
-        const IRL::Pt tmp_pt = ploc;
-        const IRL::Normal tmp_n = nloc;
-        for (IRL::UnsignedIndex_t d = 0; d < 3; ++d) {
-          ploc[d] = frame[d] * tmp_pt;
-          nloc[d] = frame[d] * tmp_n;
-        }
-        // Plane coefficients
-        Eigen::VectorXd reconstruction_plane_coeffs(3);
-        reconstruction_plane_coeffs << -(ploc * nloc), nloc[0], nloc[1];
-        reconstruction_plane_coeffs /= -IRL::safelyTiny(nloc[2]);
-        // Integrals
-        Eigen::VectorXd integrals = Eigen::VectorXd::Zero(6);
-        double b_dot_sum = 0.0;
-        for (IRL::UnsignedIndex_t v = 0; v < shape; ++v) {
-          IRL::UnsignedIndex_t vn = (v + 1) % shape;
-          IRL::Pt vert1 = polygons[n][v];
-          IRL::Pt vert2 = polygons[n][vn];
-          vert1 -= pref;
-          vert2 -= pref;
-          IRL::Pt tmp_pt1 = vert1;
-          IRL::Pt tmp_pt2 = vert2;
+        for (IRL::UnsignedIndex_t n = 0; n < polygons.size(); ++n) {
+          const IRL::UnsignedIndex_t shape = polygons[n].getNumberOfVertices();
+          if (shape == 0) {
+            continue;
+          }
+          // Local polygon normal and centroid
+          IRL::Pt ploc = polygons[n].calculateCentroid();
+          IRL::Normal nloc = polygons[n].calculateNormal();
+          if (nloc * normal_plane < 0.0) {
+            continue;
+          }
+          ploc -= pref;
+          const IRL::Pt tmp_pt = ploc;
+          const IRL::Normal tmp_n = nloc;
           for (IRL::UnsignedIndex_t d = 0; d < 3; ++d) {
-            vert1[d] = frame[d] * tmp_pt1;
-            vert2[d] = frame[d] * tmp_pt2;
+            ploc[d] = frame[d] * tmp_pt;
+            nloc[d] = frame[d] * tmp_n;
+          }
+          // Plane coefficients
+          Eigen::VectorXd reconstruction_plane_coeffs(3);
+          reconstruction_plane_coeffs << -(ploc * nloc), nloc[0], nloc[1];
+          reconstruction_plane_coeffs /= -IRL::safelyTiny(nloc[2]);
+          // Integrals
+          Eigen::VectorXd integrals = Eigen::VectorXd::Zero(6);
+          double b_dot_sum = 0.0;
+          for (IRL::UnsignedIndex_t v = 0; v < shape; ++v) {
+            IRL::UnsignedIndex_t vn = (v + 1) % shape;
+            IRL::Pt vert1 = polygons[n][v];
+            IRL::Pt vert2 = polygons[n][vn];
+            vert1 -= pref;
+            vert2 -= pref;
+            IRL::Pt tmp_pt1 = vert1;
+            IRL::Pt tmp_pt2 = vert2;
+            for (IRL::UnsignedIndex_t d = 0; d < 3; ++d) {
+              vert1[d] = frame[d] * tmp_pt1;
+              vert2[d] = frame[d] * tmp_pt2;
+            }
+
+            const double xv = vert1[0];
+            const double yv = vert1[1];
+            const double xvn = vert2[0];
+            const double yvn = vert2[1];
+
+            Eigen::VectorXd integral_to_add(6);
+            integral_to_add << (xv * yvn - xvn * yv) / 2.0,
+                (xv + xvn) * (xv * yvn - xvn * yv) / 6.0,
+                (yv + yvn) * (xv * yvn - xvn * yv) / 6.0,
+                (xv + xvn) * (xv * xv + xvn * xvn) * (yvn - yv) / 12.0,
+                (yvn - yv) *
+                    (3.0 * xv * xv * yv + xv * xv * yvn + 2.0 * xv * xvn * yv +
+                     2.0 * xv * xvn * yvn + xvn * xvn * yv +
+                     3.0 * xvn * xvn * yvn) /
+                    24.0,
+                (xv - xvn) * (yv + yvn) * (yv * yv + yvn * yvn) / 12.0;
+            integrals += integral_to_add;
+          }
+          b_dot_sum += integrals.head(3).dot(reconstruction_plane_coeffs);
+
+          // Get weighting
+          const double vfrac = a_vfrac[n];
+          double vfrac_weight = 1.0;
+          const double limit_vfrac = 0.1;
+          if (vfrac < limit_vfrac) {
+            vfrac_weight = 0.5 - 0.5 * std::cos(M_PI * vfrac / limit_vfrac);
+          } else if (vfrac > 1.0 - limit_vfrac) {
+            vfrac_weight =
+                0.5 - 0.5 * std::cos(M_PI * (1.0 - vfrac) / limit_vfrac);
+          }
+          const double dist = magnitude(ploc);
+          double ww =
+              dist < 2.5 ? (1.0 + 4.0 * dist / 2.5) * pow(1.0 - dist / 2.5, 4.0)
+                         : 0.0;
+          ww *= vfrac_weight;
+
+          if (it == 2) {
+            integrals(0) = 0.0;
+            integrals(1) = 0.0;
+            integrals(2) = 0.0;
           }
 
-          const double xv = vert1[0];
-          const double yv = vert1[1];
-          const double xvn = vert2[0];
-          const double yvn = vert2[1];
-
-          Eigen::VectorXd integral_to_add(6);
-          integral_to_add << (xv * yvn - xvn * yv) / 2.0,
-              (xv + xvn) * (xv * yvn - xvn * yv) / 6.0,
-              (yv + yvn) * (xv * yvn - xvn * yv) / 6.0,
-              (xv + xvn) * (xv * xv + xvn * xvn) * (yvn - yv) / 12.0,
-              (yvn - yv) *
-                  (3.0 * xv * xv * yv + xv * xv * yvn + 2.0 * xv * xvn * yv +
-                   2.0 * xv * xvn * yvn + xvn * xvn * yv +
-                   3.0 * xvn * xvn * yvn) /
-                  24.0,
-              (xv - xvn) * (yv + yvn) * (yv * yv + yvn * yvn) / 12.0;
-          integrals += integral_to_add;
-        }
-        b_dot_sum += integrals.head(3).dot(reconstruction_plane_coeffs);
-
-        // Get weighting
-        const double vfrac = a_vfrac[n];
-        double vfrac_weight = 1.0;
-        const double limit_vfrac = 0.1;
-        if (vfrac < limit_vfrac) {
-          vfrac_weight = 0.5 - 0.5 * std::cos(M_PI * vfrac / limit_vfrac);
-        } else if (vfrac > 1.0 - limit_vfrac) {
-          vfrac_weight =
-              0.5 - 0.5 * std::cos(M_PI * (1.0 - vfrac) / limit_vfrac);
-        }
-        const double dist = magnitude(ploc);
-        double ww = dist < 2.5
-                        ? (1.0 + 4.0 * dist / 2.5) * pow(1.0 - dist / 2.5, 4.0)
-                        : 0.0;
-        ww *= vfrac_weight;
-
-        if (it == 2) {
-          integrals(0) = 0.0;
-          integrals(1) = 0.0;
-          integrals(2) = 0.0;
+          if (ww > 0.0) {
+            A_mat += ww * integrals * integrals.transpose();
+            b_vec += ww * integrals * b_dot_sum;
+          }
         }
 
-        if (ww > 0.0) {
-          A_mat += ww * integrals * integrals.transpose();
-          b_vec += ww * integrals * b_dot_sum;
+        Eigen::VectorXd sol = A_mat.colPivHouseholderQr().solve(b_vec);
+        const double a = sol(0), b = sol(1), c = sol(2), d = sol(3), e = sol(4),
+                     f = sol(5);
+        const double theta = 0.5 * std::atan2(e, (IRL::safelyEpsilon(d - f)));
+        const double cos_t = std::cos(theta);
+        const double sin_t = std::sin(theta);
+        A = -(d * cos_t * cos_t + f * sin_t * sin_t + e * cos_t * sin_t);
+        B = -(f * cos_t * cos_t + d * sin_t * sin_t - e * cos_t * sin_t);
+
+        // Translation to coordinate system R' where aligned paraboloid
+        // valid Translation is R' = {x' = x + u, y' = y + v, z' = z + w}
+        const double denominator = IRL::safelyEpsilon(4.0 * d * f - e * e);
+        u = (2.0 * b * f - c * e) / denominator;
+        v = -(b * e - 2.0 * d * c) / denominator;
+        w = -(a + (-b * b * f + b * c * e - c * c * d) / denominator);
+
+        IRL::UnitQuaternion rotation(theta, frame[2]);
+        datum = pref - u * frame[0] - v * frame[1] - w * frame[2];
+        new_frame = rotation * frame;
+
+        if (std::isnan(u)) {
+          std::cout << "u ISNAN" << std::endl;
         }
-      }
+        if (std::isnan(v)) {
+          std::cout << "v ISNAN" << std::endl;
+        }
+        if (std::isnan(w)) {
+          std::cout << "v ISNAN" << std::endl;
+        }
+        if (std::isnan(A)) {
+          std::cout << "A ISNAN" << std::endl;
+        }
+        if (std::isnan(A)) {
+          std::cout << "B ISNAN" << std::endl;
+        }
 
-      Eigen::VectorXd sol = A_mat.colPivHouseholderQr().solve(b_vec);
-      const double a = sol(0), b = sol(1), c = sol(2), d = sol(3), e = sol(4),
-                   f = sol(5);
-      const double theta = 0.5 * std::atan2(e, (IRL::safelyEpsilon(d - f)));
-      const double cos_t = std::cos(theta);
-      const double sin_t = std::sin(theta);
-      A = -(d * cos_t * cos_t + f * sin_t * sin_t + e * cos_t * sin_t);
-      B = -(f * cos_t * cos_t + d * sin_t * sin_t - e * cos_t * sin_t);
+        /* Rescale everything */
+        datum *= scale;
+        u *= scale;
+        v *= scale;
+        w *= scale;
+        A /= scale;
+        B /= scale;
 
-      // Translation to coordinate system R' where aligned paraboloid
-      // valid Translation is R' = {x' = x + u, y' = y + v, z' = z + w}
-      const double denominator = IRL::safelyEpsilon(4.0 * d * f - e * e);
-      u = (2.0 * b * f - c * e) / denominator;
-      v = -(b * e - 2.0 * d * c) / denominator;
-      w = -(a + (-b * b * f + b * c * e - c * c * d) / denominator);
+        paraboloid = IRL::Paraboloid(datum, new_frame, A, B);
 
-      IRL::UnitQuaternion rotation(theta, frame[2]);
-      datum = pref - u * frame[0] - v * frame[1] - w * frame[2];
-      new_frame = rotation * frame;
-
-      if (std::isnan(u)) {
-        std::cout << "u ISNAN" << std::endl;
-      }
-      if (std::isnan(v)) {
-        std::cout << "v ISNAN" << std::endl;
-      }
-      if (std::isnan(w)) {
-        std::cout << "v ISNAN" << std::endl;
-      }
-      if (std::isnan(A)) {
-        std::cout << "A ISNAN" << std::endl;
-      }
-      if (std::isnan(A)) {
-        std::cout << "B ISNAN" << std::endl;
-      }
-
-      /* Rescale everything */
-      datum *= scale;
-      u *= scale;
-      v *= scale;
-      w *= scale;
-      A /= scale;
-      B /= scale;
-
-      paraboloid = IRL::Paraboloid(datum, new_frame, A, B);
-
-      auto moments_and_surface = IRL::getVolumeMoments<
-          IRL::AddSurfaceOutput<IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
-          cube, paraboloid);
-      auto surface = moments_and_surface.getSurface();
-      auto surf_area = surface.getSurfaceArea();
-      if (fabs(surf_area) > DBL_EPSILON) {
-        normal_plane = surface.getAverageNormalNonAligned();
+        auto moments_and_surface = IRL::getVolumeMoments<
+            IRL::AddSurfaceOutput<IRL::Volume, IRL::ParametrizedSurfaceOutput>>(
+            cube, paraboloid);
+        auto surface = moments_and_surface.getSurface();
+        auto surf_area = surface.getSurfaceArea();
+        if (fabs(surf_area) > DBL_EPSILON) {
+          normal_plane = surface.getAverageNormalNonAligned();
+        } else {
+          break;
+        }
       } else {
+        // std::cout << "Only " << polygons.size() << " polygons" << std::endl;
+        datum = pref * scale;
+        new_frame = frame;
         break;
       }
     }
@@ -371,24 +383,24 @@ void c_Paraboloid_setParaboloidJibben(c_Paraboloid* a_self,
     if (std::fabs(A) < 1.0e-6) {
       A = std::copysign(1.0e-6, A);
     }
-    if (std::fabs(A) > 1.0 / scale) {
-      A = std::copysign(1.0 / scale, A);
-    }
+    // if (std::fabs(A) > 1.0 / scale) {
+    //   A = std::copysign(1.0 / scale, A);
+    // }
     if (std::fabs(B) < 1.0e-6) {
       B = std::copysign(1.0e-6, B);
     }
-    if (std::fabs(B) > 1.0 / scale) {
-      B = std::copysign(1.0 / scale, B);
-    }
-
-    // const double max_curvature_dx = 5.0;
-    // if (std::sqrt(u * u + v * v + w * w) > 10.0 * scale ||
-    //     std::fabs(A) * scale > max_curvature_dx ||
-    //     std::fabs(B) * scale > max_curvature_dx) {
-    //   A = 1.0e-6;
-    //   B = -1.0e-6;
-    //   datum = pref - (pref * normal_plane - plane.distance()) * normal_plane;
+    // if (std::fabs(B) > 1.0 / scale) {
+    //   B = std::copysign(1.0 / scale, B);
     // }
+
+    const double max_curvature_dx = 3.0;
+    if (  // std::sqrt(u * u + v * v + w * w) > 100.0 * scale ||
+        std::fabs(A) * scale > max_curvature_dx ||
+        std::fabs(B) * scale > max_curvature_dx) {
+      A = 1.0e-6;
+      B = -1.0e-6;
+      datum = pref - (pref * normal_plane - plane.distance()) * normal_plane;
+    }
 
     a_self->obj_ptr->setDatum(datum);
     a_self->obj_ptr->setReferenceFrame(new_frame);
