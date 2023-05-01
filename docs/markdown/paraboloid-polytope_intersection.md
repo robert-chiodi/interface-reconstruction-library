@@ -18,8 +18,8 @@ Once the unit tests have been built, the paraboloid-polyhedron intersections sho
 ```
 
 This will generate a set of STL files which can be viewed with most visualization softwares (e.g., [Paraview](https://www.paraview.org/)). The files used to generate Figure 5 of  the [paper]() are:
-[```
-](https://github.com/fabienevrard/irl-paraboloid-testing)clipped_surface_*.stl
+```
+clipped_surface_*.stl
 unclipped_cube_*.stl
 ```
 resulting in the following visualizations:
@@ -55,60 +55,41 @@ This will generate two executables named `amr_generate_result` and `irl_confirm_
 As the name indicates, `amr_generate_result` produces reference results for our parameter sweeps using AMR (adaptive mesh-refinement) of the clipped polyhedron's faces. It takes an input file in the JSON format, which read as:
 ```
 {
-    "test_name": "parameter_sweep", [* <- chosen between: parameter_sweep and translating_cube *]{style="float:right"} 
-    "out_file_name": "sweep_cube.bin",
-    "Sweep": {
-        "geometry": "cube",
-        "random": false,
-        "fix_to_paraboloid": false,
-        "translation": [
-            [
-                -0.5,
-                -0.5,
-                -0.5
-            ],
-            [
-                0.5,
-                0.5,
-                0.5
-            ]
-        ],
-        "rotation": [
-            [
-                0.0,
-                0.0,
-                0.0
-            ],
-            [
-                3.1415926535897932384626433832795028841971693993751058209749445923,
-                3.1415926535897932384626433832795028841971693993751058209749445923,
-                3.1415926535897932384626433832795028841971693993751058209749445923
-            ]
-        ],
-        "coefficient": [
-            [
-                -5.0,
-                -5.0
-            ],
-            [
-                5.0,
-                5.0
-            ]
-        ],
-        "translation_steps": [
-            5,
-            5,
-            5
-        ],
-        "rotation_steps": [
-            5,
-            5,
-            5
-        ],
-        "coefficient_steps": [
-            11,
-            11
-        ]
-    }
+  "test_name": "parameter_sweep",                       <- type of test: "parameter_sweep", or "translating_cube"
+  "out_file_name": "sweep_cube.bin",                    <- name of the output
+  "Sweep": {                                            <- options of the parameter sweep
+    "geometry": "cube",                                 <- polyhedron geometry: "tet", "cube", "dodecahedron", "cube_hole", "bunny" (cf. Table 1)
+    "random": false,                                    <- are the parameters randomly sampled?
+    "fix_to_paraboloid": false,                         <- do we want a vertex of the polyhedron to lie exactly on the paraboloid? (cf. Table 4)
+    "translation": [[-0.5,-0.5,-0.5],[0.5,0.5,0.5]],    <- parameter space for the translation of the ref. frame
+    "rotation": [ [0.0,0.0,0.0],[3.14,3.14,3.14]],      <- parameter space for the rotation of the ref. frame
+    "coefficient": [[-5.0,-5.0],[5.0,5.0]],             <- parameter space for the coefficients of the paraboloid
+    "translation_steps": [5,5,5],                       <- only for graded parameter sweep: number of translation steps
+    "rotation_steps": [5,5,5],                          <- only for graded parameter sweep: number of rotation steps
+    "coefficient_steps": [11,11,                        <- only for graded parameter sweep: number of coefficient steps
+    "number_of_tests": 5e7,                             <- only for random parameter sweep: number of random samples
+  }
 }
 ```
+The shapes available for testing, are those introduced in Table 1 of the manuscript: 
+| `tet` | `cube` | `dodecahedron` | `cube_hole` | `bunny` |
+|:---:|:---:|:---:|:---:|:---:|
+|<img src="./figures/table1a.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1b.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1c.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1d.png" style="max-width:20%; object-fit: contain;"/>|<img src="./figures/table1e.png" style="max-width:20%; object-fit: contain;"/>|
+
+The input files used for producing the reference results used in Section 7.2 are given in the folder `example_inputs`. For instance,
+```
+mpirun -np 4 ./amr_generate_result ../example_inputs/input_random_cube.json
+``` 
+will use 4 CPU-cores to generate the reference results of the random parameter sweep for the cube. These calculation are expensive, so we recommend to first test them for a limited number of cases, e.g., with `"number_of_tests": 1e2`.
+
+Once reference results have been produced and stored, our algorithm for calculating the first moments of a polyhedron-paraboloid intersection can be tested using the executable `irl_confirm_result`. For instance,
+```
+./irl_confirm_result random_cube_results.txt random_cube.bin
+``` 
+will test IRL against the results of the random parameter sweep of the cube, and summarize them in the output file `random_cube_results.txt`. This file lists information in the following format:
+```
+<Input AMR result file> <Number of tests> <Avg. M0 error> <RMS M0 error> <Max. M0 error> <Avg. M1 error> <RMS M1 error> <Max. M1 error> <Avg. M0_surface error> <RMS M0_surface error> <Max. M0_surface error> <Avg. CPU time per moments calculation>
+random_cube.bin         100               1.86E-16        2.28E-17       5.55E-16        1.46E-16        1.97E-17       3.46E-15        0.00E+00                0.00E+00               0.00E+00                2.31E-06
+```
+
+Finally, the Figures 7 and 8 of the manuscript have been generated using similar code as in the unit-test `SISCPaperFig5` introduced earlier.
