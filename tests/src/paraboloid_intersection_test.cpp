@@ -445,7 +445,50 @@ TEST(ParaboloidIntersection, Dodecahedron) {
   EXPECT_NEAR(max_error, 0.0, 1.0e-14);
 }
 
-TEST(ParaboloidIntersection, TranslatingCube) {
+TEST(ParaboloidIntersection, SISCPaperFig5) {
+  using VolumeAndSuface = AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>;
+
+  // Defining elliptic paraboloic
+  AlignedParaboloid aligned_paraboloid({1.0, 1.0});
+  Pt datum(0, 0, 0);
+  ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
+  Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+                        aligned_paraboloid.b());
+
+  // Constructing cells for each subfigure
+  auto cubes = std::array<RectangularCuboid, 3>(
+      {RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -0.5),
+                                          Pt(1.0, 1.0, +0.5)),
+       RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -1.5),
+                                          Pt(1.0, 1.0, -0.5)),
+       RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -2.5),
+                                          Pt(1.0, 1.0, -1.5))});
+  std::array<std::string, 3> surface_filenames(
+      {"surface_a", "surface_b", "surface_c"});
+  std::array<std::string, 3> clipped_faces_filenames(
+      {"_cube_a", "_cube_b", "_cube_c"});
+
+  // Compute moments and return parametrized surface
+  for (UnsignedIndex_t i = 0; i < 3; i++) {
+    auto temp_surface_and_moments =
+        getVolumeMoments<VolumeAndSuface>(cubes[i], paraboloid);
+    auto temp_param_surface = temp_surface_and_moments.getSurface();
+    auto temp_tri_surface = temp_param_surface.triangulate(0.025);
+    temp_tri_surface.write(surface_filenames[i]);
+  }
+
+  // Generate approximate triangulation of clipped polyhedron using AMR
+  for (UnsignedIndex_t i = 0; i < 3; i++) {
+    HalfEdgePolyhedronParaboloid<Pt> half_edge;
+    cubes[i].setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    auto dummy_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+        clipped_faces_filenames[i]);
+  }
+}
+
+TEST(ParaboloidIntersection, SISCPaperFig6) {
   using VolumeMomentsAndSuface =
       AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>;
 
@@ -464,9 +507,9 @@ TEST(ParaboloidIntersection, TranslatingCube) {
   double max_surface_error = 0.0, rms_surface_error = 0.0;
 
   std::ofstream myfile;
-  myfile.open("translating_cube.txt");
-  myfile << "k m0 m0_ex m0_err m1x m1x_ex m1x_err m1z m1z_ex m1z_err m0s "
-            "m0s_ex m0s_err\n";
+  myfile.open("fig6.txt");
+  myfile << "k m0p m0p_exact m0p_error m1xp m1xp_exact m1xp_error m1zp "
+            "m1zp_exact m1zp_error m0s m0s_exact m0s_error\n";
   myfile.close();
 
   for (UnsignedIndex_t i = 0; i < Ntests; i++) {
@@ -529,7 +572,7 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                  "---------------------------------------------------------"
               << std::endl;
 
-    myfile.open("translating_cube.txt", std::ios::app);
+    myfile.open("fig6.txt", std::ios::app);
     // myfile << "k m0_err m1x_err m1z_err m0s_err\n";
     myfile << std::scientific << std::setprecision(20) << k << " "
            << our_moments.volume() << " " << exact_volume << " "
