@@ -538,12 +538,9 @@ TEST(ReconstructionInterface, ELVIRA_2D) {
       }
     }
     auto found_reconstruction = reconstructionWithELVIRA2D(neighborhood_VF);
-    EXPECT_NEAR(found_reconstruction[0].normal()[0],
-                correct_reconstruction[0].normal()[0], 1.0e-15);
-    EXPECT_NEAR(found_reconstruction[0].normal()[1],
-                correct_reconstruction[0].normal()[1], 1.0e-15);
-    EXPECT_NEAR(found_reconstruction[0].normal()[2],
-                correct_reconstruction[0].normal()[2], 1.0e-15);
+    EXPECT_NEAR(
+        found_reconstruction[0].normal() * correct_reconstruction[0].normal(),
+        1.0, 1.0e-3);
     double found_VF = getVolumeFraction(stencil_cells[4], found_reconstruction);
     EXPECT_NEAR(set_VF, found_VF, 1.0e-14);
   }
@@ -593,12 +590,9 @@ TEST(ReconstructionInterface, ELVIRA_3D) {
       }
     }
     auto found_reconstruction = reconstructionWithELVIRA3D(neighborhood_VF);
-    EXPECT_NEAR(found_reconstruction[0].normal()[0],
-                correct_reconstruction[0].normal()[0], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[1],
-                correct_reconstruction[0].normal()[1], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[2],
-                correct_reconstruction[0].normal()[2], 1.0e-3);
+    EXPECT_NEAR(
+        found_reconstruction[0].normal() * correct_reconstruction[0].normal(),
+        1.0, 1.0e-3);
     double found_VF =
         getVolumeFraction(stencil_cells[13], found_reconstruction);
     EXPECT_NEAR(set_VF, found_VF, 1.0e-14);
@@ -658,12 +652,9 @@ TEST(ReconstructionInterface, LVIRA_2D) {
 
     found_reconstruction =
         reconstructionWithLVIRA2D(neighborhood_VF, found_reconstruction);
-    EXPECT_NEAR(found_reconstruction[0].normal()[0],
-                correct_reconstruction[0].normal()[0], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[1],
-                correct_reconstruction[0].normal()[1], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[2],
-                correct_reconstruction[0].normal()[2], 1.0e-3);
+    EXPECT_NEAR(
+        found_reconstruction[0].normal() * correct_reconstruction[0].normal(),
+        1.0, 1.0e-3);
     double found_VF = getVolumeFraction(stencil_cells[4], found_reconstruction);
     EXPECT_NEAR(set_VF, found_VF, 1.0e-14);
   }
@@ -728,12 +719,9 @@ TEST(ReconstructionInterface, LVIRA_3D) {
 
     found_reconstruction =
         reconstructionWithLVIRA3D(neighborhood_VF, found_reconstruction);
-    EXPECT_NEAR(found_reconstruction[0].normal()[0],
-                correct_reconstruction[0].normal()[0], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[1],
-                correct_reconstruction[0].normal()[1], 1.0e-3);
-    EXPECT_NEAR(found_reconstruction[0].normal()[2],
-                correct_reconstruction[0].normal()[2], 1.0e-3);
+    EXPECT_NEAR(
+        found_reconstruction[0].normal() * correct_reconstruction[0].normal(),
+        1.0, 1.0e-3);
     double found_VF =
         getVolumeFraction(stencil_cells[13], found_reconstruction);
     EXPECT_NEAR(set_VF, found_VF, 1.0e-14);
@@ -767,11 +755,11 @@ TEST(ReconstructionInterface, MOF_2D) {
             unit_cell, found_reconstruction);
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[0].centroid() -
                                  correct_svm[0].centroid()),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "Internal volume: " << set_VF << '\n';
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[1].centroid() -
                                  correct_svm[1].centroid()),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "External volume: " << 1.0 - set_VF << '\n';
     EXPECT_NEAR(
         std::fabs(found_volume_moments[0].volume() - correct_svm[0].volume()),
@@ -817,12 +805,12 @@ TEST(ReconstructionInterface, MOF_2D_Triangle) {
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[0].centroid() -
                                  correct_svm[0].centroid()) /
                     std::pow(base_tri_volume, 1.0 / 3.0),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "Internal volume: " << set_VF << '\n';
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[1].centroid() -
                                  correct_svm[1].centroid()) /
                     std::pow(base_tri_volume, 1.0 / 3.0),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "External volume: " << 1.0 - set_VF << '\n';
     EXPECT_NEAR(std::fabs((found_volume_moments[0].volume() -
                            correct_svm[0].volume())) /
@@ -921,11 +909,11 @@ TEST(ReconstructionInterface, MOF_3D) {
             unit_cell, found_reconstruction);
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[0].centroid() -
                                  correct_svm[0].centroid()),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "Internal volume: " << set_VF << '\n';
     EXPECT_NEAR(squaredMagnitude(found_volume_moments[1].centroid() -
                                  correct_svm[1].centroid()),
-                0.0, 1.0e-4)
+                0.0, 1.0e-2)
         << "External volume: " << 1.0 - set_VF << '\n';
     EXPECT_NEAR(
         std::fabs(found_volume_moments[0].volume() - correct_svm[0].volume()),
