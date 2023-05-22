@@ -143,11 +143,11 @@ GeneralMoments3D_Functor<ORDER>::getMoments(void) const {
             for (int mj = mcorder - mi; mj >= 0; --mj, ++mm) {
               const auto mk = mcorder - mi - mj;
               if (mi <= i && mj <= j && mk <= k) {
-                mom_shifted[m] += C_m[mi][i][0] * C_m[mj][j][0] *
-                                  C_m[mk][k][0] *
-                                  std::pow(datum_m[0], (i - mi)) *
-                                  std::pow(datum_m[1], (j - mj)) *
-                                  std::pow(datum_m[2], (k - mk)) * mom[mm];
+                mom_shifted[m] +=
+                    C_m[mi][i][0] * C_m[mj][j][0] * C_m[mk][k][0] *
+                    std::pow(datum_m[0], static_cast<double>(i - mi)) *
+                    std::pow(datum_m[1], static_cast<double>(j - mj)) *
+                    std::pow(datum_m[2], static_cast<double>(k - mk)) * mom[mm];
               }
             }
         }

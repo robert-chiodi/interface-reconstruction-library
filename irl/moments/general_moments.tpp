@@ -19,7 +19,10 @@
 namespace IRL {
 
 template <UnsignedIndex_t ORDER, UnsignedIndex_t DIM>
-GeneralMoments<ORDER, DIM>::GeneralMoments(void) : moments_m() {}
+GeneralMoments<ORDER, DIM>::GeneralMoments(void) : moments_m() {
+  static_assert(DIM == 2 || DIM == 3,
+                "Dimension argument of GeneralMoments template must be 2 or 3");
+}
 
 template <UnsignedIndex_t ORDER, UnsignedIndex_t DIM>
 GeneralMoments<ORDER, DIM> GeneralMoments<ORDER, DIM>::fromScalarConstant(
@@ -39,6 +42,10 @@ GeneralMoments<ORDER, DIM> GeneralMoments<ORDER, DIM>::calculateMoments(
 template <UnsignedIndex_t ORDER, UnsignedIndex_t DIM>
 typename GeneralMoments<ORDER, DIM>::storage
 GeneralMoments<ORDER, DIM>::calculateCentralMoments(void) const {
+  // Implementation of factorial requires this assertion
+  static_assert(ORDER < 10,
+                "Calculation of CentralMoments supported only up to order 10.");
+
   storage central;
   central[0] = (*this)[0];
   std::fill(central.begin() + 1, central.begin() + DIM + 1, 0.0);
@@ -198,7 +205,7 @@ double& GeneralMoments<ORDER, DIM>::volume(void) {
 }
 
 template <UnsignedIndex_t ORDER, UnsignedIndex_t DIM>
-const double GeneralMoments<ORDER, DIM>::volume(void) const {
+const Volume GeneralMoments<ORDER, DIM>::volume(void) const {
   return moments_m[0];
 }
 

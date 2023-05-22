@@ -19,9 +19,9 @@ namespace IRL {
 /// \brief A general moments class
 /// that stores moments in row-major order.
 /// For 3D, this is:
-/// 1, x, y, z, x^2, xy, xz, y^2, yz, z^2, x^3, x^3 y, ...
+/// 1, x, y, z, x^2, xy, xz, y^2, yz, z^2, x^3, x^2 y, ...
 /// For 2D, this is
-/// 1, x, y, x^2, xy, y^2, x^3, x^3 y, ...
+/// 1, x, y, x^2, xy, y^2, x^3, x^2 y, ...
 template <UnsignedIndex_t ORDER, UnsignedIndex_t DIM>
 class GeneralMoments {
  public:
@@ -51,11 +51,11 @@ class GeneralMoments {
   /// scale invariance.
   void normalizeAsInvariant(void);
 
-  /// \brief Return const reference to stored volume.
+  /// \brief Return reference to stored volume.
   double& volume(void);
 
   /// \brief Return const reference to stored volume.
-  const double volume(void) const;
+  const Volume volume(void) const;
 
   /// \brief Multiply all moments by the volume (zeroeth moments)
   void multiplyByVolume(void);

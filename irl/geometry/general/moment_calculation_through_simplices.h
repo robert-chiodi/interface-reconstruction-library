@@ -32,7 +32,7 @@ auto calculateMoments(const GeometryType& a_geometry,
 // of Koehl (2012). DOI:10.1109/TPAMI.2012.23
 //
 // Moments returned are ordered in row-major, i.e.,
-// 1, x, y, z, x^2, xy, xz, y^2, yz, z^2, x^3, x^3 y, ...
+// 1, x, y, z, x^2, xy, xz, y^2, yz, z^2, x^3, x^2 y, ...
 template <UnsignedIndex_t ORDER>
 class GeneralMoments3D_Functor {
  public:
