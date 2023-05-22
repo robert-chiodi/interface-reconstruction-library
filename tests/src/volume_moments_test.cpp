@@ -291,64 +291,6 @@ TEST(VolumeMoments, GeneralMoments3D) {
   for (UnsignedIndex_t i = 0; i < mom.size(); ++i) {
     EXPECT_NEAR(mom[i], correct[i], 1.0e-12);
   }
-
-  auto hex =
-      Hexahedron({Pt(0.0, 0.0, 2.0), Pt(0.0, 2.0, 2.0), Pt(2.0, 2.0, 0.0),
-                  Pt(2.0, 0.0, 0.0), Pt(-2.0, 0.0, 0.0), Pt(-2.0, 2.0, 0.0),
-                  Pt(0.0, 2.0, -2.0), Pt(0.0, 0.0, -2.0)});
-  auto shift = Pt(10.0, -4.0, 8.0);
-  for (auto& p : hex) {
-    p += shift;
-    std::cout << p << std::endl;
-  }
-  mom = hex.calculateGeneralMoments<2>();
-  // correct = std::array<double, 10>{{}};
-  // for (UnsignedIndex_t i = 0; i < mom.size(); ++i) {
-  //   EXPECT_NEAR(mom[i], correct[i], 1.0e-12);
-  // }
-}
-
-TEST(VolumeMoments, SecondVolumeMoments3D) {
-  auto cube =
-      RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, 0.0), Pt(1.0, 1.0, 1.0));
-  auto mom = cube.calculateSecondMoments();
-  std::array<double, 10> correct{
-      {1.0, 0.5, 0.5, 0.5, 1.0 / 3.0, 0.25, 0.25, 1.0 / 3.0, 0.25, 1.0 / 3.0}};
-  for (UnsignedIndex_t i = 0; i < mom.size(); ++i) {
-    EXPECT_DOUBLE_EQ(mom[i], correct[i]);
-  }
-
-  auto tet = Tet({
-      Pt(2.0, 0.0, 0.0),
-      Pt(10.0, 3.0, 2.0),
-      Pt(10.0, 5.0, 0.0),
-      Pt(10.0, 4.0, -3.0),
-  });
-  // Correct generated using mathematica to do the integrations
-  correct = std::array<double, 10>{{10.6666666666666, 85.3333333333333, 32.0,
-                                    -2.666666666666667, 708.2666666666666,
-                                    268.8, -22.4, 103.4666666666667, -9.6,
-                                    7.466666666666666}};
-  mom = tet.calculateSecondMoments();
-  for (UnsignedIndex_t i = 0; i < mom.size(); ++i) {
-    std::cout << i << std::endl;
-    EXPECT_NEAR(mom[i], correct[i], 1.0e-12);
-  }
-
-  auto hex =
-      Hexahedron({Pt(0.0, 0.0, 2.0), Pt(0.0, 2.0, 2.0), Pt(2.0, 2.0, 0.0),
-                  Pt(2.0, 0.0, 0.0), Pt(-2.0, 0.0, 0.0), Pt(-2.0, 2.0, 0.0),
-                  Pt(0.0, 2.0, -2.0), Pt(0.0, 0.0, -2.0)});
-  auto shift = Pt(10.0, -4.0, 8.0);
-  for (auto& p : hex) {
-    p += shift;
-    std::cout << p << std::endl;
-  }
-  mom = hex.calculateSecondMoments();
-  // correct = std::array<double, 10>{{}};
-  // for (UnsignedIndex_t i = 0; i < mom.size(); ++i) {
-  //   EXPECT_NEAR(mom[i], correct[i], 1.0e-12);
-  // }
 }
 
 }  // namespace
