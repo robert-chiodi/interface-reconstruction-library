@@ -75,8 +75,9 @@ inline MomentsType& SeparatedMomentsCommon<Derived, MomentsType>::operator[](
 }
 
 template <class Derived, class MomentsType>
-inline const MomentsType& SeparatedMomentsCommon<Derived, MomentsType>::
-operator[](const UnsignedIndex_t a_moment_index) const {
+inline const MomentsType&
+SeparatedMomentsCommon<Derived, MomentsType>::operator[](
+    const UnsignedIndex_t a_moment_index) const {
   assert(a_moment_index < this->getNumberOfPhases());
   return volume_moments_m[a_moment_index];
 }
@@ -178,18 +179,8 @@ SeparatedMoments<VolumeMoments>::fillWithComplementMoments(
   // Here, we are expecting a_known_moments.centroid = vol*centroid, and
   // NOT the centroid. Will return correct centroids for both phases
   MomentsType encompassing_moments = a_encompassing_geometry.calculateMoments();
-
-  // Encompassing volume should be same or greater than the known phase's
-  // volume. Doing for round-off
-  MomentsType unknown_moments;
-//  if (std::fabs(encompassing_moments.volume()) <
-//      std::fabs(a_known_moments.volume())) {
-//    unknown_moments = MomentsType::fromScalarConstant(0.0);
-//  } else {
-    unknown_moments = encompassing_moments - a_known_moments;
-//  }
-  return a_flipped ? SelfType(unknown_moments, a_known_moments)
-                   : SelfType(a_known_moments, unknown_moments);
+  return fillWithComplementMoments(a_known_moments, encompassing_moments,
+                                   a_flipped);
 }
 
 inline SeparatedMoments<VolumeMoments>
@@ -204,41 +195,30 @@ SeparatedMoments<VolumeMoments>::fillWithComplementMoments(
   // Encompassing volume should be same or greater than the known phase's
   // volume.  Doing for round-off
   MomentsType unknown_moments;
-//  if (std::fabs(a_encompassing_geometry_volume_moments.volume()) <
-//      std::fabs(a_known_moments.volume())) {
-//    unknown_moments = MomentsType::fromScalarConstant(0.0);
-//  } else {
-    unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
-//  }
+  //  if (std::fabs(a_encompassing_geometry_volume_moments.volume()) <
+  //      std::fabs(a_known_moments.volume())) {
+  //    unknown_moments = MomentsType::fromScalarConstant(0.0);
+  //  } else {
+  unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
+  //  }
 
   return a_flipped ? SelfType(unknown_moments, a_known_moments)
                    : SelfType(a_known_moments, unknown_moments);
 }
 
 inline SeparatedMoments<VolumeMoments>::SeparatedMoments(const double* a_list)
-    : SeparatedMomentsCommon<SeparatedMoments<VolumeMoments>,MomentsType>(MomentsType::fromRawDoublePointer(&a_list[0]),
-                       MomentsType::fromRawDoublePointer(&a_list[4])) {}
-
+    : SeparatedMomentsCommon<SeparatedMoments<VolumeMoments>, MomentsType>(
+          MomentsType::fromRawDoublePointer(&a_list[0]),
+          MomentsType::fromRawDoublePointer(&a_list[4])) {}
 
 template <class GeometryType>
 inline SeparatedMoments<Volume>
 SeparatedMoments<Volume>::fillWithComplementMoments(
     const MomentsType& a_known_moments,
     const GeometryType& a_encompassing_geometry, const bool a_flipped) {
-
   MomentsType encompassing_moments = a_encompassing_geometry.calculateVolume();
-
-  // Encompassing volume should be same or greater than the known phase's
-  // volume. Doing for round-off
-  MomentsType unknown_moments;
-//  if (std::fabs(encompassing_moments) <
-//      std::fabs(a_known_moments)) {
-//    unknown_moments = MomentsType::fromScalarConstant(0.0);
-//  } else {
-    unknown_moments = encompassing_moments - a_known_moments;
-//  }
-  return a_flipped ? SelfType(unknown_moments, a_known_moments)
-                   : SelfType(a_known_moments, unknown_moments);
+  return fillWithComplementMoments(a_known_moments, encompassing_moments,
+                                   a_flipped);
 }
 
 inline SeparatedMoments<Volume>
@@ -246,26 +226,87 @@ SeparatedMoments<Volume>::fillWithComplementMoments(
     const MomentsType& a_known_moments,
     const MomentsType& a_encompassing_geometry_volume_moments,
     const bool a_flipped) {
-
   // Encompassing volume should be same or greater than the known phase's
   // volume.  Doing for round-off
   MomentsType unknown_moments;
-//  if (std::fabs(a_encompassing_geometry_volume_moments) <
-//      std::fabs(a_known_moments)) {
-//    unknown_moments = MomentsType::fromScalarConstant(0.0);
-//  } else {
-    unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
-//  }
+  //  if (std::fabs(a_encompassing_geometry_volume_moments) <
+  //      std::fabs(a_known_moments)) {
+  //    unknown_moments = MomentsType::fromScalarConstant(0.0);
+  //  } else {
+  unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
+  //  }
+
+  return a_flipped ? SelfType(unknown_moments, a_known_moments)
+                   : SelfType(a_known_moments, unknown_moments);
+}
+
+template <std::size_t ORDER>
+template <class GeometryType>
+inline SeparatedMoments<GeneralMoments3D<ORDER>>
+SeparatedMoments<GeneralMoments3D<ORDER>>::fillWithComplementMoments(
+    const MomentsType& a_known_moments,
+    const GeometryType& a_encompassing_geometry, const bool a_flipped) {
+  MomentsType encompassing_moments =
+      a_encompassing_geometry.template calculateGeneralMoments<ORDER>();
+  return fillWithComplementMoments(a_known_moments, encompassing_moments,
+                                   a_flipped);
+}
+
+template <std::size_t ORDER>
+inline SeparatedMoments<GeneralMoments3D<ORDER>>
+SeparatedMoments<GeneralMoments3D<ORDER>>::fillWithComplementMoments(
+    const MomentsType& a_known_moments,
+    const MomentsType& a_encompassing_geometry_volume_moments,
+    const bool a_flipped) {
+  // Encompassing volume should be same or greater than the known phase's
+  // volume.  Doing for round-off
+  MomentsType unknown_moments;
+  //  if (std::fabs(a_encompassing_geometry_volume_moments) <
+  //      std::fabs(a_known_moments)) {
+  //    unknown_moments = MomentsType::fromScalarConstant(0.0);
+  //  } else {
+  unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
+  //  }
+
+  return a_flipped ? SelfType(unknown_moments, a_known_moments)
+                   : SelfType(a_known_moments, unknown_moments);
+}
+
+template <std::size_t ORDER>
+template <class GeometryType>
+inline SeparatedMoments<GeneralMoments2D<ORDER>>
+SeparatedMoments<GeneralMoments2D<ORDER>>::fillWithComplementMoments(
+    const MomentsType& a_known_moments,
+    const GeometryType& a_encompassing_geometry, const bool a_flipped) {
+  MomentsType encompassing_moments =
+      a_encompassing_geometry.template calculateGeneralMoments<ORDER>();
+  return fillWithComplementMoments(a_known_moments, encompassing_moments,
+                                   a_flipped);
+}
+
+template <std::size_t ORDER>
+inline SeparatedMoments<GeneralMoments2D<ORDER>>
+SeparatedMoments<GeneralMoments2D<ORDER>>::fillWithComplementMoments(
+    const MomentsType& a_known_moments,
+    const MomentsType& a_encompassing_geometry_volume_moments,
+    const bool a_flipped) {
+  // Encompassing volume should be same or greater than the known phase's
+  // volume.  Doing for round-off
+  MomentsType unknown_moments;
+  //  if (std::fabs(a_encompassing_geometry_volume_moments) <
+  //      std::fabs(a_known_moments)) {
+  //    unknown_moments = MomentsType::fromScalarConstant(0.0);
+  //  } else {
+  unknown_moments = a_encompassing_geometry_volume_moments - a_known_moments;
+  //  }
 
   return a_flipped ? SelfType(unknown_moments, a_known_moments)
                    : SelfType(a_known_moments, unknown_moments);
 }
 
 inline SeparatedMoments<Volume>::SeparatedMoments(const double* a_list)
-    : SeparatedMomentsCommon<SeparatedMoments<Volume>,MomentsType>(MomentsType(a_list[0]),
-                                                                   MomentsType(a_list[1])) {}
-
-
+    : SeparatedMomentsCommon<SeparatedMoments<Volume>, MomentsType>(
+          MomentsType(a_list[0]), MomentsType(a_list[1])) {}
 
 template <UnsignedIndex_t kArrayLength>
 template <class GeometryType>
@@ -342,4 +383,4 @@ inline SeparatedMomentsCommon<Derived, MomentsType> operator*(
 
 }  // namespace IRL
 
-#endif // IRL_MOMENTS_SEPARATED_VOLUME_MOMENTS_TPP_
+#endif  // IRL_MOMENTS_SEPARATED_VOLUME_MOMENTS_TPP_

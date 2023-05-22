@@ -13,6 +13,7 @@
 #include "irl/geometry/general/moment_calculation_through_simplices.h"
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/pt_with_data.h"
+#include "irl/moments/general_moments.h"
 #include "irl/moments/volume.h"
 #include "irl/moments/volume_moments.h"
 #include "irl/moments/volume_moments_and_doubles.h"
@@ -49,6 +50,10 @@ class PolyhedronMomentsCalculationCommon {
 
   /// \brief Calculate and return volume weighted VolumeMoments.
   inline VolumeMoments calculateMoments() const;
+
+  /// \brief Calculate General Moments
+  template <std::size_t ORDER>
+  inline GeneralMoments3D<ORDER> calculateGeneralMoments(void) const;
 };
 
 template <class Derived, class VertexType, class SimplexType>
@@ -73,4 +78,4 @@ class PolyhedronMomentsCalculation<
 
 #include "irl/geometry/polyhedrons/polyhedron_moments_calculation.tpp"
 
-#endif // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_MOMENTS_CALCULATION_H_
+#endif  // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_MOMENTS_CALCULATION_H_
