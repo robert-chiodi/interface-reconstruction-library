@@ -17,11 +17,14 @@
 namespace IRL {
 
 template <class ContainerType>
-class IteratorThroughBracketOperator
-    : public std::iterator<std::random_access_iterator_tag,
-                           typename ContainerType::value_t> {
+class IteratorThroughBracketOperator {
  public:
   using value_t = typename ContainerType::value_t;
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = typename ContainerType::value_t;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_t*;
+  using reference = value_t&;
 
   IteratorThroughBracketOperator(ContainerType& a_container,
                                  const UnsignedIndex_t a_location);
@@ -75,13 +78,14 @@ IteratorThroughBracketOperator<ContainerType> operator-(
     const IteratorThroughBracketOperator<ContainerType>& a_iterator);
 
 template <class ContainerType>
-class ConstIteratorThroughBracketOperator
-    : public std::iterator<std::random_access_iterator_tag,
-                           typename ContainerType::value_t, std::ptrdiff_t,
-                           const typename ContainerType::value_t*,
-                           const typename ContainerType::value_t&> {
+class ConstIteratorThroughBracketOperator {
  public:
   using value_t = typename ContainerType::value_t;
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = typename ContainerType::value_t;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const value_t*;
+  using reference = const value_t&;
 
   ConstIteratorThroughBracketOperator(const ContainerType& a_container,
                                       const UnsignedIndex_t a_location);
@@ -142,4 +146,4 @@ std::ptrdiff_t operator-(
 
 #include "irl/data_structures/iterator_through_bracket_operator.tpp"
 
-#endif // IRL_DATA_STRUCTURES_ITERATOR_THROUGH_BRACKET_OPERATOR_H_
+#endif  // IRL_DATA_STRUCTURES_ITERATOR_THROUGH_BRACKET_OPERATOR_H_

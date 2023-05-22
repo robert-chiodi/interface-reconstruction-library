@@ -63,6 +63,13 @@ inline VolumeMoments PolyhedronMomentsCalculationCommon<
   return IRL::calculateMoments((*this), VolumeMoments3D_Functor());
 }
 
+template <class Derived, class VertexType, class SimplexType>
+template <std::size_t ORDER>
+inline GeneralMoments3D<ORDER> PolyhedronMomentsCalculationCommon<
+    Derived, VertexType, SimplexType>::calculateGeneralMoments(void) const {
+  return IRL::calculateMoments((*this), GeneralMoments3D_Functor<ORDER>());
+}
+
 template <class Derived, class FunctorType, UnsignedIndex_t kArrayLength,
           class SimplexType>
 inline VolumeMomentsAndDoubles<kArrayLength> PolyhedronMomentsCalculation<
@@ -74,4 +81,4 @@ inline VolumeMomentsAndDoubles<kArrayLength> PolyhedronMomentsCalculation<
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_MOMENTS_CALCULATION_TPP_
+#endif  // IRL_GEOMETRY_POLYHEDRONS_POLYHEDRON_MOMENTS_CALCULATION_TPP_

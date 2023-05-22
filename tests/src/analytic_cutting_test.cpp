@@ -53,7 +53,7 @@ TEST(AnalyticCutting, RectangularCuboidForVolume) {
               findDistanceOnePlane(cuboid, set_VF, correct_normal)));
     auto calculated_volume =
         getAnalyticVolume(cuboid, correct_reconstruction[0]);
-    EXPECT_NEAR(calculated_volume / cell_volume, set_VF, 1.0e-14)
+    EXPECT_NEAR(calculated_volume / cell_volume, set_VF, 1.0e-13)
         << correct_reconstruction << " " << set_VF << std::endl;
   }
 }

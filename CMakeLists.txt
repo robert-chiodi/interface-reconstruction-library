@@ -11,7 +11,7 @@ project(IRL VERSION 0.1.0
 	DESCRIPTION "Interface Reconstruction Library"
 	LANGUAGES CXX Fortran)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Inform CMake where to look for CMake files.
