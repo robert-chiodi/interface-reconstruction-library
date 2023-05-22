@@ -18,13 +18,14 @@ static constexpr std::array<std::array<UnsignedIndex_t, 3>, 6>
     face_triangle_decomposition{
         {{0, 1, 2}, {0, 2, 3}, {1, 5, 6}, {1, 6, 2}, {3, 2, 6}, {3, 6, 7}}};
 
-// This is a special case, where since we require a convex and
-// consistent ordering, we can split this into 5 tets, which is
-// not the same (6 tet) discretization that could exist
-// through triangulating the faces.
-static constexpr std::array<std::array<UnsignedIndex_t, 4>, 5>
-    tet_decomposition{
-        {{0, 1, 2, 5}, {0, 2, 7, 5}, {0, 4, 5, 7}, {0, 2, 3, 7}, {2, 5, 6, 7}}};
+// // This is a special case, where since we require a convex and
+// // consistent ordering, we can split this into 5 tets, which is
+// // not the same (6 tet) discretization that could exist
+// // through triangulating the faces.
+// static constexpr std::array<std::array<UnsignedIndex_t, 4>, 5>
+//     tet_decomposition{
+//         {{0, 1, 2, 5}, {0, 2, 7, 5}, {0, 4, 5, 7}, {0, 2, 3, 7}, {2, 5, 6,
+//         7}}};
 }  // namespace hexahedron_triangulation
 
 template <class Derived, class VertexType>
@@ -135,7 +136,7 @@ template <class Derived, class VertexType>
 constexpr UnsignedIndex_t HexahedronSpecialization<
     Derived, VertexType>::getNumberOfSimplicesInDecomposition(void) {
   return static_cast<UnsignedIndex_t>(
-      hexahedron_triangulation::tet_decomposition.size());
+      hexahedron_triangulation::face_triangle_decomposition.size());
 }
 
 template <class Derived, class VertexType>
@@ -144,10 +145,10 @@ HexahedronSpecialization<Derived, VertexType>::
     getSimplexIndicesFromDecomposition(const UnsignedIndex_t a_tet) {
   assert(a_tet <
          HexahedronSpecialization::getNumberOfSimplicesInDecomposition());
-  return {hexahedron_triangulation::tet_decomposition[a_tet][0],
-          hexahedron_triangulation::tet_decomposition[a_tet][1],
-          hexahedron_triangulation::tet_decomposition[a_tet][2],
-          hexahedron_triangulation::tet_decomposition[a_tet][3]};
+  return {hexahedron_triangulation::face_triangle_decomposition[a_tet][0],
+          hexahedron_triangulation::face_triangle_decomposition[a_tet][1],
+          hexahedron_triangulation::face_triangle_decomposition[a_tet][2],
+          hexahedron_triangulation::datum_index};
 }
 
 template <class Derived, class VertexType>
@@ -161,4 +162,4 @@ HexahedronSpecialization<Derived, VertexType>::getSimplexFromDecomposition(
 
 }  // namespace IRL
 
-#endif // IRL_GEOMETRY_POLYHEDRONS_HEXAHEDRON_TPP_
+#endif  // IRL_GEOMETRY_POLYHEDRONS_HEXAHEDRON_TPP_
