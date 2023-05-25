@@ -12,6 +12,7 @@
 
 #include <ostream>
 
+#include "irl/moments/volume.h"
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
