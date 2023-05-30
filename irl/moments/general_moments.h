@@ -10,6 +10,7 @@
 #ifndef IRL_MOMENTS_GENERAL_MOMENTS_H_
 #define IRL_MOMENTS_GENERAL_MOMENTS_H_
 
+#include <array>
 #include <ostream>
 
 #include "irl/moments/volume.h"
