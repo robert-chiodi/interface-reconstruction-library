@@ -25,4 +25,3 @@ IRLAddExample_cpp(
     "examples_advector"
 )
 
-configure_file("visualize.m" "${IRL_EXAMPLES_OUTPUT_DIR}/advector/visualize.m" COPYONLY)

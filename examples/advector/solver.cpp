@@ -172,25 +172,6 @@ void writeOutVisualization(const int a_iteration,
                            const int a_visualization_frequency,
                            const double a_simulation_time,
                            const Data<double>& a_liquid_volume_fraction) {
-  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
-  FILE* viz_file;
-  std::string file_name =
-      "viz/vizfile_" + std::to_string(a_iteration / a_visualization_frequency);
-  viz_file = fopen(file_name.c_str(), "w");
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        fprintf(viz_file, "%15.8E \n", a_liquid_volume_fraction(i, j, k));
-      }
-    }
-  }
-  fclose(viz_file);
-}
-
-void writeOutVisualizationVTK(const int a_iteration,
-                              const int a_visualization_frequency,
-                              const double a_simulation_time,
-                              const Data<double>& a_liquid_volume_fraction) {
   std::string output_folder = "viz";
   const int dir_err = mkdir(output_folder.c_str(), 0777);
 
@@ -231,14 +212,12 @@ void writeOutVisualizationVTK(const int a_iteration,
   fprintf(viz_file, "FIELD FieldData 1 \n");
   fprintf(viz_file, "%11s \t %d \t %d \t %6s \n", "VolumeFraction ", 1,
           mesh.getNx() * mesh.getNy() * mesh.getNz(), "float");
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+  for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+      for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
         fprintf(viz_file, "%15.8E \n", a_liquid_volume_fraction(i, j, k));
       }
     }
   }
-  fprintf(viz_file, "TIME 1 1 double \n");
-  fprintf(viz_file, "%15.4f \n", a_simulation_time);
   fclose(viz_file);
 }

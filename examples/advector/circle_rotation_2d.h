@@ -16,7 +16,7 @@
 #include "examples/advector/data.h"
 
 struct CircleRotation2D {
-  static BasicMesh setMesh(void);
+  static BasicMesh setMesh(const IRL::UnsignedIndex_t a_n);
 
   static void initialize(Data<double>* a_U, Data<double>* a_V,
                          Data<double>* a_W,

@@ -30,23 +30,16 @@
 #include "examples/advector/solver.h"
 #include "examples/advector/vof_advection.h"
 
-constexpr int NX = 50;
-constexpr int NY = 50;
-constexpr int NZ = 50;
 constexpr int GC = 2;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
 constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
 
-BasicMesh Deformation3D::setMesh(void) {
-  BasicMesh mesh(NX, NY, NZ, GC);
+BasicMesh Deformation3D::setMesh(const IRL::UnsignedIndex_t a_n) {
+  BasicMesh mesh(a_n, a_n, a_n, GC);
   IRL::Pt my_lower_domain = lower_domain;
   IRL::Pt my_upper_domain = upper_domain;
-  if (NZ == 1) {
-    const double dx =
-        (my_upper_domain[0] - my_lower_domain[0]) / static_cast<double>(NX);
-    my_lower_domain[2] = 0.0 - dx;
-    my_upper_domain[2] = 0.0 + dx;
-  }
+  const double dx =
+      (my_upper_domain[0] - my_lower_domain[0]) / static_cast<double>(a_n);
   mesh.setCellBoundaries(my_lower_domain, my_upper_domain);
   return mesh;
 }
@@ -56,7 +49,7 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
                                Data<IRL::PlanarSeparator>* a_separators) {
   Deformation3D::setVelocity(0.0, a_U, a_V, a_W);
   const BasicMesh& mesh = a_U->getMesh();
-  const IRL::Pt circle_center(0.35 , 0.35 , 0.35);
+  const IRL::Pt circle_center(0.35, 0.35, 0.35);
   const double circle_radius = 0.15;
   constexpr int subdivisions = 1;
   IRL::PlanarSeparator temp_separator;
@@ -92,9 +85,12 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
           for (int ii = 0; ii < subdivisions; ++ii) {
             for (int jj = 0; jj < subdivisions; ++jj) {
               for (int kk = 0; kk < subdivisions; ++kk) {
-                sc_lower[0] = lower_cell_pt[0] + static_cast<double>(ii) * sc_dx;
-                sc_lower[1] = lower_cell_pt[1] + static_cast<double>(jj) * sc_dy;
-                sc_lower[2] = lower_cell_pt[2] + static_cast<double>(kk) * sc_dz;
+                sc_lower[0] =
+                    lower_cell_pt[0] + static_cast<double>(ii) * sc_dx;
+                sc_lower[1] =
+                    lower_cell_pt[1] + static_cast<double>(jj) * sc_dy;
+                sc_lower[2] =
+                    lower_cell_pt[2] + static_cast<double>(kk) * sc_dz;
                 sc_upper[0] = sc_lower[0] + sc_dx;
                 sc_upper[1] = sc_lower[1] + sc_dy;
                 sc_upper[2] = sc_lower[2] + sc_dz;
@@ -102,16 +98,18 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
                     IRL::RectangularCuboid::fromBoundingPts(sc_lower, sc_upper);
                 IRL::Normal sub_cell_normal = IRL::Normal::fromPtNormalized(
                     (sub_cell.calculateCentroid() - circle_center));
-                temp_separator = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(
-                    sub_cell_normal,
-                    sub_cell_normal * IRL::Pt(circle_center +
-                                              IRL::Normal::toPt(sub_cell_normal *
-                                                                circle_radius))));
+                temp_separator = IRL::PlanarSeparator::fromOnePlane(
+                    IRL::Plane(sub_cell_normal,
+                               sub_cell_normal *
+                                   IRL::Pt(circle_center +
+                                           IRL::Normal::toPt(sub_cell_normal *
+                                                             circle_radius))));
                 IRL::Polygon interface_poly =
                     IRL::getPlanePolygonFromReconstruction<IRL::Polygon>(
                         sub_cell, temp_separator, temp_separator[0]);
-                auto moments = IRL::getVolumeMoments<IRL::VolumeMomentsAndNormal>(
-                    interface_poly);
+                auto moments =
+                    IRL::getVolumeMoments<IRL::VolumeMomentsAndNormal>(
+                        interface_poly);
                 listed_volume_moments += moments;
               }
             }
@@ -156,10 +154,9 @@ void Deformation3D::setVelocity(const double a_time, Data<double>* a_U,
                           std::pow(sin(M_PI * mesh.ym(j)), 2) *
                           sin(2.0 * M_PI * mesh.zm(k)) *
                           cos(M_PI * (a_time) / 3.0);
-        (*a_W)(i, j, k) = -sin(2.0 * M_PI * mesh.xm(i)) *
-                          sin(2.0 * M_PI * mesh.ym(j)) *
-                          std::pow(sin(M_PI * mesh.zm(k)), 2) *
-                          cos(M_PI * (a_time) / 3.0);
+        (*a_W)(i, j, k) =
+            -sin(2.0 * M_PI * mesh.xm(i)) * sin(2.0 * M_PI * mesh.ym(j)) *
+            std::pow(sin(M_PI * mesh.zm(k)), 2) * cos(M_PI * (a_time) / 3.0);
       }
     }
   }

@@ -28,23 +28,19 @@
 #include "examples/advector/solver.h"
 #include "examples/advector/vof_advection.h"
 
-constexpr int NX = 50;
-constexpr int NY = 50;
 constexpr int NZ = 1;
 constexpr int GC = 2;
 constexpr IRL::Pt lower_domain(-0.5, -0.5, -0.5);
 constexpr IRL::Pt upper_domain(0.5, 0.5, 0.5);
 
-BasicMesh CircleRotation2D::setMesh(void) {
-  BasicMesh mesh(NX, NY, NZ, GC);
+BasicMesh CircleRotation2D::setMesh(const IRL::UnsignedIndex_t a_n) {
+  BasicMesh mesh(a_n, a_n, 1, GC);
   IRL::Pt my_lower_domain = lower_domain;
   IRL::Pt my_upper_domain = upper_domain;
-  if (NZ == 1) {
-    const double dx =
-        (my_upper_domain[0] - my_lower_domain[0]) / static_cast<double>(NX);
-    my_lower_domain[2] = 0.0 - dx;
-    my_upper_domain[2] = 0.0 + dx;
-  }
+  const double dx =
+      (my_upper_domain[0] - my_lower_domain[0]) / static_cast<double>(a_n);
+  my_lower_domain[2] = 0.0 - dx;
+  my_upper_domain[2] = 0.0 + dx;
   mesh.setCellBoundaries(my_lower_domain, my_upper_domain);
   return mesh;
 }

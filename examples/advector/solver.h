@@ -28,7 +28,8 @@
 /// static functions in structs.
 template <class SimulationType>
 int runSimulation(const std::string& a_advection_method,
-                  const std::string& a_reconstruction_method, const double a_dt,
+                  const std::string& a_reconstruction_method,
+                  const IRL::UnsignedIndex_t a_ncells, const double a_dt,
                   const double a_end_time, const int a_visualization_frequency);
 
 // \brief Convert and store the mesh cells into localizers.
@@ -62,14 +63,8 @@ void writeOutDiagnostics(const int a_iteration, const double a_dt,
                          std::chrono::duration<double> a_VOF_duration,
                          std::chrono::duration<double> a_recon_duration);
 
-/// \brief Write out visualization files for python.
-void writeOutVisualization(const int a_iteration,
-                           const int a_visualization_frequency,
-                           const double a_simulation_time,
-                           const Data<double>& a_liquid_volume_fraction);
-
 /// \brief Write out visualization files in VTK format.
-void writeOutVisualizationVTK(const int a_iteration,
+void writeOutVisualization(const int a_iteration,
                            const int a_visualization_frequency,
                            const double a_simulation_time,
                            const Data<double>& a_liquid_volume_fraction);
@@ -79,12 +74,12 @@ void writeOutVisualizationVTK(const int a_iteration,
 //******************************************************************* //
 template <class SimulationType>
 int runSimulation(const std::string& a_advection_method,
-                  const std::string& a_reconstruction_method, const double a_dt,
+                  const std::string& a_reconstruction_method,
+                  const IRL::UnsignedIndex_t a_ncells, const double a_dt,
                   const double a_end_time,
-                  const int a_visualization_frequency,
-                  const std::string& a_visualization_type) {
+                  const int a_visualization_frequency) {
   // Set mesh
-  BasicMesh cc_mesh = SimulationType::setMesh();
+  BasicMesh cc_mesh = SimulationType::setMesh(a_ncells);
 
   // Allocate local data
   Data<double> velU(&cc_mesh);
@@ -121,14 +116,8 @@ int runSimulation(const std::string& a_advection_method,
   const int dir_err = mkdir(output_folder.c_str(), 0777);
 
   // Visualization in the first time step
-  if (a_visualization_type == "VIZ") { // file for python or matlab
-    writeOutMesh(cc_mesh);
-    writeOutVisualization(iteration, a_visualization_frequency,
-                          simulation_time, liquid_volume_fraction);
-  } else { // VTK file
-    writeOutVisualizationVTK(iteration, a_visualization_frequency,
-                          simulation_time, liquid_volume_fraction);
-  }
+  writeOutVisualization(iteration, a_visualization_frequency, simulation_time,
+                        liquid_volume_fraction);
 
   std::chrono::duration<double> advect_VOF_time(0.0);
   std::chrono::duration<double> recon_time(0.0);
@@ -160,25 +149,14 @@ int runSimulation(const std::string& a_advection_method,
 
     if (a_visualization_frequency > 0 &&
         iteration % a_visualization_frequency == 0) {
-      if (a_visualization_type == "VIZ") {
-        writeOutVisualization(iteration, a_visualization_frequency,
-                              simulation_time, liquid_volume_fraction);
-      } else {
-        writeOutVisualizationVTK(iteration, a_visualization_frequency,
-                              simulation_time, liquid_volume_fraction);
-      }
+      writeOutVisualization(iteration, a_visualization_frequency,
+                            simulation_time, liquid_volume_fraction);
     }
     ++iteration;
-
   }
   // Visualization in the last time step
-  if(a_visualization_type == "VIZ"){
-    writeOutVisualization(iteration, a_visualization_frequency,
-                          simulation_time, liquid_volume_fraction);
-  } else{
-    writeOutVisualizationVTK(iteration, a_visualization_frequency,
-                          simulation_time, liquid_volume_fraction);
-  }
+  writeOutVisualization(iteration, a_visualization_frequency, simulation_time,
+                        liquid_volume_fraction);
 
   // L1 Difference between Starting VOF and ending VOF
   double l1_error = 0.0;
