@@ -221,3 +221,133 @@ void writeOutVisualization(const int a_iteration,
   }
   fclose(viz_file);
 }
+
+void writeOutInterface(const int a_iteration,
+                       const int a_visualization_frequency,
+                       const double a_simulation_time,
+                       const Data<IRL::PlanarSeparator>& a_interface) {
+  std::string output_folder = "viz";
+  const int dir_err = mkdir(output_folder.c_str(), 0777);
+
+  const BasicMesh& mesh = a_interface.getMesh();
+  FILE* viz_file;
+
+  // Create zero-filled file name
+  int iteration_digits = 6;
+  std::string number = std::to_string(a_iteration / a_visualization_frequency);
+  assert(iteration_digits > number.length());
+  std::string id_suffix =
+      std::string(iteration_digits - number.length(), '0') + number;
+  std::string file_name = "viz/interface_" + id_suffix + ".vtu";
+  viz_file = fopen(file_name.c_str(), "w");
+
+  // Build vectors of vertex locations and connectivities
+  std::size_t n_vert = 0;
+  std::size_t n_faces = 0;
+  std::size_t current_face_size = 0;
+  std::string vert_loc;
+  std::string connectivity;
+  std::string offsets;
+
+  auto add_polyhedron = [&](const auto& a_poly) {
+    using T = std::decay_t<decltype(a_poly)>;
+    std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
+        unique_vertices;
+    for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
+      unique_vertices[a_poly.getVertex(n)] = n + n_vert;
+      const auto& vert_pt = a_poly.getVertex(n)->getLocation();
+      vert_loc += std::to_string(vert_pt[0]) + " " +
+                  std::to_string(vert_pt[1]) + " " +
+                  std::to_string(vert_pt[2]) + "\n";
+    }
+    assert(unique_vertices.size() == a_poly.getNumberOfVertices());
+
+    for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
+      const auto& face = a_poly[n];
+      auto current_half_edge = face->getStartingHalfEdge();
+      do {
+        ++current_face_size;
+        connectivity +=
+            std::to_string(unique_vertices[current_half_edge->getVertex()]) +
+            " ";
+        current_half_edge = current_half_edge->getNextHalfEdge();
+      } while (current_half_edge != face->getStartingHalfEdge());
+      offsets += std::to_string(current_face_size) + " ";
+      connectivity += "\n";
+    }
+
+    n_vert += a_poly.getNumberOfVertices();
+    n_faces += a_poly.getNumberOfFaces();
+  };
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        const auto& recon = a_interface(i, j, k);
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+
+        if (recon.isFlipped()) {
+          auto he_poly = cell.generateHalfEdgeVersion();
+          auto seg = he_poly.generateSegmentedPolyhedron();
+          for (const auto& plane : recon) {
+            decltype(seg) clipped;
+            auto new_plane = plane.generateFlippedPlane();
+            IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
+            add_polyhedron(clipped);
+          }
+        } else {
+          auto he_poly = cell.generateHalfEdgeVersion();
+          auto seg = he_poly.generateSegmentedPolyhedron();
+          for (const auto& plane : recon) {
+            decltype(seg) clipped;
+            IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
+          }
+          add_polyhedron(seg);
+        }
+      }
+    }
+  }
+
+  // Write header
+  {
+    fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
+    fprintf(viz_file,
+            "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
+            "byte_order=\"LittleEndian\">\n");
+    fprintf(viz_file, "<UnstructuredGrid>\n");
+    fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
+            n_vert, n_faces);
+
+    fprintf(viz_file, "<Points>\n");
+    fprintf(viz_file,
+            "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
+    fprintf(viz_file, "%s", vert_loc.c_str());
+    fprintf(viz_file, "</DataArray>\n");
+    fprintf(viz_file, "</Points>\n");
+
+    fprintf(viz_file, "<Cells>\n");
+    fprintf(viz_file,
+            "<DataArray type=\"Int32\" Name=\"connectivity\" "
+            "format=\"ascii\">\n");
+    fprintf(viz_file, "%s", connectivity.c_str());
+    fprintf(viz_file, "</DataArray>\n");
+
+    fprintf(viz_file,
+            "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+    fprintf(viz_file, "%s", offsets.c_str());
+    fprintf(viz_file, "\n</DataArray>\n");
+
+    // Cell type - General Polygon type
+    fprintf(viz_file,
+            "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+    for (std::size_t n = 0; n < n_faces; ++n) {
+      fprintf(viz_file, "7 ");  // General polygon type
+    }
+    fprintf(viz_file,
+            "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
+            "VTKFile>\n");
+  }
+  fclose(viz_file);
+}

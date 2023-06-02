@@ -69,6 +69,12 @@ void writeOutVisualization(const int a_iteration,
                            const double a_simulation_time,
                            const Data<double>& a_liquid_volume_fraction);
 
+/// \brief Writes the interface to VTK as an unstructured mesh.
+void writeOutInterface(const int a_iteration,
+                       const int a_visualization_frequency,
+                       const double a_simulation_time,
+                       const Data<IRL::PlanarSeparator>& a_interface);
+
 //******************************************************************* //
 //     Template function definitions placed below this.
 //******************************************************************* //
@@ -118,6 +124,8 @@ int runSimulation(const std::string& a_advection_method,
   // Visualization in the first time step
   writeOutVisualization(iteration, a_visualization_frequency, simulation_time,
                         liquid_volume_fraction);
+  writeOutInterface(iteration, a_visualization_frequency, simulation_time,
+                    interface);
 
   std::chrono::duration<double> advect_VOF_time(0.0);
   std::chrono::duration<double> recon_time(0.0);
@@ -151,12 +159,16 @@ int runSimulation(const std::string& a_advection_method,
         iteration % a_visualization_frequency == 0) {
       writeOutVisualization(iteration, a_visualization_frequency,
                             simulation_time, liquid_volume_fraction);
+      writeOutInterface(iteration, a_visualization_frequency, simulation_time,
+                        interface);
     }
     ++iteration;
   }
   // Visualization in the last time step
   writeOutVisualization(iteration, a_visualization_frequency, simulation_time,
                         liquid_volume_fraction);
+  writeOutInterface(iteration, a_visualization_frequency, simulation_time,
+                    interface);
 
   // L1 Difference between Starting VOF and ending VOF
   double l1_error = 0.0;
