@@ -6,6 +6,7 @@ IRLAddExample_cpp(
     "circle_rotation_2d.h"
     "data.h"
     "deformation_2d.h"
+    "deformation_3d.h"
     "reconstruction_types.h"
     "solver.h"
     "vof_advection.h"
@@ -17,10 +18,10 @@ IRLAddExample_cpp(
     "solver.cpp"
     "reconstruction_types.cpp"
     "deformation_2d.cpp"
+    "deformation_3d.cpp"
   OUTPUT_DIR
     "${IRL_EXAMPLES_OUTPUT_DIR}/advector"
   COLLECTION
     "examples_advector"
 )
 
-configure_file("visualize.m" "${IRL_EXAMPLES_OUTPUT_DIR}/advector/visualize.m" COPYONLY)
