@@ -6,7 +6,7 @@ IRLAddExample_cpp(
     "circle_rotation_2d.h"
     "data.h"
     "deformation_2d.h"
-    "deformation_2d.h"
+    "deformation_3d.h"
     "reconstruction_types.h"
     "solver.h"
     "vof_advection.h"
