@@ -16,6 +16,7 @@
 #include "irl/geometry/general/pt_with_data.h"
 #include "irl/geometry/half_edge_structures/half_edge.h"
 #include "irl/geometry/half_edge_structures/segmented_half_edge_polytope.h"
+#include "irl/moments/general_moments.h"
 #include "irl/moments/volume.h"
 #include "irl/moments/volume_moments.h"
 #include "irl/moments/volume_moments_and_doubles.h"
@@ -38,6 +39,9 @@ class SegmentedHalfEdgePolyhedronCommon
   inline Pt calculateCentroid(void);
 
   inline VolumeMoments calculateMoments(void);
+
+  template <std::size_t ORDER>
+  inline GeneralMoments3D<ORDER> calculateGeneralMoments(void);
 
   bool checkValidHalfEdgeStructure(void);
 
@@ -92,4 +96,4 @@ class SegmentedHalfEdgePolyhedron
 
 #include "irl/geometry/half_edge_structures/segmented_half_edge_polyhedron.tpp"
 
-#endif // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_SEGMENTED_HALF_EDGE_POLYHEDRON_H_
+#endif  // IRL_GEOMETRY_HALF_EDGE_STRUCTURES_SEGMENTED_HALF_EDGE_POLYHEDRON_H_

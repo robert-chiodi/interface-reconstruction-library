@@ -12,31 +12,34 @@
 
 #include <utility>
 
+#include "irl/moments/general_moments.h"
+#include "irl/moments/volume.h"
 #include "irl/moments/volume_moments.h"
 #include "irl/moments/volume_moments_and_doubles.h"
 #include "irl/parameters/defined_types.h"
 
 namespace IRL {
 /// \brief Storage for multiple volume moments.
-template <class Derived, class MomentsType> class SeparatedMomentsCommon {
+template <class Derived, class MomentsType>
+class SeparatedMomentsCommon {
   static constexpr UnsignedIndex_t kMaxNumberOfPhases = 2;
   using iterator = typename std::array<MomentsType, 2>::iterator;
   using const_iterator = typename std::array<MomentsType, 2>::const_iterator;
 
-  Derived &getDerived(void);
-  const Derived &getDerived(void) const;
+  Derived& getDerived(void);
+  const Derived& getDerived(void) const;
 
-public:
+ public:
   using moments_type = MomentsType;
 
   /// \brief Default constructor.
   SeparatedMomentsCommon(void) = default;
 
   /// \brief Constructor that sets moments for two phases.
-  constexpr SeparatedMomentsCommon(const MomentsType &a_moment_0,
-                                   const MomentsType &a_moment_1);
+  constexpr SeparatedMomentsCommon(const MomentsType& a_moment_0,
+                                   const MomentsType& a_moment_1);
 
-  static Derived fromRawDoublePointer(const double *a_list);
+  static Derived fromRawDoublePointer(const double* a_list);
 
   static Derived fromScalarConstant(const double a_value);
 
@@ -69,30 +72,29 @@ public:
   /// \param[in] a_flipped Boolean expressing whether the supplied
   /// `a_known_moments` is for SeparatedMomentsCommon[0] or [1].
   template <class GeometryType>
-  inline static Derived
-  fillWithComplementMoments(const MomentsType &a_known_moments,
-                            const GeometryType &a_encompassing_geometry,
-                            const bool a_flipped);
+  inline static Derived fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
 
   inline static Derived fillWithComplementMoments(
-      const MomentsType &a_known_moments,
-      const MomentsType &a_encompassing_geometry_volume_moments,
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
       const bool a_flipped);
 
   static constexpr UnsignedIndex_t getNumberOfPhases(void);
 
-  MomentsType &operator[](const UnsignedIndex_t a_moment_index);
+  MomentsType& operator[](const UnsignedIndex_t a_moment_index);
 
-  const MomentsType &operator[](const UnsignedIndex_t a_moment_index) const;
+  const MomentsType& operator[](const UnsignedIndex_t a_moment_index) const;
 
   /// \brief Overload += operator to adjust liquid and gas moments.
-  Derived &operator+=(const Derived &a_rhs);
+  Derived& operator+=(const Derived& a_rhs);
 
   /// \brief Overload *= operator to for const doubles
-  Derived &operator*=(const double a_rhs);
+  Derived& operator*=(const double a_rhs);
 
   /// \brief Overload assignment to assign constant value to moments.
-  Derived &operator=(const double a_value);
+  Derived& operator=(const double a_value);
 
   /// \brief Normalize both centroids by their respective phase volumes.
   void normalizeByVolume(void);
@@ -113,15 +115,16 @@ public:
   /// \brief  Default destructor.
   ~SeparatedMomentsCommon(void) = default;
 
-protected:
+ protected:
   /// \brief Construct that initializes volume/centroid as a value.
   explicit SeparatedMomentsCommon(const double a_value);
 
   std::array<MomentsType, kMaxNumberOfPhases>
-      volume_moments_m; ///< \brief VolumeMoments
+      volume_moments_m;  ///< \brief VolumeMoments
 };
 
-template <class MomentsType> class SeparatedMoments;
+template <class MomentsType>
+class SeparatedMoments;
 
 template <>
 class SeparatedMoments<VolumeMoments>
@@ -132,20 +135,19 @@ class SeparatedMoments<VolumeMoments>
 
   friend SeparatedMomentsCommon<SelfType, MomentsType>;
 
-public:
+ public:
   using SeparatedMomentsCommon<SelfType, MomentsType>::SeparatedMomentsCommon;
 
   SeparatedMoments(void) = default;
 
   template <class GeometryType>
-  static SeparatedMoments
-  fillWithComplementMoments(const MomentsType &a_known_moments,
-                            const GeometryType &a_encompassing_geometry,
-                            const bool a_flipped);
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
 
   static SeparatedMoments fillWithComplementMoments(
-      const MomentsType &a_known_moments,
-      const MomentsType &a_encompassing_geometry_volume_moments,
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
       const bool a_flipped);
 
   /// \brief Set volume moments from a list of 8 doubles.
@@ -154,7 +156,7 @@ public:
   /// Expected order is InternalVolumeMoments(Volume,Centroidx_, Centroid_y,
   /// Centroid_z), then ExternalVolumeMoments(Volume,Centroidx_, Centroid_y,
   /// Centroid_z).
-  explicit SeparatedMoments(const double *a_list);
+  explicit SeparatedMoments(const double* a_list);
 };
 
 template <>
@@ -165,27 +167,76 @@ class SeparatedMoments<Volume>
 
   friend SeparatedMomentsCommon<SelfType, MomentsType>;
 
-public:
+ public:
   using SeparatedMomentsCommon<SelfType, MomentsType>::SeparatedMomentsCommon;
 
   SeparatedMoments(void) = default;
 
   template <class GeometryType>
-  static SeparatedMoments
-  fillWithComplementMoments(const MomentsType &a_known_moments,
-                            const GeometryType &a_encompassing_geometry,
-                            const bool a_flipped);
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
 
   static SeparatedMoments fillWithComplementMoments(
-      const MomentsType &a_known_moments,
-      const MomentsType &a_encompassing_geometry_volume_moments,
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
       const bool a_flipped);
 
   /// \brief Set volumes from a list of 2 doubles.
   ///
   /// Construct the volume moments from a list of 2 doubles.
   /// Expected order is Internal Volume, External Volume
-  explicit SeparatedMoments(const double *a_list);
+  explicit SeparatedMoments(const double* a_list);
+};
+
+template <std::size_t ORDER>
+class SeparatedMoments<GeneralMoments3D<ORDER>>
+    : public SeparatedMomentsCommon<SeparatedMoments<GeneralMoments3D<ORDER>>,
+                                    GeneralMoments3D<ORDER>> {
+  using SelfType = SeparatedMoments<GeneralMoments3D<ORDER>>;
+  using MomentsType = GeneralMoments3D<ORDER>;
+
+  friend SeparatedMomentsCommon<SelfType, MomentsType>;
+
+ public:
+  using SeparatedMomentsCommon<SelfType, MomentsType>::SeparatedMomentsCommon;
+
+  SeparatedMoments(void) = default;
+
+  template <class GeometryType>
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
+
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
+      const bool a_flipped);
+};
+
+template <std::size_t ORDER>
+class SeparatedMoments<GeneralMoments2D<ORDER>>
+    : public SeparatedMomentsCommon<SeparatedMoments<GeneralMoments2D<ORDER>>,
+                                    GeneralMoments2D<ORDER>> {
+  using SelfType = SeparatedMoments<GeneralMoments2D<ORDER>>;
+  using MomentsType = GeneralMoments2D<ORDER>;
+
+  friend SeparatedMomentsCommon<SelfType, MomentsType>;
+
+ public:
+  using SeparatedMomentsCommon<SelfType, MomentsType>::SeparatedMomentsCommon;
+
+  SeparatedMoments(void) = default;
+
+  template <class GeometryType>
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
+
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
+      const bool a_flipped);
 };
 
 template <UnsignedIndex_t kArrayLength>
@@ -198,41 +249,38 @@ class SeparatedMoments<VolumeMomentsAndDoubles<kArrayLength>>
 
   friend SeparatedMomentsCommon<SelfType, MomentsType>;
 
-public:
+ public:
   using SeparatedMomentsCommon<SelfType, MomentsType>::SeparatedMomentsCommon;
 
   SeparatedMoments(void) = default;
 
   template <class GeometryType>
-  static SeparatedMoments
-  fillWithComplementMoments(const MomentsType &a_known_moments,
-                            const GeometryType &a_encompassing_geometry,
-                            const bool a_flipped);
+  static SeparatedMoments fillWithComplementMoments(
+      const MomentsType& a_known_moments,
+      const GeometryType& a_encompassing_geometry, const bool a_flipped);
 
   static SeparatedMoments fillWithComplementMoments(
-      const MomentsType &a_known_moments,
-      const MomentsType &a_encompassing_geometry_volume_moments,
+      const MomentsType& a_known_moments,
+      const MomentsType& a_encompassing_geometry_volume_moments,
       const bool a_flipped);
 };
 
 template <class MomentsType>
-inline std::ostream &
-operator<<(std::ostream &out,
-           const SeparatedMoments<MomentsType> &a_separated_volume_moments);
+inline std::ostream& operator<<(
+    std::ostream& out,
+    const SeparatedMoments<MomentsType>& a_separated_volume_moments);
 
 /// \brief Overload * operator to multiply the two geometric moments.
 template <class MomentsType>
-SeparatedMoments<MomentsType>
-operator*(const SeparatedMoments<MomentsType> &a_svm,
-          const double a_multiplier);
+SeparatedMoments<MomentsType> operator*(
+    const SeparatedMoments<MomentsType>& a_svm, const double a_multiplier);
 /// \brief Overload * operator to multiply the two geometric moments.
 template <class MomentsType>
-SeparatedMoments<MomentsType>
-operator*(const double a_multiplier,
-          const SeparatedMoments<MomentsType> &a_svm);
+SeparatedMoments<MomentsType> operator*(
+    const double a_multiplier, const SeparatedMoments<MomentsType>& a_svm);
 
-} // namespace IRL
+}  // namespace IRL
 
 #include "irl/moments/separated_volume_moments.tpp"
 
-#endif // SRC_MOMENTS_SEPARATED_VOLUME_MOMENTS_H_
+#endif  // SRC_MOMENTS_SEPARATED_VOLUME_MOMENTS_H_
