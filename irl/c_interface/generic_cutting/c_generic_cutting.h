@@ -168,6 +168,10 @@ void c_getNormMoments_CapDod_LocSepLink_TagAccVM_SepVM(
     const c_CapDod* a_Cap_Dod, const c_LocSepLink* a_localized_separator_link,
     c_TagAccVM_SepVM* a_moments_to_return);
 
+void c_getMoments_CapDod_LocSepLink_TagAccVM_SepVM(
+    const c_CapDod* a_Cap_Dod, const c_LocSepLink* a_localized_separator_link,
+    c_TagAccVM_SepVM* a_moments_to_return);
+
 void c_getNormMoments_Dod_LocSepLink_TagAccVM_SepVM(
     const c_Dod* a_Dod, const c_LocSepLink* a_localized_separator_link,
     c_TagAccVM_SepVM* a_moments_to_return);
