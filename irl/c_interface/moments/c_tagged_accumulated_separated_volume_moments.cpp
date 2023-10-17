@@ -23,6 +23,12 @@ void c_TagAccVM_SepVM_delete(c_TagAccVM_SepVM* a_self) {
   a_self->obj_ptr = nullptr;
 }
 
+void c_TagAccVM_SepVM_clear(c_TagAccVM_SepVM* a_self) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr == nullptr);
+  a_self->obj_ptr->clear();
+}
+
 void c_TagAccVM_SepVM_normalizeByVolume(c_TagAccVM_SepVM* a_self) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);

@@ -33,6 +33,9 @@ module f_TagAccVM_SepVM_class
   interface new
     module procedure TagAccVM_SepVM_class_new
   end interface
+  interface clear
+    module procedure TagAccVM_SepVM_class_clear
+  end interface
   interface normalizeByVolume
     module procedure TagAccVM_SepVM_class_normalizeByVolume
   end interface
@@ -67,6 +70,13 @@ module f_TagAccVM_SepVM_class
       implicit none
       type(c_TagAccVM_SepVM) :: this
     end subroutine F_TagAccVM_SepVM_delete
+
+    subroutine F_TagAccVM_SepVM_clear(this) &
+      bind(C, name="c_TagAccVM_SepVM_clear")
+      import
+      implicit none
+      type(c_TagAccVM_SepVM) :: this
+    end subroutine F_TagAccVM_SepVM_clear
 
     subroutine F_TagAccVM_SepVM_normalizeByVolume(this) &
       bind(C, name="c_TagAccVM_SepVM_normalizeByVolume")
@@ -134,6 +144,12 @@ module f_TagAccVM_SepVM_class
       type(TagAccVM_SepVM_type), intent(in) :: this
       call F_TagAccVM_SepVM_delete(this%c_object)
     end subroutine TagAccVM_SepVM_class_delete
+
+    subroutine TagAccVM_SepVM_class_clear(this)
+      implicit none
+      type(TagAccVM_SepVM_type), intent(inout) :: this
+      call F_TagAccVM_SepVM_clear(this%c_object)
+    end subroutine TagAccVM_SepVM_class_clear
 
     subroutine TagAccVM_SepVM_class_normalizeByVolume(this)
       implicit none
