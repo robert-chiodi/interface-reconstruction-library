@@ -26,6 +26,8 @@ void c_TagAccVM_SepVM_new(c_TagAccVM_SepVM* a_self);
 
 void c_TagAccVM_SepVM_delete(c_TagAccVM_SepVM* a_self);
 
+void c_TagAccVM_SepVM_clear(c_TagAccVM_SepVM* a_self);
+
 void c_TagAccVM_SepVM_normalizeByVolume(c_TagAccVM_SepVM* a_self);
 
 void c_TagAccVM_SepVM_multiplyByVolume(c_TagAccVM_SepVM* a_self);
