@@ -687,12 +687,12 @@ module f_getMoments
   end interface
 
   interface
-    subroutine F_getMoments_CapDod_LocSepLink_TagAccVM_SepVM(a_Capped_Dod, a_localized_separator_link, a_moments_to_return) &
+    subroutine F_getMoments_CapDod_LocSepLink_TagAccVM_SepVM(a_capped_dod, a_localized_separator_link, a_moments_to_return) &
     bind(C, name="c_getMoments_CapDod_LocSepLink_TagAccVM_SepVM")
       use, intrinsic :: iso_c_binding
       import
       implicit none
-      type(c_CapDod) :: a_Capped_Dod ! Pointer to CapDod object
+      type(c_CapDod) :: a_capped_dod ! Pointer to CapDod object
       type(c_LocSepLink) :: a_localized_separator_link ! Pointer to LocSepLink object
       type(c_TagAccVM_SepVM) :: a_moments_to_return ! Where TagAccVM<SeparatedMoments<VM>> is stored
     end subroutine F_getMoments_CapDod_LocSepLink_TagAccVM_SepVM
@@ -2065,10 +2065,10 @@ contains
 
   end subroutine getNormMoments_CapDod_LocSepLink_TagAccVM_SepVM
 
-  subroutine getMoments_CapDod_LocSepLink_TagAccVM_SepVM(a_Capped_Dod, a_localized_separator_link, a_moments_to_return)
+  subroutine getMoments_CapDod_LocSepLink_TagAccVM_SepVM(a_capped_dod, a_localized_separator_link, a_moments_to_return)
    use, intrinsic :: iso_c_binding
    implicit none
-     type(CapDod_type), intent(in) :: a_Capped_Dod
+     type(CapDod_type), intent(in) :: a_capped_dod
      type(LocSepLink_type), intent(in) :: a_localized_separator_link
      type(TagAccVM_SepVM_type), intent(inout) :: a_moments_to_return
 

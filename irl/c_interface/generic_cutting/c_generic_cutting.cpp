@@ -449,6 +449,7 @@ void c_getMoments_CapDod_LocSepLink_TagAccVM_SepVM(
   assert(a_capped_dodecahedron != nullptr);
   assert(a_capped_dodecahedron->obj_ptr != nullptr);
   assert(a_localized_separator_link != nullptr);
+  assert(a_localized_separator_link->obj_ptr != nullptr);
   assert(a_moments_to_return != nullptr);
   assert(a_moments_to_return->obj_ptr != nullptr);
   *a_moments_to_return->obj_ptr =
