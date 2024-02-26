@@ -426,6 +426,19 @@ module f_ReconstructionInterface
     end subroutine F_reconstructLVIRA3D_Tet
   end interface
   
+  interface
+    subroutine F_reconstructML(normal, vf_center, cell_bound, a_planar_separator) &
+    bind(C, name="c_reconstructML")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      real(C_DOUBLE), dimension(0:2), intent(in) :: normal
+      real(C_DOUBLE), dimension(0:0), intent(in) :: vf_center
+      real(C_DOUBLE), dimension(0:5) :: cell_bound
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
+    end subroutine F_reconstructML
+  end interface
+  
   contains
 
   subroutine reconstructELVIRA2D(a_elvira_neighborhood, a_planar_separator)
@@ -703,5 +716,16 @@ module f_ReconstructionInterface
       type(PlanarSep_type), intent(inout) :: a_planar_separator
       call F_reconstructLVIRA3D_Tet(a_neighborhood%c_object, a_planar_separator%c_object)
   end subroutine reconstructLVIRA3D_Tet 
+
+  subroutine reconstructML(normal, vf_center, cell_bound, a_separator)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      real(IRL_DOUBLE), dimension(0:2), intent(in) :: normal
+      real(IRL_DOUBLE), dimension(0:0), intent(in) :: vf_center
+      real(IRL_DOUBLE), dimension(0:5), intent(in) :: cell_bound
+      type(PlanarSep_type), intent(inout) :: a_separator
+      call F_reconstructML(normal, vf_center, cell_bound, a_separator%c_object)
+
+  end subroutine reconstructML
   
 end module f_ReconstructionInterface

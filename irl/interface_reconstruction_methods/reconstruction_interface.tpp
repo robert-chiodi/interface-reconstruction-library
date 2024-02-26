@@ -121,6 +121,17 @@ PlanarSeparator reconstructionWithLVIRA3D(
   return lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
 }
 
+PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p) 
+{
+  auto n = IRL::Normal(normal[0],normal[1],normal[2]);
+  const IRL::Normal& n1 = n;
+  auto cell = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(cell_bound[0], cell_bound[1], cell_bound[2]),
+            IRL::Pt(cell_bound[3], cell_bound[4], cell_bound[5]));
+  const IRL::RectangularCuboid& cell1 = cell;
+  double distance = IRL::findDistanceOnePlane(cell1, *vf_center, n1);
+  return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+}
+
 template <class CellType>
 PlanarSeparator reconstructionWithMOF2D(
     const CellType& a_cell, const SeparatedMoments<VolumeMoments>& a_svm,

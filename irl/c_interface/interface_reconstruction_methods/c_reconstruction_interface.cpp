@@ -327,5 +327,16 @@ void c_reconstructLVIRA3D_Tet(const c_LVIRANeigh_Tet* a_neighborhood,
       *a_neighborhood->obj_ptr, *a_separator->obj_ptr);
 }
 
+void c_reconstructML(const double* normal, const double* vf_center, const double* cell_bound, c_PlanarSep* a_separator)
+{
+  assert(normal != nullptr);
+  assert(vf_center != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(cell_bound != nullptr);
+  *a_separator->obj_ptr =
+      reconstructionWithML(normal, vf_center, cell_bound, *a_separator->obj_ptr);
+}
+
 
 }  // end extern C

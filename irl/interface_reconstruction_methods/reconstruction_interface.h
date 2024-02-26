@@ -71,6 +71,9 @@ inline PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
 
+/// \brief Perform Machine Learning Reconstruction for 3D.
+inline PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p); 
+
 /// \brief Perform MOF Reconstruction for 2D with optional weights.
 /// Defaults to even weighting.
 template <class CellType>

@@ -142,6 +142,8 @@ void c_reconstructLVIRA3D_Hex(const c_LVIRANeigh_Hex* a_neighborhood,
 void c_reconstructLVIRA3D_Tet(const c_LVIRANeigh_Tet* a_neighborhood,
                                   c_PlanarSep* a_separator);
 
+void c_reconstructML(const double* normal, const double* vf_center, const double* cell_bound, c_PlanarSep* a_separator); 
+
 }  // end extern C
 
 #endif // IRL_C_INTERFACE_INTERFACE_RECONSTRUCTION_METHODS_C_RECONSTRUCTION_INTERFACE_H_
