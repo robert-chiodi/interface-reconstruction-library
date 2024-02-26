@@ -7,15 +7,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_ADVECTOR_CIRCLE_ROTATION_2D_H_
-#define EXAMPLES_ADVECTOR_CIRCLE_ROTATION_2D_H_
+#ifndef EXAMPLES_ADVECTOR_DEFORMATION_3D_H_
+#define EXAMPLES_ADVECTOR_DEFORMATION_3D_H_
 
 #include "irl/planar_reconstruction/planar_separator.h"
 
 #include "examples/advector/basic_mesh.h"
 #include "examples/advector/data.h"
 
-struct CircleRotation2D {
+struct Deformation3D {
   static BasicMesh setMesh(const IRL::UnsignedIndex_t a_n);
 
   static void initialize(Data<double>* a_U, Data<double>* a_V,
@@ -26,4 +26,4 @@ struct CircleRotation2D {
                           Data<double>* a_V, Data<double>* a_W);
 };
 
-#endif  // EXAMPLES_ADVECTOR_CIRCLE_ROTATION_2D_H_
+#endif  // EXAMPLES_ADVECTOR_DEFORMATION_3D_H_
