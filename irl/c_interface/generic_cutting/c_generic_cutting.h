@@ -132,6 +132,11 @@ void c_getMoments_Poly24_LocSepLink_SepVM(
     const c_LocSepLink* a_localized_separator_link,
     c_SepVM* a_moments_to_return);
 
+void c_getMoments_Poly24_LocSepLink_TagAccVM_SepVM(
+    const c_Poly24* a_polyhedron_24,
+    const c_LocSepLink* a_localized_separator_link,
+    c_TagAccVM_SepVM* a_moments_to_return);
+
 void c_getNormMoments_Tet_LocSepLink_SepVM(
     const c_Tet* a_tet, const c_LocSepLink* a_localized_separator_link,
     c_SepVM* a_moments_to_return);
