@@ -530,7 +530,7 @@ void R2P_2D1P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
       a_neighborhood.getCenterCell().calculateVolume();
 
   double distance_multiplier = {1.0};
-  double volume_weight_switch = {1.0};
+  double volume_weight_switch = {0.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   this->setRelativeImportanceBetweenWeights(0.0, 0.5, 1.0, 0.0);
@@ -624,7 +624,7 @@ void R2P_3D1P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
       a_neighborhood.getCenterCell().calculateVolume();
 
   double distance_multiplier = {1.0};
-  double volume_weight_switch = {1.0};
+  double volume_weight_switch = {0.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   this->setRelativeImportanceBetweenWeights(this->weight_importance_m.importance_of_liquid_volume_fraction,
@@ -719,7 +719,7 @@ void R2P_2D2P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
       a_neighborhood.getCenterCell().calculateVolume();
 
   double distance_multiplier = {1.0};
-  double volume_weight_switch = {1.0};
+  double volume_weight_switch = {0.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   double weight_surface_area =
@@ -873,7 +873,7 @@ void R2P_3D2P<CellType>::setup(const R2PNeighborhood<CellType> &a_neighborhood,
       a_neighborhood.getCenterCell().calculateVolume();
 
   double distance_multiplier = {1.0};
-  double volume_weight_switch = {1.0};
+  double volume_weight_switch = {0.0};
   this->fillGeometryAndWeightVectors(a_neighborhood, distance_multiplier,
                                      volume_weight_switch);
   double weight_surface_area =
